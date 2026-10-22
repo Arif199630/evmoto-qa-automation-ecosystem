@@ -1,0 +1,28 @@
+# Environments & Credentials
+.env
+.env.*
+!.env.example
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest / Test Cache & Logs
+.pytest_cache/
+*.log
+geckodriver.log
+appium.log
+
+# Large Binaries (> 100MB GitHub limit)
+*.apk
+*.aab
+
+# Local IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Reports screenshots temp
+mobile-apps/reports/screenshots/temp/

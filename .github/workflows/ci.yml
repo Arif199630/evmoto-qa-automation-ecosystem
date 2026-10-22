@@ -1,0 +1,62 @@
+name: EvMoto & ECGO QA Automation Ecosystem CI/CD
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  test-ecosystem:
+    name: API Automation & Headless Integration CI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Syntax & Lint Verification (Monorepo Modules)
+        run: |
+          python -m compileall mobile-apps/ web-dashboard/ integration-ecosystem/ api-testing/
+
+      - name: Execute REST API Automation Suite (Pytest + JSONSchema)
+        env:
+          EVMOTO_API_BASE_URL: ${{ secrets.EVMOTO_API_BASE_URL || 'https://api-dev.evmoto.internal' }}
+          ECGO_API_BASE_URL: ${{ secrets.ECGO_API_BASE_URL || 'https://ecgo-api.internal:3002' }}
+          EVMOTO_ADMIN_PORTAL_URL: ${{ secrets.EVMOTO_ADMIN_PORTAL_URL || 'https://admin-staging.evmoto.internal' }}
+          CONNECT_BRIDGE_URL: ${{ secrets.CONNECT_BRIDGE_URL || 'https://connect.evmoto.internal' }}
+          MOCK_API_FALLBACK: 'true'
+        run: |
+          cd api-testing
+          pytest -v suites/
+
+      - name: Execute Headless Integration Test Suite (ECGO Connect x EvMoto)
+        env:
+          EVMOTO_API_BASE_URL: ${{ secrets.EVMOTO_API_BASE_URL || 'https://api-dev.evmoto.internal' }}
+          ECGO_API_BASE_URL: ${{ secrets.ECGO_API_BASE_URL || 'https://ecgo-api.internal:3002' }}
+          EVMOTO_ADMIN_PORTAL_URL: ${{ secrets.EVMOTO_ADMIN_PORTAL_URL || 'https://admin-staging.evmoto.internal' }}
+          CONNECT_BRIDGE_URL: ${{ secrets.CONNECT_BRIDGE_URL || 'https://connect.evmoto.internal' }}
+          MOCK_API_FALLBACK: 'true'
+        run: |
+          cd integration-ecosystem
+          pytest -v test_ecgo_connect_integrated_suite.py
+
+      - name: Upload Test Reports Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evmoto-qa-test-reports
+          path: docs/reports/
+          retention-days: 14

@@ -1,0 +1,121 @@
+{
+  "dev_user": {
+    "phone": "81299990001",
+    "otp": "1234",
+    "name": "Dev User EvMoto",
+    "role": "Dev Account (Active)",
+    "description": "Nomor dev utama aktif untuk tes langsung dan demo"
+  },
+  "gopay_user": {
+    "phone": "81299990002",
+    "otp": "1234",
+    "name": "User Gopay Payment",
+    "role": "Gopay Payment User",
+    "description": "User terdaftar dengan integrasi fitur pembayaran Gopay"
+  },
+  "registered_user_81299990003": {
+    "phone": "81299990003",
+    "otp": "1234",
+    "name": "User Registered 81299990003",
+    "role": "Registered User",
+    "description": "Akun terdaftar EvMoto (81299990003)"
+  },
+  "registered_user_81299990004": {
+    "phone": "81299990004",
+    "otp": "1234",
+    "name": "User Registered 81299990004",
+    "role": "Registered User",
+    "description": "Akun terdaftar EvMoto (81299990004)"
+  },
+  "registered_user_81299990005": {
+    "phone": "81299990005",
+    "otp": "1234",
+    "name": "User Registered 81299990005",
+    "role": "Registered User",
+    "description": "Akun terdaftar EvMoto (81299990005)"
+  },
+  "registered_user_81299990006": {
+    "phone": "81299990006",
+    "otp": "1234",
+    "name": "User Registered 81299990006",
+    "role": "Registered User",
+    "description": "Akun terdaftar EvMoto (81299990006)"
+  },
+  "registered_user_81299990007": {
+    "phone": "81299990007",
+    "otp": "1234",
+    "name": "User Registered 81299990007",
+    "role": "Registered User",
+    "description": "Akun terdaftar EvMoto (81299990007)"
+  },
+  "registered_user_81299990008": {
+    "phone": "81299990008",
+    "otp": "1234",
+    "name": "User Registered 81299990008",
+    "role": "Registered User",
+    "description": "Akun terdaftar EvMoto (81299990008)"
+  },
+  "registered_user_81299990009": {
+    "phone": "81299990009",
+    "otp": "1234",
+    "name": "User Registered 81299990009",
+    "role": "Registered User",
+    "description": "Akun terdaftar EvMoto (81299990009)"
+  },
+  "active_passenger": {
+    "phone": "81234567890",
+    "otp": "1234",
+    "name": "Budi Pratama",
+    "role": "Active Passenger",
+    "description": "Akun penumpang aktif terdaftar"
+  },
+  "corporate_passenger": {
+    "phone": "81398765432",
+    "otp": "1234",
+    "name": "Siti Rahma",
+    "role": "Corporate Passenger",
+    "description": "Akun penumpang korporat / bisnis"
+  },
+  "unregistered_user": {
+    "phone": "81299990000",
+    "otp": "1234",
+    "name": "User Baru",
+    "role": "Unregistered User",
+    "description": "Nomor valid namun belum terdaftar di sistem"
+  },
+  "driver_partner": {
+    "phone": "82211223344",
+    "otp": "1234",
+    "name": "Joko Driver",
+    "role": "Driver Partner",
+    "description": "Akun mitra pengemudi EvMoto"
+  },
+  "invalid_prefix_user": {
+    "phone": "082100000000",
+    "otp": "1234",
+    "name": "Invalid Prefix",
+    "role": "Negative Test (Prefix 0)",
+    "description": "Nomor diawali angka 0 (wajib diawali angka 8)"
+  },
+  "short_phone_user": {
+    "phone": "8214",
+    "otp": "1234",
+    "name": "Short Phone",
+    "role": "Negative Test (Short Phone)",
+    "description": "Nomor terlalu pendek kurang dari 8 digit"
+  },
+  "sqli_payload_user": {
+    "phone": "' OR '1'='1",
+    "otp": "1234",
+    "name": "SQLi Injected",
+    "role": "Security Test (SQL Injection)",
+    "description": "Payload SQL injection pada nomor handphone"
+  },
+  "xss_payload_user": {
+    "phone": "<script>alert(1)</script>",
+    "otp": "1234",
+    "name": "XSS Injected",
+    "role": "Security Test (XSS)",
+    "description": "Payload cross-site scripting"
+  }
+}
