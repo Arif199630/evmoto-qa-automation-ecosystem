@@ -56,6 +56,7 @@ class ApiClient:
         })
         self._subsidized_orders = set()
         self._processed_payout_dates = set()
+        self._claimed_onboarding_phones = set()
 
     def set_auth_token(self, token: str, header_key: str = "Authorization", prefix: str = "Bearer "):
         """Menyematkan token otorisasi ke seluruh request sesi."""
@@ -515,6 +516,28 @@ class ApiClient:
             sim_budget_empty = req_body.get("simulate_budget_exhausted", False)
             user_id = req_body.get("userId", 8812)
 
+            phone = str(req_body.get("phone", ""))
+            sim_farming = req_body.get("simulate_reregister_after_delete", False)
+
+            # Deteksi & Pertahanan Voucher Farming: Re-registrasi dengan nomor yang sama setelah akun dihapus
+            if sim_farming or (phone and phone in self._claimed_onboarding_phones):
+                return {
+                    "status_code": 200,
+                    "data": {
+                        "code": 200,
+                        "msg": "ALREADY_CLAIMED_ONBOARDING_REWARD",
+                        "data": {
+                            "userId": user_id,
+                            "companyId": 1,
+                            "packageId": 105,
+                            "vouchersIssued": 0,
+                            "totalDiscountValue": 0.0,
+                            "budgetDeducted": 0.0,
+                            "vouchers": []
+                        }
+                    }
+                }
+
             # Jika bukan EvMoto (companyId != 1) atau package tidak aktif
             if company_id != 1 or sim_inactive:
                 return {
@@ -558,6 +581,10 @@ class ApiClient:
                         }
                     }
                 }
+
+            # Catat nomor telepon ke daftar permanen histori klaim onboarding
+            if phone:
+                self._claimed_onboarding_phones.add(phone)
 
             # Default onboarding package penerbitan kupon lengkap
             return {

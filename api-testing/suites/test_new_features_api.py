@@ -190,6 +190,49 @@ class TestFitur3UserOnboardingVouchersApi:
         data = res_json.get("data", {})
         assert data.get("vouchersIssued") == 0, "Paket nonaktif tidak boleh menerbitkan voucher"
 
+    def test_tc_api_usr_vcr_06_voucher_farming_reregister_defense(self, evmoto_client: ApiClient):
+        """TC-API-VCR-06: Verifikasi Celah Voucher Farming - User menghapus akun lalu mendaftar ulang dengan nomor yang sama."""
+        target_phone = "081272370001"
+
+        # Tahap 1: Pendaftaran pertama kali (Normal First-Time Registration)
+        reg_payload_1 = {
+            "userId": 9016,
+            "companyId": 1,
+            "phone": target_phone,
+            "authType": "PHONE_OTP"
+        }
+        resp_1 = evmoto_client.put(ApiConfig.EP_USER_REGISTER, json_data=reg_payload_1)
+        assert resp_1.status_code == 200
+        res_json_1 = resp_1.json()
+        jsonschema.validate(instance=res_json_1, schema=USER_ONBOARDING_VOUCHER_SCHEMA)
+        data_1 = res_json_1.get("data", {})
+        assert data_1.get("vouchersIssued") == 3, "Pendaftaran pertama kali wajib berhasil menerima 3 kupon selamat datang"
+        assert data_1.get("totalDiscountValue") == 35000.0
+
+        # Tahap 2: Simulasi Penutupan / Penghapusan Akun Pengguna (Account Cancellation via Profil)
+
+        # Tahap 3: Re-Registrasi dengan nomor telepon yang sama persis (Simulasi Potensi Voucher Farming)
+        reg_payload_2 = {
+            "userId": 9017,  # ID user baru hasil re-registrasi
+            "companyId": 1,
+            "phone": target_phone,
+            "authType": "PHONE_OTP",
+            "simulate_reregister_after_delete": True
+        }
+        resp_2 = evmoto_client.put(ApiConfig.EP_USER_REGISTER, json_data=reg_payload_2)
+        assert resp_2.status_code == 200
+        res_json_2 = resp_2.json()
+        jsonschema.validate(instance=res_json_2, schema=USER_ONBOARDING_VOUCHER_SCHEMA)
+        data_2 = res_json_2.get("data", {})
+
+        # Tahap 4: Verifikasi Pertahanan Anti-Farming (Sistem Wajib Memblokir Kupon Ganda)
+        assert res_json_2.get("msg") == "ALREADY_CLAIMED_ONBOARDING_REWARD" or data_2.get("vouchersIssued") == 0, (
+            "POTENSI CELAH KEAMANAN: User yang mendaftar ulang dengan nomor sama tidak boleh menerima kupon kedua kali"
+        )
+        assert data_2.get("vouchersIssued") == 0, "Jumlah voucher diterbitkan harus 0 untuk re-registrasi nomor yang sama"
+        assert data_2.get("totalDiscountValue") == 0.0, "Total diskon harus Rp 0"
+        assert len(data_2.get("vouchers", [])) == 0, "Daftar voucher harus kosong"
+
 
 class TestFitur5RushHourSubsidyApi:
     """Pengujian Otomatis Fitur 5: Subsidi Jam Sibuk Driver (Rush Hour - Private Car Only)."""

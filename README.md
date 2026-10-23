@@ -13,8 +13,8 @@
 
 ## 🌟 Executive Summary & Key Achievements
 
-* 📊 **1.240+ Test Cases Terotomasi & Terdokumentasi Lengkap (1.257 TC Total):**
-  * ⚡ **API Automation Suite:** **48 Test Scenarios** (Autentikasi OTP/Bypass, Driver Telemetry & Order, Passenger Lifecycle & Fare, Security & Fraud Defense, Boundary Tests, ECGO Swap, Dompet Digital, serta Fitur Baru 2, 3, dan 5).
+* 📊 **1.240+ Test Cases Terotomasi & Terdokumentasi Lengkap (1.258 TC Total):**
+  * ⚡ **API Automation Suite:** **49 Test Scenarios** (Autentikasi OTP/Bypass, Driver Telemetry & Order, Passenger Lifecycle & Fare, Security & Fraud Defense, Anti-Voucher Farming Guard, Boundary Tests, ECGO Swap, Dompet Digital, serta Fitur Baru 2, 3, dan 5).
   * 🌐 **Web Admin Console:** **608 Test Cases** (25 modul administrasi, penetapan tarif, manajemen armada & driver, verifikasi order).
   * 🛵 **Driver Mobile App (v1.9.27):** **339 Test Cases** (Autentikasi, alur order, pendapatan jaminan GI, dompet eWallet, sewa motor & cicilan ECGO, akumulasi free swap 07:00-19:00 WIB, subsidi jam sibuk rush hour).
   * 👤 **Passenger Mobile App (v1.2.33):** **257 Test Cases** (Booking, live dispatch, multi-payment, riwayat perjalanan, profil, paket kupon registrasi onboarding).
