@@ -209,3 +209,102 @@ USER_CREATE_ORDER_SCHEMA = {
     }
 }
 
+# ==============================================================================
+# 5. NEW FEATURES SCHEMAS (FITUR 2, 3, & 5)
+# ==============================================================================
+
+FREE_SWAP_DAILY_PAYOUT_SCHEMA = {
+    "type": "object",
+    "required": ["code", "msg", "data"],
+    "properties": {
+        "code": {"type": "integer", "enum": [200]},
+        "msg": {"type": "string"},
+        "data": {
+            "type": "object",
+            "required": ["date", "allocatedCount", "eligibleDrivers"],
+            "properties": {
+                "date": {"type": "string"},
+                "totalEvaluated": {"type": "integer", "minimum": 0},
+                "allocatedCount": {"type": "integer", "minimum": 0},
+                "quotaRemaining": {"type": "integer", "minimum": 0},
+                "redisLockKey": {"type": "string"},
+                "eligibleDrivers": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": ["driverId", "onlineMinutesWindow", "linkedAt", "couponStatus"],
+                        "properties": {
+                            "driverId": {"type": "integer"},
+                            "onlineMinutesWindow": {"type": "integer"},
+                            "linkedAt": {"type": "string"},
+                            "couponStatus": {"type": "string", "enum": ["RESERVED", "ISSUED", "REJECTED_UNLINKED", "QUOTA_EXCEEDED"]},
+                            "ecgoCouponId": {"type": ["string", "integer", "null"]}
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+USER_ONBOARDING_VOUCHER_SCHEMA = {
+    "type": "object",
+    "required": ["code", "msg", "data"],
+    "properties": {
+        "code": {"type": "integer", "enum": [200]},
+        "msg": {"type": "string"},
+        "data": {
+            "type": "object",
+            "required": ["userId", "companyId", "vouchersIssued", "totalDiscountValue"],
+            "properties": {
+                "userId": {"type": "integer"},
+                "companyId": {"type": "integer"},
+                "packageId": {"type": "integer"},
+                "vouchersIssued": {"type": "integer", "minimum": 0},
+                "totalDiscountValue": {"type": "number", "minimum": 0},
+                "budgetDeducted": {"type": "number", "minimum": 0},
+                "vouchers": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": ["couponId", "amount", "expireTime"],
+                        "properties": {
+                            "couponId": {"type": "integer"},
+                            "amount": {"type": "number"},
+                            "expireTime": {"type": "string"}
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+RUSH_HOUR_SUBSIDY_SCHEMA = {
+    "type": "object",
+    "required": ["code", "msg", "data"],
+    "properties": {
+        "code": {"type": "integer", "enum": [200]},
+        "msg": {"type": "string"},
+        "data": {
+            "type": "object",
+            "required": ["orderId", "driverId", "subsidyAmount", "tierApplied", "windowMatched", "isGuaranteedIncomeExempt"],
+            "properties": {
+                "orderId": {"type": "string"},
+                "driverId": {"type": "integer"},
+                "vehicleType": {"type": "integer"},
+                "orderMoneyRaw": {"type": "number"},
+                "orderMoneyRounded": {"type": "integer"},
+                "evaluatedTime": {"type": "string"},
+                "windowMatched": {"type": "string"},
+                "tierApplied": {"type": "integer", "enum": [0, 1, 2, 3]},
+                "subsidyAmount": {"type": "integer", "enum": [0, 3000, 4000, 5000]},
+                "balanceChangeType": {"type": "integer", "enum": [23]},
+                "incomeType": {"type": "integer", "enum": [1]},
+                "isGuaranteedIncomeExempt": {"type": "boolean"}
+            }
+        }
+    }
+}
+
+

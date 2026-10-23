@@ -92,4 +92,26 @@ class ApiConfig:
     EP_ECGO_CONNECT_START = "/v5/users/evmoto-connect/start"
     EP_ECGO_DISCOUNTS = "/v5/users/diskon/list"
 
+    # --------------------------------------------------------------------------
+    # Fitur Baru 2: Akumulasi Online Driver -> Kupon Free Swap ECGO
+    # --------------------------------------------------------------------------
+    EP_DRIVER_FREE_SWAP_DAILY = "/account/base/driver/freeSwapDaily"
+    EP_DRIVER_FREE_SWAP_ONLINE_SESSION = "/driver/api/driver/onlineSession"
+    EP_ADMIN_FREE_SWAP_LIST = "/admin/freeSwap/list"
+
+    # --------------------------------------------------------------------------
+    # Fitur Baru 3: Paket Kupon Registrasi User Baru (Onboarding)
+    # --------------------------------------------------------------------------
+    EP_USER_REGISTER = "/account/base/user"
+    EP_USER_CAPTCHA_LOGIN = "/account/base/user/captchaLogin"
+    EP_USER_THREE_LOGIN = "/account/base/user/threeLogin"
+    EP_USER_COUPON_LIST = "/user/api/coupon/userCouponList"
+
+    # --------------------------------------------------------------------------
+    # Fitur Baru 5: Subsidi Jam Sibuk Driver (Rush Hour - Private Car Only)
+    # --------------------------------------------------------------------------
+    EP_ORDER_RUSH_HOUR_SUBSIDY = "/order/api/order/rushHourSubsidy"
+    EP_ORDER_COMPLETE = "/order/api/order/completeOrder"
+    EP_DRIVER_BALANCE_HISTORY = "/account/api/driver/balanceHistory"
+
 

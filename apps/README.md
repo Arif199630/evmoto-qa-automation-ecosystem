@@ -11,8 +11,8 @@ Folder ini mendokumentasikan spesifikasi teknis dan artefak APK yang digunakan d
 
 | Aplikasi | Nama File Build | Versi | Package Name | Ukuran | Status Verifikasi |
 | :--- | :--- | :---: | :--- | :---: | :---: |
-| **EvMoto User** | `evmoto-user-1.2.33-env-dev_golang-20261020-v8a.apk` | `1.2.33` | `com.evmoto.user.app` | 28.2 MB | ✅ Verified (237 TC) |
-| **EvMoto Driver** | `evmoto-driver-1.9.27-env-dev_golang-20261020-v7a.apk` | `1.9.27` | `com.evmoto.driver.app` | 28.9 MB | ✅ Verified (299 TC) |
+| **EvMoto User** | `evmoto-user-1.2.33-env-dev_golang-20261020-v8a.apk` | `1.2.33` | `com.evmoto.user.app` | 28.2 MB | ✅ Verified (257 TC) |
+| **EvMoto Driver** | `evmoto-driver-1.9.27-env-dev_golang-20261020-v7a.apk` | `1.9.27` | `com.evmoto.driver.app` | 28.9 MB | ✅ Verified (339 TC) |
 | **ECGO SuperApps** | `ECGO SuperApps.apk` | `Latest` | `pk.krave.flutter_app` | 146.0 MB | ✅ Verified (Interkoneksi) |
 
 ---

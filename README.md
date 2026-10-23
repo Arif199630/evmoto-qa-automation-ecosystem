@@ -13,11 +13,13 @@
 
 ## 🌟 Executive Summary & Key Achievements
 
-* 📊 **1.180+ Test Cases Terotomasi & Terdokumentasi Lengkap:**
-  * ⚡ **API Automation Suite:** **31 Test Scenarios** (Autentikasi OTP/Bypass, Driver Telemetry & Order, Passenger Lifecycle & Fare, Security & Fraud Defense, Boundary Tests, ECGO Swap, Dompet Digital).
+* 📊 **1.240+ Test Cases Terotomasi & Terdokumentasi Lengkap (1.257 TC Total):**
+  * ⚡ **API Automation Suite:** **48 Test Scenarios** (Autentikasi OTP/Bypass, Driver Telemetry & Order, Passenger Lifecycle & Fare, Security & Fraud Defense, Boundary Tests, ECGO Swap, Dompet Digital, serta Fitur Baru 2, 3, dan 5).
   * 🌐 **Web Admin Console:** **608 Test Cases** (25 modul administrasi, penetapan tarif, manajemen armada & driver, verifikasi order).
-  * 🛵 **Driver Mobile App:** **299 Test Cases** (Autentikasi, alur order, pendapatan jaminan GI, dompet eWallet, sewa motor & cicilan ECGO).
-  * 👤 **Passenger Mobile App:** **237 Test Cases** (Booking, live dispatch, multi-payment, riwayat perjalanan, profil).
+  * 🛵 **Driver Mobile App (v1.9.27):** **339 Test Cases** (Autentikasi, alur order, pendapatan jaminan GI, dompet eWallet, sewa motor & cicilan ECGO, akumulasi free swap 07:00-19:00 WIB, subsidi jam sibuk rush hour).
+  * 👤 **Passenger Mobile App (v1.2.33):** **257 Test Cases** (Booking, live dispatch, multi-payment, riwayat perjalanan, profil, paket kupon registrasi onboarding).
+* 📈 **Performance & Load Testing Suite (Locust 2.x):**
+  * Pengujian beban konkurensi (10, 100, hingga 1.000 Concurrent Virtual Users) dengan validasi SLA P95 < 500ms, Error Rate 0.0%, serta pelaporan otomatis bilingual (Indonesia & English Executive / Developer Reports).
 * 🔄 **Interkoneksi 3-Sisi (ECGO Connect & Free Swap Kupon):**
   * Handshake penautan akun *One-Way Binding* antara **ECGO SuperApps** $\leftrightarrow$ **EvMoto Driver App** $\leftrightarrow$ **Dashboard Admin**.
   * Otomasi evaluasi sesi online 5 menit untuk penerbitan kupon diskon 100% swap baterai secara realtime.
@@ -56,6 +58,13 @@ Struktur direktori dirancang dengan prinsip modularitas tinggi agar mudah dipaha
 │   └── record_dashboard_price_bug.py  # Automation Script Verifikasi Form Tarif
 ├── integration-ecosystem/             # Pengujian Interkoneksi Terpadu 3-Sisi
 │   └── test_ecgo_connect_integrated_suite.py # Multi-Role Actor Test Suite (100% Headless)
+├── performance-testing/               # [MODUL PERFORMANCE & LOAD TESTING]
+│   ├── config/                        # Dynamic Config, Timeout & SLA Threshold Manager
+│   ├── locustfiles/                   # Skenario Locust (Passenger, Driver, ECGO, Unified Mix)
+│   ├── shapes/                        # Load Profiles (Standard Load, Step-up Stress, Surge Spike)
+│   ├── reports/                       # Laporan Interaktif HTML & File Statistik CSV
+│   ├── run_performance.py             # CLI Runner Otomatis & SLA Validator
+│   └── README.md                      # Dokumentasi Teknis Performance Testing
 ├── apps/                              # Spesifikasi & Metadata Build APK
 │   └── README.md                      # Metadata Versi APK, Package, Checksum & Release Links
 ├── docs/                              # Dokumentasi Resmi & Laporan QA
@@ -72,11 +81,13 @@ Struktur direktori dirancang dengan prinsip modularitas tinggi agar mudah dipaha
 
 | Komponen Sistem | Target Aplikasi / Endpoint | Lingkungan | Platform & Tools |
 | :--- | :--- | :---: | :--- |
+| **Performance Testing** | `https://api-dev.evmoto.internal` *(Masked)* | Staging / Dev | **Locust 2.x**, Load, Stress, Spike Profiles, SLA Validator |
 | **REST API Services** | `https://api-dev.evmoto.internal` *(Masked)* | Staging / Dev | Pytest, Requests, JSONSchema, Contract Testing |
 | **Web Admin Console** | `https://admin-staging.evmoto.internal` *(Masked)* | Staging / Dev | Selenium, Headless Chrome, Requests |
 | **Driver Mobile App** | `evmoto-driver-1.9.27-env-dev_golang-20261020-v7a.apk` | Golang Dev | Appium, UiAutomator2, Pytest BDD |
 | **Passenger App** | `evmoto-user-1.2.33-env-dev_golang-20261020-v8a.apk` | Golang Dev | Appium, UiAutomator2, Pytest BDD |
 | **ECGO SuperApps** | `ECGO SuperApps.apk` (`https://ecgo-api.internal:3002`) | Dev API | Headless Protocol, Web Bridge Handshake |
+
 
 > *Catatan Keamanan:* Semua domain internal, IP server staging, nomor telepon uji coba, dan kredensial dalam dokumentasi publik direkayasa atau dimuat via environment variable demi menjaga kerahasiaan data internal.
 
