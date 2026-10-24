@@ -98,21 +98,36 @@ class DriverRoleSimulator:
             if self._active_trip is not None:
                 raise ValueError("Driver sedang aktif mengantar order lain, tidak dapat menerima order baru!")
 
+            oid = order_data.get("orderId") or order_data.get("order_id") or f"ORD-{int(time.time())}"
             self._active_trip = {
-                "order_id": order_data.get("order_id", f"ORD-{int(time.time())}"),
+                "order_id": oid,
+                "orderId": oid,
                 "user_phone": order_data.get("user_phone", "81299990001"),
                 "pickup": order_data.get("pickup", "Lokasi Jemput"),
                 "destination": order_data.get("destination", "Lokasi Tujuan"),
                 "fare": order_data.get("fare", "Rp 10.200"),
                 "payment_method": order_data.get("payment_method", "cash"),
-
-                "status": "driver_assigned",
+                "status": "ACCEPTED",
+                "trip_state": "driver_assigned",
                 "accepted_at": time.time()
             }
             self._is_available = False
             self._dispatch_history.append(self._active_trip)
             logger.info(f"[DRIVER ROLE] Driver {self.driver_name} MENERIMA Order {self._active_trip['order_id']} dari {self._active_trip['user_phone']}")
             return self._active_trip
+
+    def simulate_dispatch_order(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Mensimulasikan dispatch pesanan baru dari server ke driver yang sedang online/standby."""
+        if not self._is_online:
+            return {"status": "FAILED", "reason": "Driver offline"}
+        oid = order_data.get("orderId") or order_data.get("order_id") or f"ORD-DISP-{int(time.time())}"
+        logger.info(f"[DRIVER ROLE] Broadcast Dispatch order {oid} ke Driver {self.driver_name} (Timeout: {order_data.get('biddingTimeout', 20)}s)")
+        return {
+            "status": "DISPATCHED",
+            "orderId": oid,
+            "biddingTimeout": order_data.get("biddingTimeout", 20),
+            "timestamp": time.time()
+        }
 
     # ==========================================================================
     # 3. PENANGANAN RACE CONDITION (1 DRIVER, 2 USER ORDER SIMULTAN)
