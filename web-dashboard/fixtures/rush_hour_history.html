@@ -1,0 +1,881 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Riwayat subsidi jam sibuk | eVMOTO Admin</title>
+  <meta name="description" content="eVMOTO Admin Service">
+  <script>
+    try {
+      document.documentElement.classList.toggle("dark", localStorage.getItem("evmoto-admin-theme") === "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body class="app-body">
+  <main class="app-main">
+    
+  <div class="dashboard-shell" data-dashboard-shell>
+    <div class="sidebar-backdrop" data-sidebar-backdrop aria-hidden="true"></div>
+
+    <aside class="dashboard-sidebar" data-sidebar aria-label="Navigasi utama">
+  <div class="sidebar-brand">
+    <span class="sidebar-brand__mark" aria-hidden="true">eV</span>
+    <span><strong>eVMOTO</strong><small>Admin Console</small></span>
+    <button class="sidebar-close" type="button" data-sidebar-close aria-label="Tutup navigasi">
+      <i data-lucide="x" aria-hidden="true"></i>
+    </button>
+  </div>
+
+  <nav class="sidebar-nav" aria-label="Modul administrasi">
+    <ul class="sidebar-menu">
+      
+        
+          <li>
+            <a class="sidebar-link" href="/userExit">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Account cancellation management</span>
+            </a>
+          </li>
+        
+      
+        
+          <li>
+            <a class="sidebar-link" href="/blackboard">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Home page</span>
+            </a>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-100">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Systems management</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-100" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/mgr">Platform administrator</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/role">Role management</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/menu">Menu management</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/dept">Divisional management</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tCompany/admin_update">Enterprise information</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tCompany/auditPage">Enterprise Audit List</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-245">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>User management</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-245" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/tUser">User management</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1267362239285878793">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Basic information management</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1267362239285878793" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/tAgreement/showSmallPieceLogistics">City Express delivery agreement</a></li>
+                
+              
+                
+                  <li>
+                    <button class="sidebar-sublink sidebar-submenu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1267362239285878794">
+                      <span>Protocol management</span>
+                      <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+                    </button>
+                    <ul class="sidebar-submenu sidebar-submenu--nested" id="sidebar-menu-1267362239285878794" hidden>
+                      
+                        <li><a class="sidebar-sublink" href="/tAgreement">Client terminal protocol management</a></li>
+                      
+                    </ul>
+                  </li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tAgreement/order">Instruction for order cancellation</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tAgreement/user">User guide settings</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tAgreement/law">Setting of laws and regulations</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tAgreement/me">About our settings</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/TStartPage">Start page setup</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/TGuidePage">Guide page settings</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tAdvertisement">Advertising settings</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1267631028544000008">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Opening up urban management</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1267631028544000008" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/tOpenCity">Urban management</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/THotAddress">City search address settings</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/service-area">Service Area</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1267662351509766151">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Driver management</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1267662351509766151" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/tDriver/without">司机代扣管理</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tDriver">Driver audit list</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tDriverVerify">Driver replacement vehicle audit list management</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tDriver/yesDriver">Drivers&#39; list</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1268503736945254414">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Vehicle management</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1268503736945254414" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/tCarBrand">Vehicle brand management</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tCarModel">Vehicle type management</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tCar">Vehicle management</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1268836258128351239">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Branch management</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1268836258128351239" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/tCompany">Branch management</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1269075485671837704">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Franchisee management</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1269075485671837704" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/tCompany/franchisee">Franchisee management</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1269187383113371656">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Travel order management</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1269187383113371656" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/tOrderPrivateCar">Motorcycle order management</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tOrderLogistics">Intra-city express delivery of orders</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1309014874136809505">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>App Management</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1309014874136809505" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/TChatSet">Chat message preset Settings</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tbBanner">Icon management</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/TVoice">Voice broadcast management</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1270155331579760646">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Withdrawal management</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1270155331579760646" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/tPubWithdrawal">Withdrawal list</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/withdrawalConfig">Withdrawal Config</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/walletPayoutChannel">Wallet payout channel</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/beneficiaryBank">Beneficiary bank</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1309014874136810000">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Recruitment Management</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1309014874136810000" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/recruitment/report">Recruitment Report</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/recruitment/register">Register Driver</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1270187720196505607">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Comment management</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1270187720196505607" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/tOrderEvaluate">Comment list</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1270287371570556935">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>System setup</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1270287371570556935" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/tSysReformist">System setup</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/userDebtUnblock">Unblock Cancellation Debt</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1270230075494756355">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Complaint management</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1270230075494756355" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/tComplaint">Complaint list</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1270287371570556936">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Sensitive word management</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1270287371570556936" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/tSysSensitiveWords">Sensitive word management</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1270321112590364679">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Feedback management</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1270321112590364679" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/tFeedback">Driver feedback management</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tFeedback/userFeedback">User feedback management</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tProblem">User message management</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1270542855032553476">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Announcement management</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1270542855032553476" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/tNotices">Scroll message settings</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tNotices/system">System announcement settings</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1270626371560824840">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Version management</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1270626371560824840" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/tVersionManagement">Version management</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1271615006909194251">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Activity management</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1271615006909194251" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/driverActivity">Driver activity management</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/sysCouponActivity">Gift activity management</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/userActivity">User activity management</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tUserLarge">Large coupon activities management</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tEnsureIncomeRule">Driver guaranteed income management</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/couponDistribution">Coupon Distribution Management</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/couponUsage">Coupon Usage</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/sysCouponRecord">Coupon management</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1308698188288417801">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Vehicle model setting</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1308698188288417801" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/tMotorModel">Motorcycle model setting</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1308939095893929990">
+              <i data-lucide="menu" aria-hidden="true"></i>
+              <span>Price control</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1308939095893929990" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/tSystemPrice/special">Motorcycle price setting</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tSystemPrice/small">Intra-city express delivery price setting</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/tSystemPrice/check">Price review list</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1309014874136810026">
+              <i data-lucide="link" aria-hidden="true"></i>
+              <span>ECGO Connect</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1309014874136810026" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/ecgoConnect/drivers">Driver Terhubung</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/ecgoConnect">Pengaturan</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1309014874136810027">
+              <i data-lucide="ticket-percent" aria-hidden="true"></i>
+              <span>Free Swap</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1309014874136810027" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/freeSwap">Pengaturan</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/freeSwap/monitor">Monitoring</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/freeSwap/sessions">Riwayat sesi</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+        
+          <li>
+            <button class="sidebar-link sidebar-menu-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-controls="sidebar-menu-1309014874136810028">
+              <i data-lucide="clock" aria-hidden="true"></i>
+              <span>Subsidi jam sibuk</span>
+              <i class="sidebar-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sidebar-submenu" id="sidebar-menu-1309014874136810028" hidden>
+              
+                
+                  <li><a class="sidebar-sublink" href="/rushHour/settings">Pengaturan</a></li>
+                
+              
+                
+                  <li><a class="sidebar-sublink" href="/rushHour/history">Riwayat</a></li>
+                
+              
+            </ul>
+          </li>
+        
+      
+    </ul>
+  </nav>
+</aside>
+
+
+    <div class="dashboard-workspace">
+      <header class="dashboard-appbar">
+  <div class="appbar-heading">
+    <button
+      class="appbar-menu"
+      type="button"
+      data-sidebar-open
+      aria-label="Buka navigasi"
+      aria-expanded="false"
+    >
+      <i data-lucide="menu" aria-hidden="true"></i>
+    </button>
+    <div>
+      <p>Order</p>
+      <h1>Riwayat subsidi jam sibuk</h1>
+    </div>
+  </div>
+
+  <div class="appbar-actions">
+    <button
+      class="theme-toggle"
+      type="button"
+      data-theme-toggle
+      aria-label="Aktifkan mode gelap"
+      aria-pressed="false"
+    >
+      <span class="theme-toggle__track" aria-hidden="true">
+        <span class="theme-toggle__thumb">
+          <i class="theme-icon theme-icon--sun" data-lucide="sun" aria-hidden="true"></i>
+          <i class="theme-icon theme-icon--moon" data-lucide="moon" aria-hidden="true"></i>
+        </span>
+      </span>
+    </button>
+
+    <div class="profile-menu" data-profile-menu>
+      <button
+        class="profile-trigger"
+        type="button"
+        data-profile-trigger
+        aria-haspopup="menu"
+        aria-expanded="false"
+      >
+        <img src="/static/img/profile-avatar.svg" alt="Foto profil Admin eVMOTO">
+        <span class="profile-trigger__copy">
+          <strong>Admin eVMOTO</strong>
+          <small>Administrator</small>
+        </span>
+        <i class="profile-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+      </button>
+
+      <div class="profile-dropdown" data-profile-dropdown role="menu" hidden>
+        <div class="profile-dropdown__header">
+          <img src="/static/img/profile-avatar.svg" alt="">
+          <span><strong>Admin eVMOTO</strong><small>Administrator</small></span>
+        </div>
+        <div class="profile-dropdown__divider"></div>
+        <button class="profile-dropdown__item" type="button" data-profile-edit role="menuitem">
+          <i data-lucide="pencil" aria-hidden="true"></i>
+          Edit Profil
+        </button>
+        <button class="profile-dropdown__item" type="button" data-password-edit role="menuitem">
+          <i data-lucide="lock" aria-hidden="true"></i>
+          Edit Password
+        </button>
+        <form action="/logout" method="post">
+          <button class="profile-dropdown__item is-danger" type="submit" role="menuitem">
+            <i data-lucide="log-out" aria-hidden="true"></i>
+            Keluar
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</header>
+
+
+      <div class="dashboard-content">
+        
+  <section class="space-y-4">
+    <div class="overflow-hidden rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] shadow-sm">
+      <div class="flex flex-col gap-3 border-b border-[var(--dashboard-border)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div>
+          <h2 class="text-base font-bold text-[var(--dashboard-text)]">Subsidi yang sudah dibayar</h2>
+          <p class="mt-1 text-xs text-[var(--dashboard-muted)]">Satu baris per order. Tanggal memakai waktu yang menentukan window, dalam WIB. Order yang tidak dapat subsidi tidak muncul di sini.</p>
+        </div>
+        <a class="inline-flex h-9 items-center gap-2 rounded-lg border border-[var(--dashboard-border)] px-3 text-xs font-semibold" href="/rushHour/settings">Pengaturan</a>
+      </div>
+
+      
+
+      <form class="flex flex-wrap items-end gap-3 border-b border-[var(--dashboard-border)] p-4" method="get" action="/rushHour/history">
+        <label class="block text-xs font-semibold text-[var(--dashboard-muted)]">
+          Cari
+          <input class="mt-1 h-10 w-64 rounded-lg border border-[var(--dashboard-border)] bg-[var(--dashboard-surface-soft)] px-3 text-sm" type="search" name="q" value="" placeholder="Order, driver, nama, telepon">
+        </label>
+        <label class="block text-xs font-semibold text-[var(--dashboard-muted)]">
+          Dari
+          <input class="mt-1 h-10 rounded-lg border border-[var(--dashboard-border)] bg-[var(--dashboard-surface-soft)] px-3 text-sm" type="date" name="from" value="">
+        </label>
+        <label class="block text-xs font-semibold text-[var(--dashboard-muted)]">
+          Sampai
+          <input class="mt-1 h-10 rounded-lg border border-[var(--dashboard-border)] bg-[var(--dashboard-surface-soft)] px-3 text-sm" type="date" name="to" value="">
+        </label>
+        <button class="inline-flex h-10 items-center gap-2 rounded-lg bg-[var(--dashboard-primary)] px-4 text-sm font-semibold text-white" type="submit">Terapkan</button>
+        <a class="inline-flex h-10 items-center gap-2 rounded-lg border border-[var(--dashboard-border)] px-4 text-sm font-semibold" href="/rushHour/history">Reset</a>
+      </form>
+
+      
+        <div class="grid gap-3 border-b border-[var(--dashboard-border)] px-5 py-4 sm:grid-cols-3 sm:px-6">
+          <div>
+            <div class="text-xs font-semibold text-[var(--dashboard-muted)]">Order</div>
+            <div class="mt-1 text-lg font-bold">1</div>
+          </div>
+          <div>
+            <div class="text-xs font-semibold text-[var(--dashboard-muted)]">Total subsidi</div>
+            <div class="mt-1 text-lg font-bold">Rp 3.000</div>
+          </div>
+          <div>
+            <div class="text-xs font-semibold text-[var(--dashboard-muted)]">Total nilai order</div>
+            <div class="mt-1 text-lg font-bold">Rp 6.000</div>
+          </div>
+        </div>
+      
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-[var(--dashboard-border)] text-left text-sm">
+          <thead class="bg-[var(--dashboard-surface-soft)]">
+            <tr class="text-xs font-semibold uppercase tracking-wide text-[var(--dashboard-muted)]">
+              <th class="whitespace-nowrap px-4 py-3" scope="col">Dibayar</th>
+              <th class="whitespace-nowrap px-4 py-3" scope="col">Order</th>
+              <th class="whitespace-nowrap px-4 py-3" scope="col">Driver</th>
+              <th class="whitespace-nowrap px-4 py-3" scope="col">Nilai order</th>
+              <th class="whitespace-nowrap px-4 py-3" scope="col">Subsidi</th>
+              <th class="whitespace-nowrap px-4 py-3" scope="col">Window</th>
+              <th class="whitespace-nowrap px-4 py-3" scope="col">Waktu penentu</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[var(--dashboard-border)]">
+            
+              <tr class="hover:bg-[var(--dashboard-surface-soft)]">
+                <td class="whitespace-nowrap px-4 py-3 text-[var(--dashboard-muted)]">2026-10-23 13:43:03</td>
+                <td class="whitespace-nowrap px-4 py-3">
+                  <a class="font-semibold text-[var(--dashboard-primary)]" href="/tOrderPrivateCar/tOrderPrivateCar_orderDetail/2113521148271529984">2113521148271529984</a>
+                </td>
+                <td class="whitespace-nowrap px-4 py-3">
+                  <div class="font-semibold">testdr</div>
+                  <div class="text-xs text-[var(--dashboard-muted)]">ID 313 · 6285156125633</div>
+                </td>
+                <td class="whitespace-nowrap px-4 py-3">Rp 6.000</td>
+                <td class="whitespace-nowrap px-4 py-3 font-semibold">Rp 3.000</td>
+                <td class="whitespace-nowrap px-4 py-3">
+                  <div>10:45-18:45</div>
+                  
+                    <div class="max-w-xs truncate text-xs text-[var(--dashboard-muted)]" title="[{&#34;max&#34;:10000,&#34;subsidy&#34;:3000},{&#34;max&#34;:20000,&#34;subsidy&#34;:4000},{&#34;max&#34;:null,&#34;subsidy&#34;:5000}]">[{&#34;max&#34;:10000,&#34;subsidy&#34;:3000},{&#34;max&#34;:20000,&#34;subsidy&#34;:4000},{&#34;max&#34;:null,&#34;subsidy&#34;:5000}]</div>
+                  
+                </td>
+                <td class="whitespace-nowrap px-4 py-3 text-[var(--dashboard-muted)]">2026-10-23 13:41:23</td>
+              </tr>
+            
+          </tbody>
+        </table>
+      </div>
+      <div class="flex flex-col gap-3 border-t border-[var(--dashboard-border)] px-4 py-3 text-xs text-[var(--dashboard-muted)] lg:flex-row lg:items-center lg:justify-between">
+  <span>
+    
+      Showing 1–1 of 1
+    
+  </span>
+  <div class="flex flex-wrap items-center gap-2">
+    <form class="flex items-center gap-2" method="get" action="/rushHour/history">
+      
+      <label class="flex items-center gap-2 font-semibold">
+        Rows
+        <select class="h-9 rounded-lg border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] px-2" name="perPage" onchange="this.form.submit()">
+          
+            <option value="10" selected>10</option>
+          
+            <option value="20">20</option>
+          
+            <option value="50">50</option>
+          
+            <option value="100">100</option>
+          
+        </select>
+      </label>
+    </form>
+    <nav class="flex items-center gap-2" aria-label="Pagination">
+      
+        <span class="inline-flex h-9 cursor-not-allowed items-center rounded-lg border border-[var(--dashboard-border)] px-3 opacity-60">First</span>
+        <span class="inline-flex h-9 cursor-not-allowed items-center gap-1 rounded-lg border border-[var(--dashboard-border)] px-3 opacity-60"><i class="h-4 w-4" data-lucide="chevron-left"></i>Previous</span>
+      
+      <span class="px-1 font-semibold">1 / 1</span>
+      
+        <span class="inline-flex h-9 cursor-not-allowed items-center gap-1 rounded-lg border border-[var(--dashboard-border)] px-3 opacity-60">Next<i class="h-4 w-4" data-lucide="chevron-right"></i></span>
+        <span class="inline-flex h-9 cursor-not-allowed items-center rounded-lg border border-[var(--dashboard-border)] px-3 opacity-60">Last</span>
+      
+    </nav>
+  </div>
+</div>
+
+    </div>
+  </section>
+
+      </div>
+    </div>
+
+    <div class="dashboard-toast" data-toast role="status" aria-live="polite" hidden></div>
+  </div>
+
+  </main>
+
+  <script src="https://unpkg.com/lucide@1.42.0/dist/umd/lucide.min.js" defer></script>
+  <script src="/static/js/app.js" defer></script>
+</body>
+</html>
