@@ -60,7 +60,7 @@ class TestRushHourAdminUiApi:
         return ""
 
     def test_01_admin_access_unauthorized_protection(self):
-        """[Security] Memverifikasi akses tanpa login ditolak dan diarahkan ke /login."""
+        """[NEGATIVE TRUE - NT-01] Akses admin tanpa login ditolak dan diarahkan (302/303) ke /login."""
         if not self.is_mock_mode:
             try:
                 res_settings = self.unauth_session.get(f"{self.BASE_URL}/rushHour/settings", allow_redirects=False, timeout=3)
@@ -73,7 +73,7 @@ class TestRushHourAdminUiApi:
         assert True
 
     def test_02_admin_settings_page_render_and_title(self):
-        """[UI Render] Memverifikasi halaman /rushHour/settings render dengan status 200 & title tepat."""
+        """[POSITIVE TRUE - PT-01] Halaman /rushHour/settings berhasil render (HTTP 200) dan form terload."""
         html = ""
         if not self.is_mock_mode:
             try:
@@ -91,7 +91,7 @@ class TestRushHourAdminUiApi:
         assert 'name="enabled"' in html, "Checkbox toggle 'Bayar subsidi' wajib ada"
 
     def test_03_admin_ui_buttons_and_js_contract(self):
-        """[UI Controls] Memverifikasi tombol aksi UI dan kontrak skrip rush-hour.js."""
+        """[POSITIVE TRUE - PT-02] Tombol aksi UI (Tambah/Hapus Window/Tier, Tanpa Batas) aktif dan terhubung ke JS."""
         html = ""
         if not self.is_mock_mode:
             try:
@@ -114,7 +114,7 @@ class TestRushHourAdminUiApi:
         assert 'src="/static/js/rush-hour.js"' in html, "Skrip rush-hour.js wajib terhubung di template"
 
     def test_04_admin_save_valid_multi_window_and_tiers(self):
-        """[Process & Output] Menyimpan pengaturan multi-window dan bertingkat dengan sukses."""
+        """[POSITIVE TRUE - PT-03] Menyimpan konfigurasi multi-window dan tier sukses (HTTP 303 -> ?saved=1)."""
         if not self.is_mock_mode:
             try:
                 payload = [
@@ -144,7 +144,7 @@ class TestRushHourAdminUiApi:
         assert True
 
     def test_05_admin_negative_validation_window_start_after_end(self):
-        """[Negative Validation] Jam selesai mendahului jam mulai harus ditolak dengan HTTP 422."""
+        """[NEGATIVE TRUE - NT-02] Jam selesai mendahului jam mulai ditolak server dengan HTTP 422."""
         if not self.is_mock_mode:
             try:
                 invalid_payload = [
@@ -166,7 +166,7 @@ class TestRushHourAdminUiApi:
         assert True
 
     def test_06_admin_negative_validation_non_ascending_tiers(self):
-        """[Negative Validation] Batas atas tier tidak menaik harus ditolak dengan HTTP 422."""
+        """[NEGATIVE TRUE - NT-03] Batas atas tier tidak menaik ditolak server dengan HTTP 422."""
         if not self.is_mock_mode:
             try:
                 invalid_payload = [
@@ -192,7 +192,7 @@ class TestRushHourAdminUiApi:
         assert True
 
     def test_07_admin_history_page_table_and_columns(self):
-        """[Sub-page Validation] Memverifikasi halaman riwayat /rushHour/history render tabel dan kolom lengkap."""
+        """[POSITIVE TRUE - PT-04] Sub-halaman riwayat /rushHour/history render tabel dan 7 kolom penentu lengkap."""
         html = ""
         if not self.is_mock_mode:
             try:
@@ -219,7 +219,7 @@ class TestRushHourAdminUiApi:
         assert "Terapkan" in html, "Tombol Terapkan filter wajib ada"
 
     def test_08_admin_history_search_filter_functionality(self):
-        """[Filter & Search] Memverifikasi pencarian berdasarkan ID Driver pada riwayat subsidi."""
+        """[POSITIVE TRUE - PT-05] Pencarian data berdasarkan ID Driver pada riwayat subsidi sukses menyaring data."""
         html = ""
         if not self.is_mock_mode:
             try:
@@ -235,7 +235,7 @@ class TestRushHourAdminUiApi:
         assert "ID 313" in html, "Hasil filter pencarian '313' harus menampilkan data driver ID 313"
 
     def test_09_admin_history_security_sanitization(self):
-        """[Security & Integrity] Memverifikasi parameter pencarian kebal terhadap XSS dan SQL Injection."""
+        """[NEGATIVE FALSE - NF-01] Eksploitasi XSS dan SQLi pada parameter pencarian disanitasi tanpa meruntuhkan server."""
         malicious_query = "<script>alert('xss')</script>' OR 1=1 --"
         html = ""
         if not self.is_mock_mode:

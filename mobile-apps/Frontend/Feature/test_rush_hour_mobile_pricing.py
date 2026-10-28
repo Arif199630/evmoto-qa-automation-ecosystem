@@ -36,7 +36,7 @@ class TestRushHourMobilePricing:
     """Test suite resmi untuk pricing engine dan kalkulasi subsidi argo original."""
 
     def test_01_tier_1_short_distance_rush_hour_subsidy(self):
-        """[TC-RH-MOB-01] Order Jarak Dekat (Argo Rp 6.000) pada Jam Sibuk berhak atas Subsidi Rp 3.000."""
+        """[POSITIVE TRUE - PT-01] Order Jarak Dekat (Argo Rp 6.000) pada Jam Sibuk sukses berhak atas Subsidi Rp 3.000."""
         calc_result = RushHourSubsidyCalculator.calculate_order_subsidy(
             order_time="11:15",
             original_base_fare=6000.0
@@ -46,7 +46,7 @@ class TestRushHourMobilePricing:
         assert calc_result["original_base_fare"] == 6000.0
 
     def test_02_tier_2_medium_distance_rush_hour_subsidy(self):
-        """[TC-RH-MOB-02] Order Jarak Sedang (Argo Rp 14.400) pada Jam Sibuk berhak atas Subsidi Rp 4.000."""
+        """[POSITIVE TRUE - PT-02] Order Jarak Sedang (Argo Rp 14.400) pada Jam Sibuk sukses berhak atas Subsidi Rp 4.000."""
         calc_result = RushHourSubsidyCalculator.calculate_order_subsidy(
             order_time="14:30",
             original_base_fare=14400.0
@@ -56,7 +56,7 @@ class TestRushHourMobilePricing:
         assert calc_result["original_base_fare"] == 14400.0
 
     def test_03_tier_3_long_distance_unlimited_subsidy(self):
-        """[TC-RH-MOB-03] Order Jarak Jauh (Argo Rp 28.500) pada Jam Sibuk berhak atas Subsidi Rp 5.000."""
+        """[POSITIVE TRUE - PT-03] Order Jarak Jauh (Argo Rp 28.500) pada Jam Sibuk sukses berhak atas Subsidi Rp 5.000."""
         calc_result = RushHourSubsidyCalculator.calculate_order_subsidy(
             order_time="17:45",
             original_base_fare=28500.0
@@ -66,7 +66,7 @@ class TestRushHourMobilePricing:
         assert calc_result["original_base_fare"] == 28500.0
 
     def test_04_voucher_discount_isolation_integrity(self):
-        """[TC-RH-MOB-04] Kupon Diskon Rp 5.000 TIDAK menurunkan tier subsidi (tetap dihitung dari Rp 14.400)."""
+        """[POSITIVE FALSE / PN-01] Kupon Diskon Rp 5.000 TIDAK menurunkan tier subsidi (tetap dihitung dari Rp 14.400)."""
         # User membayar Rp 9.400 (karena diskon Rp 5.000), tapi argo aslinya Rp 14.400 (Tier 2)
         calc_result = RushHourSubsidyCalculator.calculate_order_subsidy(
             order_time="12:00",
@@ -80,7 +80,7 @@ class TestRushHourMobilePricing:
         assert calc_result["calculation_basis"] == "STRICT_ORIGINAL_BASE_FARE"
 
     def test_05_waiting_fee_isolation_integrity(self):
-        """[TC-RH-MOB-05] Biaya Menunggu (Waiting Fee) TIDAK menaikkan tier subsidi secara curang."""
+        """[POSITIVE FALSE / PN-02] Biaya Menunggu (Waiting Fee) TIDAK menaikkan tier subsidi secara curang."""
         # Argo original Rp 9.000 (Tier 1 <= 10.000), ada waiting fee Rp 3.000 -> Total tagihan Rp 12.000
         calc_result = RushHourSubsidyCalculator.calculate_order_subsidy(
             order_time="16:00",
@@ -93,7 +93,7 @@ class TestRushHourMobilePricing:
         assert calc_result["applied_subsidy"] == 3000
 
     def test_06_cancellation_penalty_fee_isolation(self):
-        """[TC-RH-MOB-06] Penalti Denda Pelanggaran TIDAK memanipulasi perhitungan subsidi."""
+        """[POSITIVE FALSE / PN-03] Penalti Denda Pelanggaran TIDAK memanipulasi perhitungan subsidi."""
         calc_result = RushHourSubsidyCalculator.calculate_order_subsidy(
             order_time="07:30",
             original_base_fare=8000.0,
@@ -104,7 +104,7 @@ class TestRushHourMobilePricing:
         assert calc_result["applied_subsidy"] == 3000
 
     def test_07_outside_rush_hour_window_zero_subsidy(self):
-        """[TC-RH-MOB-07] Order di luar window jam sibuk (misal 09:30 atau 21:00) mendapatkan subsidi Rp 0."""
+        """[NEGATIVE TRUE - NT-01] Order di luar window jam sibuk (09:30 atau 21:00) secara tepat ditolak subsidi (Rp 0)."""
         calc_result = RushHourSubsidyCalculator.calculate_order_subsidy(
             order_time="09:30",
             original_base_fare=15000.0
@@ -120,7 +120,7 @@ class TestRushHourMobilePricing:
         assert calc_night["applied_subsidy"] == 0
 
     def test_08_disabled_feature_zero_subsidy(self):
-        """[TC-RH-MOB-08] Jika toggle 'Bayar subsidi' dimatikan (enabled = False), subsidi bernilai Rp 0."""
+        """[NEGATIVE TRUE - NT-02] Jika toggle 'Bayar subsidi' dimatikan (enabled = False), kalkulasi ditolak (Rp 0)."""
         disabled_settings = {
             "enabled": False,
             "windows": [{"start": "06:45", "end": "08:45"}],
@@ -135,7 +135,7 @@ class TestRushHourMobilePricing:
         assert calc_result["applied_subsidy"] == 0
 
     def test_09_driver_seamless_experience_simulation(self):
-        """[TC-RH-MOB-09] Sisi Driver bersifat seamless (penghasilan bersih bertambah tanpa membocorkan aturan)."""
+        """[POSITIVE TRUE - PT-04] Sisi Driver seamless: total pendapatan bersih bertambah tanpa bocor rumus internal."""
         base_fare = 14400.0
         platform_fee = base_fare * 0.10  # 10% potongan platform
         calc_result = RushHourSubsidyCalculator.calculate_order_subsidy(

@@ -39,49 +39,59 @@ Fitur **Subsidi Rush Hour Driver** dikembangkan untuk memberikan insentif pendap
 
 ---
 
-## 2. IMPLEMENTASI 4 PILAR QUALITY ASSURANCE
+## 2. IMPLEMENTASI METODOLOGI 4 PILAR QUALITY ASSURANCE (PT, PF/PN, NT, NF)
 
-Pengujian dirancang secara holistik mencakup 4 pilar standar QA kelas enterprise:
+Pengujian dirancang secara holistik mengadopsi standar 4 pilar pengujian QA ekosistem EV-Moto:
 
 ```mermaid
 flowchart TD
-    A[4 Pilar Quality Assurance Fitur Rush Hour] --> B[Pilar 1: Functionality]
-    A --> C[Pilar 2: Boundary & Reliability]
-    A --> D[Pilar 3: Performance & Scalability]
-    A --> E[Pilar 4: Security & Isolation]
+    A["4 Pilar Quality Assurance Fitur Rush Hour"] --> B["Pilar 1: Positive True (PT)"]
+    A --> C["Pilar 2: Positive False / Positive Negative (PF/PN)"]
+    A --> D["Pilar 3: Negative True (NT)"]
+    A --> E["Pilar 4: Negative False (NF)"]
     
-    B --> B1[CRUD Pengaturan Admin Dashboard]
-    B --> B2[Multi-Window Time Window Matching]
-    B --> B3[Multi-Tier Subsidy Lookup Engine]
-    B --> B4[Seamless Driver Earnings Flow]
+    B --> B1["Kalkulasi Tepat Sesuai Tier Argo Original"]
+    B --> B2["Menit Inklusif 06:45 & 08:45 Berhak Subsidi"]
+    B --> B3["Siklus Simpan Form Sukses HTTP 303 to ?saved=1"]
+    B --> B4["Driver Payout Akumulasi Bersih (Seamless)"]
     
-    C --> C1[Batas Menit Presisi 06:45:00 vs 08:45:59]
-    C --> C2[Argo Rp 0, Negatif, & Nilai Ekstrem]
-    C --> C3[Window Lintas Hari & Invalid Ranges]
+    C --> C1["Order di Luar Window (09:15, 20:00) -> Subsidi Rp 0"]
+    C --> C2["Toggle Switch Disabled -> Subsidi Rp 0"]
+    C --> C3["Diskon Voucher User TIDAK Mengurangi Tier Driver"]
+    C --> C4["Biaya Menunggu TIDAK Menggelembungkan Tier Driver"]
     
-    D --> D1[Perhitungan Latensi Rendah < 5ms]
-    D --> D2[Bulk Concurrent Simulation 1.000+ Orders]
+    D --> D1["Jam Terbalik windowStart > windowEnd -> Ditolak HTTP 422"]
+    D --> D2["Batas Tier Tidak Menaik -> Ditolak HTTP 422"]
+    D --> D3["Akses Admin Unauthorized -> Ditolak HTTP 302/303"]
+    D --> D4["1 Menit Sebelum/Sesudah Window -> Ditolak (Rp 0)"]
     
-    E --> E1[Isolasi Ketat Voucher & Biaya Tunggu]
-    E --> E2[Sanitasi XSS & Anti-SQL Injection Admin]
-    E --> E3[Role-Based Access Control Redirect]
+    E --> E1["Sanitasi SQL Injection Form Riwayat (' OR 1=1 --)"]
+    E --> E2["Escape Karakter XSS Script Injection Tanpa Crash"]
+    E --> E3["Parameter Tampering Klien Ditolak Server Authoritative"]
+    E --> E4["Stress Lonjakan 1.000 Order Serentak Kilat < 50ms"]
 ```
 
-### Rincian 4 Pilar Pengujian:
-- **Pilar 1: Functionality (Fungsionalitas Menyeluruh)**:
-  - Memverifikasi form input Web Admin (`enabled`, `windowStart`, `windowEnd`, `tierMax`, `tierSubsidy`, `dailyBudget`).
-  - Verifikasi tombol interaktif UI: Tambah Jam Sibuk (`data-window-add`), Tambah Tier (`data-tier-add`), Hapus Baris (`data-row-remove`), dan Toggle Tanpa Batas (`data-tier-open`).
-  - Verifikasi tabel riwayat transaksi subsidi 7-kolom (`/rushHour/history`), filter pencarian ID pesanan/driver, dan paginasi.
-- **Pilar 2: Boundary & Reliability (Keandalan & Nilai Batas)**:
-  - Pengujian batas waktu kritis (misal pukul 06:44:59 status Non-Aktif, pukul 06:45:00 Aktif, pukul 08:45:59 Aktif, pukul 08:46:00 Non-Aktif).
-  - Validasi ketahanan terhadap input non-angka, argo Rp 0, argo bernilai jutaan rupiah, dan penanganan desimal.
-- **Pilar 3: Performance & Scalability (Performa & Skalabilitas)**:
-  - Waktu eksekusi lookup kalkulasi subsidi pada memori $\le 2$ milidetik per transaksi.
-  - Simulasi kalkulasi masal (*batch computation*) 1.000 transaksi rush hour selesai dalam waktu $< 0.15$ detik tanpa *memory leak*.
-- **Pilar 4: Security & Fare Isolation (Keamanan & Isolasi Finansial)**:
-  - Memastikan *voucher code* (misal promo diskon Rp 5.000) tidak mendowngrade tier pengemudi.
-  - Memastikan biaya tunggu (*waiting fee* Rp 3.000) tidak menggelembungkan tier pengemudi.
-  - Form validation server-side: penolakan jam tidak valid (`windowStart >= windowEnd` HTTP 422) dan sanitasi terhadap upaya XSS/SQL Injection.
+### Rincian Pembagian 4 Pilar Pengujian:
+- **Pilar 1: Positive True (PT) - Fungsionalitas & Alur Sukses Normal**:
+  - Input valid, proses normal, kalkulasi argo original akurat sesuai tier (Tier 1 $\le$ Rp 10.000 $\rightarrow$ Rp 3.000, Tier 2 $\le$ Rp 20.000 $\rightarrow$ Rp 4.000, Tier 3 Tanpa Batas $\rightarrow$ Rp 5.000).
+  - Batas menit jam sibuk bersifat inklusif (06:45:00 dan 08:45:00 sah mendapatkan subsidi).
+  - Siklus form submit berhasil (HTTP 303 Redirect ke `?saved=1` dengan alert *"Pengaturan tersimpan."*).
+  - Driver menerima akumulasi pendapatan bersih secara *seamless* tanpa bocor formula internal.
+- **Pilar 2: Positive False / Positive Negative (PF / PN) - Kondisi Alternatif & Peniadaan Subsidi**:
+  - Order perjalanan yang terjadi di luar rentang jam sibuk (misal pukul 09:15 atau 20:00) menghasilkan subsidi Rp 0 secara benar tanpa error.
+  - Master Switch Toggle dimatikan (`enabled = false`) menghasilkan subsidi Rp 0 secara global.
+  - Penggunaan voucher promo diskon oleh user (misal potongan Rp 5.000) TIDAK menurunkan tier argo original pengemudi.
+  - Penambahan biaya tunggu (*waiting fee*) dan denda penalti TIDAK memanipulasi atau menggelembungkan tier subsidi pengemudi.
+- **Pilar 3: Negative True (NT) - Penolakan Input Tidak Valid & Anomali Batas**:
+  - Input jam mulai mendahului jam selesai (`windowStart >= windowEnd`, misal 19:00–08:00) secara tepat ditolak server dengan HTTP 422 (*"Jam selesai window harus lebih akhir dari jam mulai."*).
+  - Input batas atas tier tidak berurutan / tidak menaik ditolak server dengan HTTP 422 (*"Batas atas tier harus menaik."*).
+  - Percobaan akses konfigurasi tanpa sesi login admin ditolak server dengan HTTP 302/303 redirect ke `/login`.
+  - Transaksi 1 menit di luar batas jam sibuk (06:44:59 dan 08:46:00) secara tegas ditolak hak subsidinya (Rp 0).
+- **Pilar 4: Negative False (NF) - Resiliensi Keamanan, Anti-Tampering & Anti-Crash**:
+  - Serangan SQL Injection (`' OR 1=1 --`) pada parameter pencarian riwayat disanitasi dengan aman tanpa meruntuhkan database atau menyebabkan HTTP 500.
+  - Eksploitasi Cross-Site Scripting (`<script>alert('xss')</script>`) di-escape menjadi teks aman.
+  - Parameter Tampering (klien mencoba menyuntikkan nominal subsidi buatan sendiri) ditolak oleh logika otoritatif server.
+  - Pengujian beban (*load stress benchmark*) 1.000 transaksi rush hour massal dieksekusi secara kilat dalam waktu $< 50$ ms tanpa lonjakan memori atau crash.
 
 ---
 
