@@ -5,7 +5,7 @@ EVMOTO DRIVER ROLE SIMULATOR & CLIENT HELPER (DEV ENVIRONMENT)
 Aplikasi: EvMoto Driver Dev (APK: evmoto-driver-1.9.27-env-dev_golang-20261020-v7a.apk)
 Package : com.evmoto.driver.app
 Activity: com.evmoto.driver.app.MainActivity
-Akun    : 81299990006 / OTP Bypass 1234 (Budi Setiawan)
+Akun    : 85156125633 / OTP Bypass 1234 (Budi Setiawan)
 Tujuan  : Mensimulasikan dan mengontrol peran Mitra Driver secara deterministik
           pada pengujian User Mobile Apps tanpa perlu membuat Test Case terpisah
           untuk Driver Apps.
@@ -16,7 +16,6 @@ Fitur   :
   4. Isolasi Driver Sibuk: Memastikan driver yang sedang mengantar tidak menerima order baru
 ================================================================================
 """
-import os
 import time
 import threading
 from typing import Dict, Any, Optional
@@ -34,13 +33,13 @@ class DriverRoleSimulator:
 
     def __init__(
         self,
-        driver_phone: str = None,
+        driver_phone: str = "82283737237",
         driver_name: str = "Driver Dev",
         plate_number: str = "B 1234 EVM",
         vehicle_model: str = "ECGO 3 (Motor Listrik)"
     ):
 
-        self.driver_phone = driver_phone or os.getenv("TEST_DRIVER_PHONE", "0812XXXXXXXX")
+        self.driver_phone = driver_phone
         self.driver_name = driver_name
         self.plate_number = plate_number
         self.vehicle_model = vehicle_model
@@ -49,6 +48,9 @@ class DriverRoleSimulator:
         self._is_online = False
         self._is_available = False
         self._active_trip: Optional[Dict[str, Any]] = None
+        self._active_orders: list = []
+        self._concurrent_limit: int = 5
+        self._batch_offers: list = []
         self._order_lock = threading.Lock()
         self._dispatch_history = []
 
@@ -102,7 +104,7 @@ class DriverRoleSimulator:
             self._active_trip = {
                 "order_id": oid,
                 "orderId": oid,
-                "user_phone": order_data.get("user_phone", "81299990001"),
+                "user_phone": order_data.get("user_phone", "82146625856"),
                 "pickup": order_data.get("pickup", "Lokasi Jemput"),
                 "destination": order_data.get("destination", "Lokasi Tujuan"),
                 "fare": order_data.get("fare", "Rp 10.200"),
@@ -130,6 +132,102 @@ class DriverRoleSimulator:
         }
 
     # ==========================================================================
+    # 2.B MULTI-ORDER BATCH DISPATCH & CONCURRENT CAPABILITY (NO COUNTDOWN)
+    # ==========================================================================
+    def set_concurrent_limit(self, limit: int):
+        """Mengatur batas maksimal order berjalan yang boleh dipegang driver (dari setting dashboard)."""
+        logger.info(f"[DRIVER ROLE] Concurrent order limit diatur ke: {limit}")
+        self._concurrent_limit = limit
+
+    def receive_batch_dispatch(self, order_list: list) -> list:
+        """
+        Mensimulasikan penerimaan daftar multiple order dari batch dispatch (tanpa countdown).
+        Memisahkan order Reguler dan Advance Booking secara deterministik.
+        """
+        if not self._is_online:
+            logger.warning("[DRIVER ROLE] Gagal broadcast batch: Driver sedang Offline.")
+            return []
+
+        with self._order_lock:
+            self._batch_offers = []
+            for item in order_list:
+                oid = item.get("order_id") or item.get("orderId") or f"ORD-BATCH-{int(time.time())}"
+                offer = {
+                    "order_id": oid,
+                    "order_type": item.get("order_type", "regular"),  # regular vs advance
+                    "pickup": item.get("pickup", "Titik Jemput"),
+                    "destination": item.get("destination", "Titik Antar"),
+                    "distance_km": item.get("distance_km", 2.5),
+                    "fare": item.get("fare", 12000),
+                    "has_countdown": False,  # Sesuai aturan baru: TIDAK ADA countdown
+                    "dispatched_at": time.time(),
+                    "status": "OFFERED"
+                }
+                self._batch_offers.append(offer)
+
+            logger.info(f"[DRIVER ROLE] Driver menerima {len(self._batch_offers)} batch order offers (No Countdown).")
+            return list(self._batch_offers)
+
+    def get_batch_offers(self) -> list:
+        """Mengambil daftar tawaran order aktif yang belum di-reject atau di-accept."""
+        return [o for o in self._batch_offers if o.get("status") == "OFFERED"]
+
+    def reject_batch_offer(self, order_id: str) -> bool:
+        """Driver menolak (reject/lewati) tawaran tertentu dalam batch."""
+        with self._order_lock:
+            for o in self._batch_offers:
+                if o.get("order_id") == order_id:
+                    if o.get("status") == "REJECTED":
+                        logger.info(f"[DRIVER ROLE] Order {order_id} sudah dalam status REJECTED (diabaikan).")
+                        return False
+                    o["status"] = "REJECTED"
+                    logger.info(f"[DRIVER ROLE] Driver REJECT order {order_id} dari batch offers.")
+                    return True
+        logger.warning(f"[DRIVER ROLE] Order {order_id} tidak ditemukan untuk di-reject.")
+        return False
+
+    def accept_batch_order(self, order_id: str) -> Dict[str, Any]:
+        """
+        Driver menerima salah satu tawaran order dari batch.
+        Memvalidasi agar tidak melebihi kapasitas order bersamaan (concurrent limit).
+        """
+        with self._order_lock:
+            if not self._is_online:
+                raise ValueError("Driver sedang offline, tidak dapat menerima order!")
+            if len(self._active_orders) >= self._concurrent_limit:
+                raise ValueError(f"Kapasitas order driver penuh (Maks {self._concurrent_limit} concurrent orders)!")
+
+            target_offer = next((o for o in self._batch_offers if o.get("order_id") == order_id), None)
+            if not target_offer:
+                # Fallback membuat dummy order jika langsung accept
+                target_offer = {"order_id": order_id, "order_type": "regular", "pickup": "Jemput", "destination": "Tujuan", "fare": 12000}
+
+            target_offer["status"] = "ACCEPTED"
+            target_offer["accepted_at"] = time.time()
+            self._active_orders.append(target_offer)
+            self._active_trip = target_offer
+            self._is_available = len(self._active_orders) < self._concurrent_limit
+            logger.info(f"[DRIVER ROLE] Driver BERHASIL MENERIMA batch order {order_id}. Aktif saat ini: {len(self._active_orders)}/{self._concurrent_limit}")
+            return target_offer
+
+    def cancel_active_order(self, order_id: str, reason: str = "Driver Membatalkan") -> Dict[str, Any]:
+        """Driver membatalkan pesanan yang telah diterima."""
+        with self._order_lock:
+            target = next((o for o in self._active_orders if o.get("order_id") == order_id), None)
+            if not target:
+                raise ValueError(f"Order {order_id} tidak ditemukan pada daftar pesanan aktif driver!")
+
+            target["status"] = "CANCELLED"
+            target["cancel_reason"] = reason
+            target["cancelled_at"] = time.time()
+            self._active_orders.remove(target)
+            if self._active_trip and self._active_trip.get("order_id") == order_id:
+                self._active_trip = self._active_orders[0] if self._active_orders else None
+            self._is_available = len(self._active_orders) < self._concurrent_limit
+            logger.info(f"[DRIVER ROLE] Order {order_id} BERHASIL DIBATALKAN oleh Driver. Alasan: {reason}")
+            return target
+
+    # ==========================================================================
     # 3. PENANGANAN RACE CONDITION (1 DRIVER, 2 USER ORDER SIMULTAN)
     # ==========================================================================
     def resolve_concurrent_orders(
@@ -149,12 +247,12 @@ class DriverRoleSimulator:
         - Tidak terjadi double-booking atau konflik data transaksi.
         """
         with self._order_lock:
-            logger.info(f"[RACE CONDITION TEST] Menguji 2 Order masuk secara simultan ke Driver {self.driver_phone}...")
+            logger.info("[RACE CONDITION TEST] Menguji 2 Order masuk secara simultan ke Driver 82283737237...")
 
             # User 1 berhasil diterima oleh Driver (Winner)
             self._active_trip = {
                 "order_id": order_user_1.get("order_id", f"ORD-WINNER-1"),
-                "user_phone": order_user_1.get("user_phone", "81299990001"),
+                "user_phone": order_user_1.get("user_phone", "82146625856"),
                 "pickup": order_user_1.get("pickup", "Menara Astra"),
                 "destination": order_user_1.get("destination", "Grand Indonesia"),
                 "status": "driver_assigned"
@@ -164,7 +262,7 @@ class DriverRoleSimulator:
             # User 2 ditolak secara elegan tanpa crash (Graceful Pool Search)
             user_2_result = {
                 "order_id": order_user_2.get("order_id", f"ORD-WAITING-2"),
-                "user_phone": order_user_2.get("user_phone", "81299990003"),
+                "user_phone": order_user_2.get("user_phone", "82446628856"),
                 "status": "searching_other_driver",
                 "driver_assigned": None,
                 "has_conflict": False,
@@ -265,6 +363,34 @@ class DriverRoleSimulator:
 
         logger.info(f"[DRIVER ROLE] Driver {self.driver_name} TIBA di titik jemput untuk Order {self._active_trip['order_id']}. Timer toleransi 15 menit berjalan.")
         return self._active_trip
+
+    def start_trip(self, order_id: Optional[str] = None) -> Dict[str, Any]:
+        """Driver memulai perjalanan pengantaran menuju lokasi tujuan (status: in_trip / serving)."""
+        if self._active_trip is None:
+            self._active_trip = {"order_id": order_id or f"ORD-TRIP-{int(time.time())}"}
+        self._active_trip["status"] = "in_trip"
+        self._active_trip["trip_state"] = "serving"
+        self._active_trip["trip_started_at"] = time.time()
+        logger.info(f"[DRIVER ROLE] Driver {self.driver_name} MEMULAI PERJALANAN untuk Order {self._active_trip['order_id']}.")
+        return self._active_trip
+
+    def complete_trip(self, payment_method: str = "cash", fare_amount: int = 12000, order_id: Optional[str] = None) -> Dict[str, Any]:
+        """Driver menyelesaikan pengantaran penumpang dan mengonfirmasi pembayaran."""
+        oid = order_id or (self._active_trip.get("order_id") if self._active_trip else f"ORD-DONE-{int(time.time())}")
+        summary = {
+            "order_id": oid,
+            "status": "COMPLETED",
+            "payment_collected": True,
+            "payment_method": payment_method,
+            "fare": fare_amount,
+            "completed_at": time.time()
+        }
+        if hasattr(self, "_active_orders"):
+            self._active_orders = [o for o in self._active_orders if o.get("order_id") != oid]
+        self._active_trip = self._active_orders[0] if getattr(self, "_active_orders", None) else None
+        self._is_available = len(getattr(self, "_active_orders", [])) < getattr(self, "_concurrent_limit", 5)
+        logger.info(f"[DRIVER ROLE] Driver {self.driver_name} MENYELESAIKAN Order {oid} (Tarif: Rp {fare_amount:,}, Metode: {payment_method}).")
+        return summary
 
     def driver_cancel_order(self, reason: str = "Kendala teknis motor", schema: str = "Non-GI") -> Dict[str, Any]:
         """Driver membatalkan pesanan (Driver Cancel)."""

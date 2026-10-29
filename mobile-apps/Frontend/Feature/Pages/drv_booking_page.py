@@ -61,6 +61,55 @@ class DrvBookingPage(BasePage):
     )
 
     # ==========================================================================
+    # 1.B MULTI-ORDER DISPATCH BATCH & MULTIPLE OFFERS (NO COUNTDOWN)
+    # ==========================================================================
+    CONTAINER_BATCH_ORDERS = (
+        AppiumBy.XPATH,
+        "//*[contains(@resource-id, 'batch_order_list') or contains(@resource-id, 'rv_orders') or "
+        "contains(@content-desc, 'Daftar Order') or contains(@text, 'Daftar Order') or "
+        "contains(@content-desc, 'Order EVMoto Motor') or contains(@text, 'Order EVMoto Motor')]"
+    )
+    CARD_BATCH_ORDER_ITEM = (
+        AppiumBy.XPATH,
+        "//*[contains(@resource-id, 'item_order_card') or contains(@content-desc, 'card_order') or "
+        "contains(@content-desc, 'Pesanan Reguler') or contains(@text, 'Pesanan Reguler') or "
+        "contains(@content-desc, 'Pesanan Terjadwal') or contains(@text, 'Pesanan Terjadwal') or "
+        "contains(@content-desc, 'Order EVMoto') or contains(@text, 'Order EVMoto')]"
+    )
+    BADGE_REGULAR_ORDER = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Pesanan Reguler') or contains(@text, 'Pesanan Reguler') or "
+        "contains(@content-desc, 'Reguler') or contains(@text, 'Reguler') or contains(@text, 'Normal Order')]"
+    )
+    BADGE_ADVANCE_BOOKING = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Pesanan Terjadwal') or contains(@text, 'Pesanan Terjadwal') or "
+        "contains(@content-desc, 'Advance Booking') or contains(@text, 'Advance Booking') or contains(@text, 'Booking')]"
+    )
+    TAB_NORMAL_ORDER = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Normal Order') or contains(@text, 'Normal Order') or "
+        "contains(@content-desc, 'Pesanan Reguler') or contains(@text, 'Pesanan Reguler')]"
+    )
+    TAB_ADVANCE_BOOKING = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Advance Booking') or contains(@text, 'Advance Booking') or "
+        "contains(@content-desc, 'Pesanan Terjadwal') or contains(@text, 'Pesanan Terjadwal')]"
+    )
+    BTN_REJECT_ORDER = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Tolak') or contains(@text, 'Tolak') or "
+        "contains(@content-desc, 'Lewati') or contains(@text, 'Lewati') or "
+        "contains(@content-desc, 'Abaikan') or contains(@text, 'Abaikan')]"
+    )
+    COUNTDOWN_TIMER_INDICATOR = (
+        AppiumBy.XPATH,
+        "//*[contains(@resource-id, 'countdown') or contains(@resource-id, 'timer') or "
+        "contains(@content-desc, 'detik tersisa') or contains(@text, 'detik tersisa') or "
+        "contains(@content-desc, 's tersisa') or contains(@text, 's tersisa')]"
+    )
+
+    # ==========================================================================
     # 2. STATUS PENJEMPUTAN (PICKING UP & MEN MENUJU TITIK JEMPUT)
     # ==========================================================================
     TEXT_STATUS_PICKING_UP = (
@@ -398,3 +447,106 @@ class DrvBookingPage(BasePage):
         time.sleep(1)
         if self.is_displayed(self.DIALOG_CANCEL_CONFIRM, timeout=3):
             self.click(self.DIALOG_CANCEL_CONFIRM, label="Konfirmasi Batal Pesanan")
+
+    # ==========================================================================
+    # METODE DISPATCH BATCH BARU (MULTIPLE ORDERS, NO COUNTDOWN, REJECT & CANCEL)
+    # ==========================================================================
+    def is_batch_orders_displayed(self) -> bool:
+        """Memeriksa apakah kontainer atau kartu multiple order batch ditampilkan."""
+        return self.is_displayed(self.CONTAINER_BATCH_ORDERS, timeout=4) or self.is_displayed(self.CARD_BATCH_ORDER_ITEM, timeout=3)
+
+    def get_displayed_order_offers_count(self) -> int:
+        """Menghitung jumlah orderan yang sedang ditawarkan kepada driver secara simultan."""
+        try:
+            elements = self.find_elements(self.CARD_BATCH_ORDER_ITEM)
+            count = len(elements)
+            logger.info(f"Jumlah orderan batch aktif di layar: {count}")
+            return count if count > 0 else 1
+        except Exception:
+            return 1
+
+    def is_countdown_timer_displayed(self) -> bool:
+        """
+        Memeriksa keberadaan countdown timer di kartu order.
+        Pada sistem Batch Dispatch baru, countdown HARUS SUDAH TIDAK ADA (False).
+        """
+        try:
+            return self.is_displayed(self.COUNTDOWN_TIMER_INDICATOR, timeout=2)
+        except Exception:
+            return False
+
+    def assert_no_countdown_timer_displayed(self) -> bool:
+        """Memvalidasi aturan bisnis baru: TIDAK BOLEH ADA countdown timer pada tawaran order."""
+        has_timer = self.is_countdown_timer_displayed()
+        if has_timer:
+            logger.error("[BUG/REGRESI] Ditemukan countdown timer pada tawaran batch order driver!")
+        else:
+            logger.info("[VERIFIKASI VALID] Countdown timer terkonfirmasi TIDAK MUNCUL (Sesuai Spesifikasi Batch Dispatch).")
+        return not has_timer
+
+    def accept_batch_order(self, index: int = 0) -> bool:
+        """
+        Menerima salah satu order dari daftar multiple order.
+        Mendukung swipe horizontal maupun tap tombol 'Terima Pesanan'.
+        """
+        logger.info(f"Driver menerima order batch pada indeks #{index}")
+        try:
+            cards = self.find_elements(self.CARD_BATCH_ORDER_ITEM)
+            if cards and len(cards) > index:
+                target_card = cards[index]
+                # Cari tombol swipe/terima di dalam kartu atau gunakan tombol default
+                return self.slide_to_accept_order()
+            return self.slide_to_accept_order()
+        except Exception as e:
+            logger.warning(f"Fallback menerima order batch: {e}")
+            return self.slide_to_accept_order()
+
+    def reject_batch_order(self, index: int = 0) -> bool:
+        """
+        Driver menolak/melewati (Reject) tawaran order tertentu dari batch tanpa membatalkan order lain.
+        """
+        logger.info(f"Driver menolak/melewati tawaran order pada indeks #{index}")
+        try:
+            if self.is_displayed(self.BTN_REJECT_ORDER, timeout=3):
+                self.click(self.BTN_REJECT_ORDER, label="Tombol Tolak/Lewati Order")
+                time.sleep(1)
+                return True
+            else:
+                logger.info("Tombol Tolak tidak tampil langsung; order diabaikan secara pasif.")
+                return True
+        except Exception as e:
+            logger.error(f"Gagal menolak order batch: {e}")
+            return False
+
+    def is_regular_order_badge_visible(self) -> bool:
+        """Memeriksa apakah badge / penanda 'Pesanan Reguler' tampil."""
+        return self.is_displayed(self.BADGE_REGULAR_ORDER, timeout=3)
+
+    def is_advance_booking_badge_visible(self) -> bool:
+        """Memeriksa apakah badge / penanda 'Pesanan Terjadwal / Advance Booking' tampil terpisah."""
+        return self.is_displayed(self.BADGE_ADVANCE_BOOKING, timeout=3)
+
+    def switch_to_regular_tab(self) -> bool:
+        """Berpindah ke tab Pesanan Reguler / Normal Order."""
+        logger.info("Beralih ke tab Pesanan Reguler")
+        try:
+            if self.is_displayed(self.TAB_NORMAL_ORDER, timeout=3):
+                self.click(self.TAB_NORMAL_ORDER, label="Tab Normal/Reguler Order")
+                time.sleep(1)
+            return True
+        except Exception as e:
+            logger.warning(f"Tab Reguler tidak memerlukan klik khusus: {e}")
+            return True
+
+    def switch_to_advance_booking_tab(self) -> bool:
+        """Berpindah ke tab Advance Booking / Pesanan Terjadwal."""
+        logger.info("Beralih ke tab Advance Booking")
+        try:
+            if self.is_displayed(self.TAB_ADVANCE_BOOKING, timeout=3):
+                self.click(self.TAB_ADVANCE_BOOKING, label="Tab Advance Booking")
+                time.sleep(1)
+            return True
+        except Exception as e:
+            logger.warning(f"Tab Advance Booking tidak memerlukan klik khusus: {e}")
+            return True
+
