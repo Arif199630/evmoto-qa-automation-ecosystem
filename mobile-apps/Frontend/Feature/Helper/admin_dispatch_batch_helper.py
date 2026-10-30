@@ -114,7 +114,7 @@ class AdminDispatchBatchHelper:
             "size": 0,
             "delay": 0,
             "duration": 0,
-            "concurrent": 0,
+            "concurrent": 5,  # Baseline default kuota order konkuren per driver
             "rescans": 0,
             "ordinary_bands": [],
             "advance_bands": [],

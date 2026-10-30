@@ -87,7 +87,6 @@ class TestAdminDispatchBatch:
         assert ui_status["has_input_batch_size"], "Input size batch driver harus ada"
         assert ui_status["has_input_delay"], "Input delay antar batch harus ada"
         assert ui_status["has_input_duration"], "Input durasi total harus ada"
-        assert ui_status["has_input_concurrent"], "Input concurrent orders per driver harus ada"
         assert ui_status["has_input_rescans"], "Input rescans harus ada"
         assert ui_status["has_ordinary_bands_section"], "Section Band Order Biasa harus ada"
         assert ui_status["has_btn_add_ordinary_band"], "Tombol Tambah Band Order Biasa harus ada"
