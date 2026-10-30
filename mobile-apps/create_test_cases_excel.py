@@ -50,6 +50,9 @@ DRIVER_TEST_FILES_ORDERED = [
     ("Driver Batch Dispatch", os.path.join(PROJECT_DIR, "Frontend", "Feature", "Step_Definition", "test_drv_batch_dispatch.py")),
     ("Driver Batch High Volume & Jarak", os.path.join(PROJECT_DIR, "Frontend", "Feature", "Step_Definition", "test_drv_batch_high_volume_and_distance.py")),
     ("E2E Batch Dispatch Integration", os.path.join(PROJECT_DIR, "Frontend", "Feature", "Step_Definition", "test_e2e_dispatch_batch_integration.py")),
+    ("Driver Batch Redispatch & Blacklist", os.path.join(PROJECT_DIR, "Frontend", "Feature", "Step_Definition", "test_drv_batch_redispatch_cascade.py")),
+    ("Driver Multi-Device Visual UI", os.path.join(PROJECT_DIR, "Frontend", "Feature", "Step_Definition", "test_drv_batch_multi_device_visual.py")),
+    ("Dispatch Bugs Reproduction & Verification", os.path.join(PROJECT_DIR, "Frontend", "Feature", "Step_Definition", "test_dispatch_bugs_reproduction.py")),
 ]
 
 # Daftar file pengujian Admin Dashboard (https://evmotoadmin.justkidding.app)
@@ -86,6 +89,10 @@ def parse_test_file(module_name, file_path):
             m_id = re.search(r"(TC_[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*?_\d+)", func_name)
             if m_id:
                 tc_id = m_id.group(1).upper()
+            elif "reproduce_bug_" in func_name:
+                m_bug = re.search(r"bug_(\d+)", func_name)
+                bug_num = m_bug.group(1) if m_bug else "01"
+                tc_id = f"TC_BUG_DISP_{bug_num.zfill(2)}"
             elif "live_demo" in func_name:
                 tc_id = "TC_E2E_DEMO_01"
             else:
@@ -93,7 +100,9 @@ def parse_test_file(module_name, file_path):
 
             # 2. Ekstrak Status
             status = "Positive True"
-            if "OB_" in tc_id or "order_behaviour" in doc.lower():
+            if "BUG_DISP" in tc_id:
+                status = "Defect Verification"
+            elif "OB_" in tc_id or "order_behaviour" in doc.lower():
                 status = "Order Behaviour"
             elif "SLIDE_06" in tc_id or "boundary value" in doc.lower():
                 status = "Negative True"
@@ -882,6 +891,12 @@ def generate_excel_with_real_screenshots():
             target_admin_file = os.path.join(admin_manual_dir, "Test_Cases_EvMoto_Admin_Dashboard.xlsx")
             shutil.copy2(OUTPUT_EXCEL_PATH, target_admin_file)
             print(f"[MANUAL ADMIN DOCS] Berhasil disalin ke:\n  -> {target_admin_file}")
+
+        repo_docs_dir = r"C:\Users\ASUS\.gemini\antigravity\scratch\evmoto-qa-automation-portfolio\docs\reports"
+        if os.path.exists(repo_docs_dir):
+            target_repo_file = os.path.join(repo_docs_dir, "Test_Cases_EvMoto_Mobile.xlsx")
+            shutil.copy2(OUTPUT_EXCEL_PATH, target_repo_file)
+            print(f"[REPO DOCS] Berhasil disalin ke:\n  -> {target_repo_file}")
     except Exception as e:
         print(f"Gagal menyalin ke Downloads/Desktop/Manual: {e}")
 

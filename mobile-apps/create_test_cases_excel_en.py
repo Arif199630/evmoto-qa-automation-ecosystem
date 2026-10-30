@@ -48,6 +48,9 @@ DRIVER_TEST_FILES_ORDERED = [
     ("Driver Batch Dispatch", os.path.join(PROJECT_DIR, "Frontend", "Feature", "Step_Definition", "test_drv_batch_dispatch.py")),
     ("Driver Batch High Volume & Distance", os.path.join(PROJECT_DIR, "Frontend", "Feature", "Step_Definition", "test_drv_batch_high_volume_and_distance.py")),
     ("E2E Batch Dispatch Integration", os.path.join(PROJECT_DIR, "Frontend", "Feature", "Step_Definition", "test_e2e_dispatch_batch_integration.py")),
+    ("Driver Batch Redispatch & Blacklist", os.path.join(PROJECT_DIR, "Frontend", "Feature", "Step_Definition", "test_drv_batch_redispatch_cascade.py")),
+    ("Driver Multi-Device Visual UI", os.path.join(PROJECT_DIR, "Frontend", "Feature", "Step_Definition", "test_drv_batch_multi_device_visual.py")),
+    ("Dispatch Bugs Reproduction & Verification", os.path.join(PROJECT_DIR, "Frontend", "Feature", "Step_Definition", "test_dispatch_bugs_reproduction.py")),
 ]
 
 ADMIN_TEST_FILES_ORDERED = [
@@ -650,6 +653,12 @@ def generate_excel_en():
             target_admin_file = os.path.join(admin_manual_dir, "Test_Cases_EvMoto_Admin_Dashboard_EN.xlsx")
             shutil.copy2(OUTPUT_EXCEL_PATH, target_admin_file)
             print(f"[MANUAL ADMIN DOCS] Copied to: {target_admin_file}")
+
+        repo_docs_dir = r"C:\Users\ASUS\.gemini\antigravity\scratch\evmoto-qa-automation-portfolio\docs\reports"
+        if os.path.exists(repo_docs_dir):
+            target_repo_file = os.path.join(repo_docs_dir, "Test_Cases_EvMoto_Mobile_EN.xlsx")
+            shutil.copy2(OUTPUT_EXCEL_PATH, target_repo_file)
+            print(f"[REPO DOCS] Copied to: {target_repo_file}")
     except Exception as e:
         print(f"Error copying to Downloads/Desktop/Manual: {e}")
 
