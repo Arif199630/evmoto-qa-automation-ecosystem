@@ -97,7 +97,7 @@ flowchart TD
 
 ## 3. HASIL EKSEKUTI TEST SUITE & REGRESI LENGKAP
 
-Seluruh rangkaian pengujian dieksekusi melalui master runner otomatis [`run_rush_hour_e2e_regression.py`](file:///C:/Users/ASUS/.gemini/antigravity/scratch/evmoto-qa-automation-portfolio/run_rush_hour_e2e_regression.py) dengan ringkasan sebagai berikut:
+Seluruh rangkaian pengujian dieksekusi melalui master runner otomatis [`run_rush_hour_e2e_regression.py`](file:///<path-lokal>) dengan ringkasan sebagai berikut:
 
 | Kategori Test Suite | File Pengujian | Jumlah TC | Status |
 | :--- | :--- | :---: | :---: |
@@ -134,7 +134,7 @@ Pengujian regresi menyeluruh (*72 test cases*) dijalankan untuk memvalidasi selu
 
 ## 5. DOKUMEN & ARTIFAK TERLAMPIR
 1. **Laporan Resmi Format PDF**:
-   - `C:\Users\ASUS\Desktop\LAPORAN_PENGUJIAN_FITUR_SUBSIDI_RUSH_HOUR_DRIVER.pdf`
+   - `<folder-lokal>/LAPORAN_PENGUJIAN_FITUR_SUBSIDI_RUSH_HOUR_DRIVER.pdf`
    - Berisi tanda tangan resmi Senior QA Engineer, tabel detail matriks pengujian, grafik ringkasan, dan bukti verifikasi teknis.
 2. **Repository GitHub CI/CD**:
    - Seluruh modul pengujian telah terintegrasi ke dalam pipeline GitHub Actions pada repository `https://github.com/Arif199630/evmoto-qa-automation-ecosystem.git`.

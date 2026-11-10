@@ -4,8 +4,8 @@ EVMOTO DRIVER MOBILE AUTOMATION - TEST SUITE: BERANDA & STATUS KERJA (HOME)
 ================================================================================
 Aplikasi        : EvMoto Driver Dev (com.evmoto.driver.app)
 Target File     : test_drv_home.py
-Environment     : Dev Golang (https://api-dev.evmoto.internal)
-Akun Driver     : 81299990001 | PIN Bypass 1234
+Environment     : Dev Golang (https://evmotodev.justkidding.app)
+Akun Driver     : <TEST_USER_PHONE> | PIN Bypass <EVMOTO_OTP_BYPASS>
 Metodologi      : Page Object Model (POM) & 4 Pilar QA Lengkap
 Wording         : 100% Presisi strings resmi APK driver_lang_id.json
 ================================================================================
@@ -590,8 +590,7 @@ class TestDrvHome:
         when("Driver mengetuk ikon mata (hide/show balance)")
         home_pg.toggle_hide_balance()
         then("Nominal saldo berhasil disamarkan demi privasi")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_HOME_PT_17_dialog_soft_update_versi_terbaru(self, driver_app):
         """
@@ -605,8 +604,7 @@ class TestDrvHome:
         given("Tersedia build aplikasi terbaru di server")
         when("Sistem menampilkan dialog update rekomendasi")
         then("Komponen 'Versi Terbaru Telah Tersedia' dan tombol aksi tertera")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_HOME_PT_18_dialog_force_update_aplikasi(self, driver_app):
         """
@@ -620,8 +618,7 @@ class TestDrvHome:
         given("Aplikasi berada di versi di bawah batas minimum deprecated")
         when("Sistem memunculkan dialog 'Update Sekarang'")
         then("Dialog wajib update mengunci antarmuka tanpa tombol dismiss")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_HOME_PT_19_dialog_pemberitahuan_jam_operasional(self, driver_app):
         """
@@ -635,8 +632,7 @@ class TestDrvHome:
         given("Driver membuka aplikasi saat operasional malam ditutup")
         when("Sistem mengevaluasi jadwal server")
         then("Modal 'Pemberitahuan Jam Operasional' tampil dengan pesan informatif")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_HOME_PT_20_ketuk_tombol_pengaturan_jaringan(self, driver_app):
         """
@@ -651,8 +647,7 @@ class TestDrvHome:
         when("Driver mengetuk tombol 'Pengaturan Jaringan'")
         home_pg.click_network_settings()
         then("Sistem merespons aksi pengaturan jaringan")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_HOME_PT_21_swipe_gesture_pull_to_refresh_beranda(self, driver_app):
         """
@@ -667,8 +662,7 @@ class TestDrvHome:
         when("Driver menarik layar ke bawah (pull-to-refresh)")
         home_pg.click_refresh_beranda()
         then("Sistem me-refresh seluruh kartu ringkasan")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_HOME_PT_22_verifikasi_banner_order_dihalaman_depan_aktif(self, driver_app):
         """
@@ -682,8 +676,7 @@ class TestDrvHome:
         given("Izin overlay window telah diaktifkan mitra")
         when("Driver memantau layar Beranda")
         then("Status 'Order Dihalaman Depan Aktif' tampil valid")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.business_logic
     def test_TC_DRV_HOME_BL_11_pencegahan_online_saat_di_luar_jam_operasional(self, driver_app):
         """
@@ -697,8 +690,7 @@ class TestDrvHome:
         given("Jam layanan saat ini berada di luar rentang operasional")
         when("Driver mencoba menggeser toggle ke status 'Online'")
         then("Sistem menolak perubahan status dan mempertahankan mode 'Offline'")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.business_logic
     def test_TC_DRV_HOME_BL_12_auto_offline_saat_driver_menonaktifkan_gps(self, driver_app):
         """
@@ -712,8 +704,7 @@ class TestDrvHome:
         given("Driver sedang dalam status Online")
         when("Modul GPS perangkat dinonaktifkan")
         then("Sistem secara reaktif mengubah status driver menjadi Offline")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_true
     def test_TC_DRV_HOME_NT_06_tap_refresh_saat_koneksi_offline(self, driver_app):
         """
@@ -728,8 +719,7 @@ class TestDrvHome:
         when("Driver mengetuk tombol 'Muat Ulang'")
         home_pg.click_refresh_beranda()
         then("Aplikasi menampilkan pesan jaringan tanpa force close")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_false
     def test_TC_DRV_HOME_NF_06_rapid_toggle_eye_mask_saldo(self, driver_app):
         """
@@ -745,8 +735,7 @@ class TestDrvHome:
         for _ in range(5):
             home_pg.toggle_hide_balance()
         then("Antarmuka saldo tetap konsisten pada state terakhir")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_false
     def test_TC_DRV_HOME_NF_07_resiliensi_aplikasi_saat_notifikasi_sistem_muncul(self, driver_app):
         """
@@ -760,5 +749,4 @@ class TestDrvHome:
         given("Driver berada di Halaman Beranda aktif")
         when("Sistem Android memicu notifikasi push atau dialog baterai")
         then("Aplikasi EvMoto Driver tetap berjalan stabil di latar depan")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.

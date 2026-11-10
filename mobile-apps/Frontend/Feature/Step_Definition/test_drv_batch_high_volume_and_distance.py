@@ -20,6 +20,7 @@ Fokus Pengujian Khusus :
 Metodologi: 4 Pilar QA (PT, PF, NT, NF)
 ================================================================================
 """
+import os
 import pytest
 import time
 from Frontend.Feature.Helper.driver_role_simulator import DriverRoleSimulator
@@ -33,7 +34,7 @@ logger = get_logger("TestBatchHighVolumeDistance")
 @pytest.fixture(scope="function")
 def driver_sim():
     """Fixture driver simulator online."""
-    sim = DriverRoleSimulator(driver_phone="82283737237", driver_name="Driver Stress Tester")
+    sim = DriverRoleSimulator(driver_phone=os.environ.get("EVMOTO_PHONE_EXTRA_1", ""), driver_name="Driver Stress Tester")
     sim.set_online(is_online=True)
     sim.set_concurrent_limit(5)
     yield sim

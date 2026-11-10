@@ -28,7 +28,8 @@ class MobileUserDataProvider:
         if cls._users is None:
             if os.path.exists(USERS_JSON_PATH):
                 with open(USERS_JSON_PATH, "r", encoding="utf-8-sig") as f:
-                    cls._users = json.load(f)
+                    # Nomor HP / OTP di users.json ditulis sebagai ${NAMA_ENV}; nilainya dari .env atau GitHub Secrets.
+                    cls._users = json.loads(os.path.expandvars(f.read()))
             else:
                 cls._users = {}
 
@@ -83,6 +84,16 @@ class MobileUserDataProvider:
     def get_gopay_user(cls) -> dict:
         """Mengambil profil user fitur pembayaran Gopay."""
         return cls.get_user("gopay_user")
+
+    @classmethod
+    def get_ovo_user(cls) -> dict:
+        """Mengambil profil user fitur pembayaran OVO (<TEST_USER_PHONE>)."""
+        return cls.get_user("ovo_user")
+
+    @classmethod
+    def get_ovo_driver(cls) -> dict:
+        """Mengambil profil driver penerima order OVO (<TEST_DRIVER_PHONE>)."""
+        return cls.get_user("ovo_driver")
 
     @classmethod
     def get_registered_users(cls) -> list:
@@ -197,7 +208,7 @@ REGISTER_DATA_POSITIVE_FALSE = {
 REGISTER_DATA_NEGATIVE_TRUE = {
     "TC_REG_NT_01": {
         "tag": "NEGATIVE_TRUE",
-        "description": "Registrasi dengan kode OTP salah (misal: 9999, bukan 1234)",
+        "description": "Registrasi dengan kode OTP salah (misal: 9999, bukan OTP bypass)",
         "phone": dev_phone,
         "otp_wrong": "9999",
         "expected_error": "Kode verifikasi salah. Silakan coba lagi."
@@ -205,7 +216,7 @@ REGISTER_DATA_NEGATIVE_TRUE = {
     "TC_REG_NT_02": {
         "tag": "NEGATIVE_TRUE",
         "description": "Input nomor registrasi tidak diawali angka 8 (diawali 0)",
-        "phone": "082100000000",
+        "phone": ("0" + os.environ.get("TEST_USER_PHONE", "")),
         "expected_error": "Nomor telepon harus diawali dengan 8"
     },
     "TC_REG_NT_03": {
@@ -295,7 +306,7 @@ REGISTER_DATA_NEGATIVE_FALSE = {
 LOGIN_DATA_POSITIVE_TRUE = {
     "TC_LOG_PT_01": {
         "tag": "POSITIVE_TRUE",
-        "description": "Login langsung menggunakan nomor HP Dev 81299990001 dan OTP 1234",
+        "description": "Login langsung menggunakan nomor HP Dev <TEST_USER_PHONE> dan OTP <EVMOTO_OTP_BYPASS>",
         "phone": dev_phone,
         "otp": dev_otp,
         "expected_result": "SUCCESS_LOGIN_TO_HOME"
@@ -316,7 +327,7 @@ LOGIN_DATA_POSITIVE_TRUE = {
     },
     "TC_LOG_PT_GOPAY": {
         "tag": "POSITIVE_TRUE",
-        "description": "Login langsung user fitur pembayaran Gopay (81299990002)",
+        "description": "Login langsung user fitur pembayaran Gopay (<EVMOTO_PHONE_EXTRA_3>)",
         "phone": gopay_phone,
         "otp": gopay_otp,
         "expected_result": "SUCCESS_LOGIN_GOPAY_USER"
@@ -336,7 +347,7 @@ LOGIN_DATA_POSITIVE_TRUE = {
     "TC_LOG_PT_06": {
         "tag": "POSITIVE_TRUE",
         "description": "Login dengan nomor diawali format internasional +62 / 62 otomatis dinormalisasi",
-        "phone_input": "+6281299990001",
+        "phone_input": ("+62" + os.environ.get("TEST_USER_PHONE", "")),
         "expected_phone": dev_phone,
         "otp": dev_otp,
         "expected_result": "SUCCESS_LOGIN_TO_HOME"
@@ -387,15 +398,15 @@ LOGIN_DATA_POSITIVE_FALSE = {
 LOGIN_DATA_NEGATIVE_TRUE = {
     "TC_LOG_NT_01": {
         "tag": "NEGATIVE_TRUE",
-        "description": "Login nomor Dev dengan kode OTP salah (9999, bukan 1234)",
+        "description": "Login nomor Dev dengan kode OTP salah (9999, bukan OTP bypass)",
         "phone": dev_phone,
         "otp_wrong": "9999",
         "expected_error": "Verification code is invalid"
     },
     "TC_LOG_NT_02": {
         "tag": "NEGATIVE_TRUE",
-        "description": "Login nomor tidak diawali angka 8 (misal: 082100000000)",
-        "phone": "082100000000",
+        "description": "Login nomor tidak diawali angka 8 (misal: 0<TEST_USER_PHONE>)",
+        "phone": ("0" + os.environ.get("TEST_USER_PHONE", "")),
         "expected_error": "Nomor telepon harus diawali dengan 8"
     },
     "TC_LOG_NT_03": {
@@ -489,7 +500,7 @@ PROFILE_PILAR_1_POSITIVE = {
     },
     "valid_emergency_contact_special_char": {
         "name": "Ahmad Syafi'i",
-        "phone": "81299990001"
+        "phone": os.environ.get("TEST_USER_PHONE", "")
     },
     "payment_preferences": {
         "target_default": "Cash"

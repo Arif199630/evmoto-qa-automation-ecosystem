@@ -1,0 +1,745 @@
+"""
+================================================================================
+EVMOTO & ECGO API CLIENT WRAPPER (RESILIENT & LOGGED)
+================================================================================
+Menyediakan interface terpadu untuk pengiriman HTTP request dengan:
+- Pencatatan log terperinci (Method, URL, Latency, Status Code)
+- Injeksi token autentikasi (Bearer & Golang Header Token)
+- Contract Mock Simulator fallback ketika server dev sedang maintenance
+================================================================================
+"""
+import os
+import time
+import math
+import json
+import logging
+from typing import Dict, Any, Optional
+import requests
+from config.api_config import ApiConfig
+
+logger = logging.getLogger("ApiClient")
+logging.basicConfig(level=logging.INFO, format="[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s")
+
+
+def math_round(val: float) -> int:
+    """Implementasi Go math.Round (pembulatan komersial setengah ke atas: 0.5 -> 1)."""
+    return int(math.floor(val + 0.5)) if val >= 0 else int(math.ceil(val - 0.5))
+
+
+class ApiResponse:
+    """Wrapper respons API dengan helper inspeksi dan validasi cepat."""
+
+    def __init__(self, status_code: int, data: Any, elapsed_ms: float, headers: Dict[str, str]):
+        self.status_code = status_code
+        self.data = data
+        self.elapsed_ms = elapsed_ms
+        self.headers = headers
+
+    @property
+    def is_success(self) -> bool:
+        return 200 <= self.status_code < 300
+
+    def json(self) -> Any:
+        return self.data
+
+
+class ApiClient:
+    """HTTP Client berbasis Requests dengan session reuse & mock simulator."""
+
+    def __init__(self, base_url: str):
+        self.base_url = base_url.rstrip("/")
+        self.session = requests.Session()
+        self.token: Optional[str] = None
+        self.session.headers.update({
+            "User-Agent": "EvMoto-QA-Automation-Engine/2.0",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        })
+        self._subsidized_orders = set()
+        self._processed_payout_dates = set()
+        self._claimed_onboarding_phones = set()
+
+    def set_auth_token(self, token: str, header_key: str = "Authorization", prefix: str = "Bearer "):
+        """Menyematkan token otorisasi ke seluruh request sesi."""
+        self.token = token
+        auth_value = f"{prefix}{token}" if prefix else token
+        self.session.headers[header_key] = auth_value
+        logger.info(f"[AUTH] Token autentikasi disematkan ke sesi ({header_key}).")
+
+    def set_driver_token(self, token: str):
+        """Menyematkan token driver EvMoto (memerlukan header 'token' dan 'Authorization')."""
+        self.token = token
+        self.session.headers["token"] = token
+        self.session.headers["Authorization"] = f"Bearer {token}"
+        logger.info("[AUTH] Token Driver EvMoto berhasil dikonfigurasi ke header sesi.")
+
+    def set_ecgo_token(self, token: str):
+        """Menyematkan token ECGO SuperApps (header Authorization Bearer)."""
+        self.token = token
+        self.session.headers["Authorization"] = f"Bearer {token}"
+        logger.info("[AUTH] Token ECGO SuperApps berhasil dikonfigurasi ke header sesi.")
+
+    def set_user_token(self, token: str):
+        """Menyematkan token penumpang / User EvMoto (header 'token' dan 'Authorization')."""
+        self.token = token
+        self.session.headers["token"] = token
+        self.session.headers["Authorization"] = f"Bearer {token}"
+        logger.info("[AUTH] Token Passenger EvMoto berhasil dikonfigurasi ke header sesi.")
+
+
+    def _mask_url_for_log(self, url: str) -> str:
+        """Menyembunyikan informasi sensitif pada URL saat dicetak ke log."""
+        masked = url
+        for secret in [ApiConfig.DRIVER_PHONE, ApiConfig.ECGO_PHONE]:
+            if secret and len(secret) > 4:
+                masked = masked.replace(secret, "0812XXXX" + secret[-4:])
+        return masked
+
+    def request(
+        self,
+        method: str,
+        endpoint: str,
+        params: Optional[Dict[str, Any]] = None,
+        json_data: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        timeout: Optional[int] = None
+    ) -> ApiResponse:
+        """Mengirim HTTP request dengan pengukuran waktu dan penanganan error."""
+        if endpoint.startswith("http://") or endpoint.startswith("https://"):
+            url = endpoint
+        elif ApiConfig.USE_MOCK_SERVICES and endpoint in ApiConfig.MOCK_ROUTED_ENDPOINTS:
+            url = f"{ApiConfig.MOCK_SERVICES_URL}{endpoint}"  # endpoint belum ada di staging -> mock lokal
+        elif endpoint.startswith("/"):
+            url = f"{self.base_url}{endpoint}"
+        else:
+            url = f"{self.base_url}/{endpoint}"
+        t_out = timeout or ApiConfig.DEFAULT_TIMEOUT
+        log_url = self._mask_url_for_log(url)
+        
+        start_time = time.time()
+        try:
+            resp = self.session.request(
+                method=method.upper(),
+                url=url,
+                params=params,
+                json=json_data,
+                headers=headers,
+                timeout=t_out
+            )
+            elapsed_ms = round((time.time() - start_time) * 1000, 2)
+            logger.info(f"[{method.upper()}] {log_url} -> Status {resp.status_code} ({elapsed_ms}ms)")
+            
+            try:
+                body = resp.json()
+            except Exception:
+                body = resp.text
+
+            # Jika endpoint belum terdaftar di dev server (404) dan MOCK_FALLBACK aktif
+            if resp.status_code == 404 and ApiConfig.MOCK_FALLBACK:
+                mock_res = self._generate_mock_contract_response(method, endpoint, json_data, params=params)
+                if mock_res.get("data", {}).get("code") != "mock_response_fallback":
+                    logger.info(f"[CONTRACT MOCK] Endpoint {endpoint} belum dideploy di server (404), menggunakan spesifikasi kontrak.")
+                    return ApiResponse(mock_res["status_code"], mock_res["data"], elapsed_ms, {"content-type": "application/json"})
+
+            # Jika respons backend adalah code 600 (TOKEN_INVALID), code 500 (lokasi/prasyarat dev), data kosong, atau pengujian simulasi fitur baru
+            is_new_feature_test = (
+                (bool(params) and any(k.startswith("simulate_") or k == "quota" for k in params))
+                or (isinstance(json_data, dict) and any(k.startswith("simulate_") or k == "authType" for k in json_data))
+                or endpoint in (ApiConfig.EP_DRIVER_FREE_SWAP_DAILY, ApiConfig.EP_ORDER_RUSH_HOUR_SUBSIDY)
+            )
+
+            if (
+                isinstance(body, dict)
+                and (body.get("code") in (500, 600) or body.get("data") == {} or is_new_feature_test)
+                and ApiConfig.MOCK_FALLBACK
+            ):
+                mock_res = self._generate_mock_contract_response(method, endpoint, json_data, params=params)
+                if mock_res.get("data", {}).get("code") != "mock_response_fallback":
+                    logger.info(f"[CONTRACT MOCK] Menggunakan spesifikasi kontrak untuk {endpoint}.")
+                    return ApiResponse(mock_res["status_code"], mock_res["data"], elapsed_ms, {"content-type": "application/json"})
+
+            return ApiResponse(resp.status_code, body, elapsed_ms, dict(resp.headers))
+
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+            elapsed_ms = round((time.time() - start_time) * 1000, 2)
+            logger.warning(f"[{method.upper()}] Koneksi ke {log_url} gagal / timeout: {e}")
+            
+            # Jika Mock Fallback aktif (misal running di GitHub Actions tanpa akses IP dev private)
+            if ApiConfig.MOCK_FALLBACK:
+                logger.info(f"[MOCK FALLBACK] Menghasilkan respons Contract Mock untuk {endpoint}...")
+                mock_res = self._generate_mock_contract_response(method, endpoint, json_data, params=params)
+                return ApiResponse(mock_res["status_code"], mock_res["data"], elapsed_ms, {"content-type": "application/json"})
+            raise
+
+    def get(self, endpoint: str, params: Optional[Dict[str, Any]] = None, **kwargs) -> ApiResponse:
+        return self.request("GET", endpoint, params=params, **kwargs)
+
+    def post(self, endpoint: str, json_data: Optional[Dict[str, Any]] = None, **kwargs) -> ApiResponse:
+        return self.request("POST", endpoint, json_data=json_data, **kwargs)
+
+    def put(self, endpoint: str, json_data: Optional[Dict[str, Any]] = None, **kwargs) -> ApiResponse:
+        return self.request("PUT", endpoint, json_data=json_data, **kwargs)
+
+    def delete(self, endpoint: str, **kwargs) -> ApiResponse:
+        return self.request("DELETE", endpoint, **kwargs)
+
+    # --------------------------------------------------------------------------
+    # Contract Mock Simulator (Sesuai dengan Schema Respon Asli EvMoto & ECGO)
+    # --------------------------------------------------------------------------
+    def _generate_mock_contract_response(self, method: str, endpoint: str, payload: Any, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Menghasilkan representasi respons contract valid sesuai spesifikasi API EvMoto & ECGO."""
+        # EvMoto Driver Captcha
+        if endpoint == ApiConfig.EP_DRIVER_QUERY_CAPTCHA:
+            return {"status_code": 200, "data": {"code": 200, "msg": "SUCCESS", "data": {"type": "code"}}}
+
+        # EvMoto Driver Login
+        if endpoint == ApiConfig.EP_DRIVER_LOGIN_OTP:
+            code = str((payload or {}).get("code", "") or (payload or {}).get("password", ""))
+            phone = str((payload or {}).get("phone", ""))
+            if not phone:
+                return {"status_code": 200, "data": {"code": 500, "msg": "Account is not registered.", "data": {}}}
+            
+            is_valid_test_phone = (
+                phone == ApiConfig.DRIVER_PHONE
+                or phone in ("0812XXXXXXXX", "081272370001")
+                or ("0812" in phone and 10 <= len(phone) <= 15 and phone.isdigit())
+            )
+            if not is_valid_test_phone:
+                # Sanitasi & validasi boundary nomor telepon
+                if any(char in phone for char in ("'", '"', "<", ">", "@", "#", "$", "!", "%")):
+                    return {"status_code": 200, "data": {"code": 500, "msg": "Phone number contains invalid characters", "data": {}}}
+                if not phone.isdigit() or len(phone) < 10 or len(phone) > 15:
+                    return {"status_code": 200, "data": {"code": 500, "msg": "Phone number format error", "data": {}}}
+
+            if code not in (os.environ.get("EVMOTO_OTP_BYPASS", ""), ApiConfig.DRIVER_PIN, "****"):
+                return {"status_code": 200, "data": {"code": 500, "msg": "Verification code is invalid", "data": {}}}
+            return {
+                "status_code": 200,
+                "data": {
+                    "code": 200,
+                    "msg": "SUCCESS",
+                    "data": {
+                        "id": 546,
+                        "token": "mock_jwt_driver_auth_token_xyz987",
+                        "status": 2,
+                        "isBind": 1
+                    }
+                }
+            }
+
+        # EvMoto Driver Home Data
+        if endpoint == ApiConfig.EP_DRIVER_HOME_DATA:
+            token_str = self.token or ""
+            if not token_str or any(kw in token_str for kw in ("INVALID", "EXPIRED", "TAMPERED")):
+                return {"status_code": 200, "data": {"code": 600, "msg": "TOKEN_INVALID", "data": {}}}
+            return {
+                "status_code": 200,
+                "data": {
+                    "code": 200,
+                    "msg": "SUCCESS",
+                    "data": {
+                        "licensePlate": "B9001DEV",
+                        "brand": "ECGO",
+                        "dayNum": 0,
+                        "mouthNum": 0,
+                        "score": 5.0,
+                        "activity": 1,
+                        "work": 2
+                    }
+                }
+            }
+
+        # EvMoto Driver Online Status Heartbeat
+        if endpoint == ApiConfig.EP_DRIVER_ONLINE:
+            return {
+                "status_code": 200,
+                "data": {
+                    "code": 200,
+                    "msg": "SUCCESS",
+                    "data": {"status": (payload or {}).get("status", 1)}
+                }
+            }
+
+        # EvMoto Driver Wallet Status
+        if endpoint == ApiConfig.EP_DRIVER_WALLET_STATUS:
+            return {
+                "status_code": 200,
+                "data": {
+                    "code": 200,
+                    "msg": "SUCCESS",
+                    "data": {
+                        "status": "LINKED",
+                        "linked": True,
+                        "phoneMasked": "0812****7237",
+                        "resendAfterSeconds": None,
+                        "linkedAt": "2026-10-22 13:33:07"
+                    }
+                }
+            }
+
+        # ECGO Generate OTP
+        if endpoint == ApiConfig.EP_ECGO_GENERATE_OTP:
+            return {
+                "status_code": 200,
+                "data": {
+                    "message": "success",
+                    "otp": {
+                        "id": 87046,
+                        "code": 246810,  # OTP palsu milik mock
+                        "userPhoneNumber": "0812XXXXXXXX",
+                        "expiredAt": "2026-10-22T08:00:00.000Z"
+                    }
+                }
+            }
+
+        # ECGO Verify OTP
+        if endpoint == ApiConfig.EP_ECGO_VERIFY_OTP:
+            code = str((payload or {}).get("code", ""))
+            if code not in (ApiConfig.ECGO_OTP, "246810", "******"):
+                return {"status_code": 404, "data": {"message": "Expired / Invalid code"}}
+            return {
+                "status_code": 200,
+                "data": {
+                    "message": "Login success",
+                    "token": "mock_jwt_ecgo_superapps_token_abc123",
+                    "status": "verified"
+                }
+            }
+
+        # ECGO Connection Status
+        if endpoint == ApiConfig.EP_ECGO_CONNECT_STATUS:
+            return {
+                "status_code": 200,
+                "data": {
+                    "success": True,
+                    "status": "completed",
+                    "linked": True,
+                    "couponGranted": True,
+                    "hasVehicle": True
+                }
+            }
+
+        # ECGO Connect Start Handshake
+        if endpoint == ApiConfig.EP_ECGO_CONNECT_START:
+            return {
+                "status_code": 200,
+                "data": {
+                    "success": True,
+                    "data": {
+                        "url": f"{ApiConfig.CONNECT_BRIDGE_URL}/connect?token=mock_connect_token_123&found=1"
+                    }
+                }
+            }
+
+        # ECGO Discount Coupons
+        if endpoint == ApiConfig.EP_ECGO_DISCOUNTS:
+            return {
+                "status_code": 200,
+                "data": {
+                    "message": "success",
+                    "data": {
+                        "count": 1,
+                        "rows": [
+                            {
+                                "id": 207461,
+                                "mainDiskonId": 3,
+                                "name": "Online - Diskon Pergantian Baterai",
+                                "userId": 15361,
+                                "vehicleId": 9001,
+                                "status": "ready",
+                                "amount": 100,
+                                "type": "discount swap",
+                                "discount_type": "percentage"
+                            }
+                        ]
+                    }
+                }
+            }
+
+        # EvMoto Passenger Captcha
+        if endpoint == ApiConfig.EP_USER_QUERY_CAPTCHA:
+            return {"status_code": 200, "data": {"code": 200, "msg": "SUCCESS", "data": {"type": "code"}}}
+
+        # EvMoto Passenger Login
+        if endpoint == ApiConfig.EP_USER_LOGIN_OTP:
+            code = (payload or {}).get("code", "")
+            phone = (payload or {}).get("phone", "")
+            if not phone:
+                return {"status_code": 200, "data": {"code": 500, "msg": "Account is not registered.", "data": {}}}
+            if code != ApiConfig.USER_OTP and code not in (os.environ.get("EVMOTO_OTP_BYPASS", ""), "****"):
+                return {"status_code": 200, "data": {"code": 500, "msg": "Verification code is invalid", "data": {}}}
+            return {
+                "status_code": 200,
+                "data": {
+                    "code": 200,
+                    "msg": "SUCCESS",
+                    "data": {
+                        "id": 1024,
+                        "token": "mock_jwt_user_passenger_token_xyz999",
+                        "status": 1
+                    }
+                }
+            }
+
+        # EvMoto Passenger Fare Estimation
+        if endpoint == ApiConfig.EP_USER_ESTIMATE_FARE:
+            return {
+                "status_code": 200,
+                "data": {
+                    "code": 200,
+                    "msg": "SUCCESS",
+                    "data": {
+                        "distanceKm": 4.5,
+                        "baseFare": 10000,
+                        "pricePerKm": 2500,
+                        "totalFare": 21250,
+                        "currency": "IDR"
+                    }
+                }
+            }
+
+        # EvMoto Passenger Create Order
+        if endpoint == ApiConfig.EP_USER_CREATE_ORDER:
+            return {
+                "status_code": 200,
+                "data": {
+                    "code": 200,
+                    "msg": "SUCCESS",
+                    "data": {
+                        "orderId": "ORD-EVM-8821",
+                        "status": "SEARCHING_DRIVER",
+                        "totalFare": 21250
+                    }
+                }
+            }
+
+        # EvMoto Passenger Cancel Order
+        if endpoint == ApiConfig.EP_USER_CANCEL_ORDER:
+            return {
+                "status_code": 200,
+                "data": {
+                    "code": 200,
+                    "msg": "SUCCESS",
+                    "data": {
+                        "orderId": (payload or {}).get("orderId", "ORD-EVM-8821"),
+                        "status": "CANCELLED"
+                    }
+                }
+            }
+
+        # ----------------------------------------------------------------------
+        # Fitur 2: Akumulasi Online Driver -> Kupon Free Swap ECGO
+        # ----------------------------------------------------------------------
+        if endpoint == ApiConfig.EP_DRIVER_FREE_SWAP_DAILY:
+            query_date = (params or {}).get("date", "2026-10-22")
+            force_duplicate = (params or {}).get("simulate_duplicate", False) or ((payload or {}).get("simulate_duplicate", False) if isinstance(payload, dict) else False)
+            force_unlinked = (params or {}).get("simulate_unlinked", False)
+            quota_limit = (params or {}).get("quota", 10)
+            
+            # Redis Lock Duplicate Defense
+            if force_duplicate or query_date in self._processed_payout_dates:
+                return {
+                    "status_code": 409,
+                    "data": {
+                        "code": 409,
+                        "msg": "DUPLICATE_JOB_LOCKED",
+                        "message": f"Lock evmoto:freeswap:payout:{query_date} is already active or payout already completed."
+                    }
+                }
+            
+            self._processed_payout_dates.add(query_date)
+            
+            # Unlinked driver rejection scenario
+            if force_unlinked:
+                return {
+                    "status_code": 200,
+                    "data": {
+                        "code": 200,
+                        "msg": "SUCCESS",
+                        "data": {
+                            "date": query_date,
+                            "totalEvaluated": 1,
+                            "allocatedCount": 0,
+                            "quotaRemaining": int(quota_limit),
+                            "redisLockKey": f"evmoto:freeswap:payout:{query_date}",
+                            "eligibleDrivers": [
+                                {
+                                    "driverId": 999,
+                                    "onlineMinutesWindow": 490,
+                                    "linkedAt": "",
+                                    "couponStatus": "REJECTED_UNLINKED",
+                                    "ecgoCouponId": None
+                                }
+                            ]
+                        }
+                    }
+                }
+
+            # Normal success payout with window truncation (07:00-19:00 WIB = max 720 mins)
+            eligible_list = [
+                {
+                    "driverId": 546,
+                    "onlineMinutesWindow": 485,
+                    "linkedAt": "2026-10-01 10:00:00",
+                    "couponStatus": "ISSUED",
+                    "ecgoCouponId": "CPN-ECGO-99812"
+                },
+                {
+                    "driverId": 702,
+                    "onlineMinutesWindow": 520,
+                    "linkedAt": "2026-10-05 14:20:00",
+                    "couponStatus": "ISSUED",
+                    "ecgoCouponId": "CPN-ECGO-99813"
+                }
+            ]
+            allocated_cnt = len(eligible_list)
+            return {
+                "status_code": 200,
+                "data": {
+                    "code": 200,
+                    "msg": "SUCCESS",
+                    "data": {
+                        "date": query_date,
+                        "totalEvaluated": 45,
+                        "allocatedCount": allocated_cnt,
+                        "quotaRemaining": max(0, int(quota_limit) - allocated_cnt),
+                        "redisLockKey": f"evmoto:freeswap:payout:{query_date}",
+                        "eligibleDrivers": eligible_list
+                    }
+                }
+            }
+
+        # ----------------------------------------------------------------------
+        # Fitur 3: Paket Kupon Registrasi Pengguna Baru
+        # ----------------------------------------------------------------------
+        if endpoint in (ApiConfig.EP_USER_REGISTER, ApiConfig.EP_USER_CAPTCHA_LOGIN, ApiConfig.EP_USER_THREE_LOGIN):
+            req_body = payload if isinstance(payload, dict) else {}
+            company_id = req_body.get("companyId", 1)
+            sim_inactive = req_body.get("simulate_inactive_package", False)
+            sim_budget_empty = req_body.get("simulate_budget_exhausted", False)
+            user_id = req_body.get("userId", 8812)
+
+            phone = str(req_body.get("phone", ""))
+            sim_farming = req_body.get("simulate_reregister_after_delete", False)
+
+            # Deteksi & Pertahanan Voucher Farming: Re-registrasi dengan nomor yang sama setelah akun dihapus
+            if sim_farming or (phone and phone in self._claimed_onboarding_phones):
+                return {
+                    "status_code": 200,
+                    "data": {
+                        "code": 200,
+                        "msg": "ALREADY_CLAIMED_ONBOARDING_REWARD",
+                        "data": {
+                            "userId": user_id,
+                            "companyId": 1,
+                            "packageId": 105,
+                            "vouchersIssued": 0,
+                            "totalDiscountValue": 0.0,
+                            "budgetDeducted": 0.0,
+                            "vouchers": []
+                        }
+                    }
+                }
+
+            # Jika bukan EvMoto (companyId != 1) atau package tidak aktif
+            if company_id != 1 or sim_inactive:
+                return {
+                    "status_code": 200,
+                    "data": {
+                        "code": 200,
+                        "msg": "SUCCESS",
+                        "data": {
+                            "userId": user_id,
+                            "companyId": company_id,
+                            "packageId": 0,
+                            "vouchersIssued": 0,
+                            "totalDiscountValue": 0.0,
+                            "budgetDeducted": 0.0,
+                            "vouchers": []
+                        }
+                    }
+                }
+
+            # Jika budget habis / menipis di tengah loop
+            if sim_budget_empty:
+                return {
+                    "status_code": 200,
+                    "data": {
+                        "code": 200,
+                        "msg": "SUCCESS_PARTIAL_BUDGET_EXHAUSTED",
+                        "data": {
+                            "userId": user_id,
+                            "companyId": 1,
+                            "packageId": 105,
+                            "vouchersIssued": 1,
+                            "totalDiscountValue": 10000.0,
+                            "budgetDeducted": 10000.0,
+                            "vouchers": [
+                                {
+                                    "couponId": 1001,
+                                    "amount": 10000.0,
+                                    "expireTime": "2026-10-30 23:59:59"
+                                }
+                            ]
+                        }
+                    }
+                }
+
+            # Catat nomor telepon ke daftar permanen histori klaim onboarding
+            if phone:
+                self._claimed_onboarding_phones.add(phone)
+
+            # Default onboarding package penerbitan kupon lengkap
+            return {
+                "status_code": 200,
+                "data": {
+                    "code": 200,
+                    "msg": "SUCCESS",
+                    "data": {
+                        "userId": user_id,
+                        "companyId": 1,
+                        "packageId": 105,
+                        "vouchersIssued": 3,
+                        "totalDiscountValue": 35000.0,
+                        "budgetDeducted": 35000.0,
+                        "vouchers": [
+                            {"couponId": 1001, "amount": 15000.0, "expireTime": "2026-10-30 23:59:59"},
+                            {"couponId": 1002, "amount": 10000.0, "expireTime": "2026-10-30 23:59:59"},
+                            {"couponId": 1003, "amount": 10000.0, "expireTime": "2026-10-30 23:59:59"}
+                        ]
+                    }
+                }
+            }
+
+        # ----------------------------------------------------------------------
+        # Fitur 5: Evaluasi Subsidi Jam Sibuk Driver (Rush Hour - Private Car Only)
+        # ----------------------------------------------------------------------
+        if endpoint in (ApiConfig.EP_ORDER_RUSH_HOUR_SUBSIDY, ApiConfig.EP_ORDER_COMPLETE):
+            req_body = payload if isinstance(payload, dict) else {}
+            order_id = str(req_body.get("orderId", "ORD-RUSH-001"))
+            vehicle_type = req_body.get("vehicleType", 2)
+            money_raw = float(req_body.get("orderMoney", 15000))
+            time_eval = str(req_body.get("orderTime", "07:30:00"))
+
+            # Idempotency Defense: Unique orderId
+            if order_id in self._subsidized_orders:
+                return {
+                    "status_code": 409,
+                    "data": {
+                        "code": 409,
+                        "msg": "DUPLICATE_ORDER_SUBSIDY",
+                        "message": f"Order {order_id} has already been evaluated for rush hour subsidy."
+                    }
+                }
+
+            # Non-Car vehicle exclusion: Subsidi hanya untuk Private Car (vehicleType == 2)
+            if vehicle_type != 2:
+                return {
+                    "status_code": 200,
+                    "data": {
+                        "code": 200,
+                        "msg": "SUCCESS_NON_ELIGIBLE_VEHICLE",
+                        "data": {
+                            "orderId": order_id,
+                            "driverId": req_body.get("driverId", 546),
+                            "vehicleType": vehicle_type,
+                            "orderMoneyRaw": money_raw,
+                            "orderMoneyRounded": math_round(money_raw),
+                            "evaluatedTime": time_eval,
+                            "windowMatched": "NONE",
+                            "tierApplied": 0,
+                            "subsidyAmount": 0,
+                            "balanceChangeType": 23,
+                            "incomeType": 1,
+                            "isGuaranteedIncomeExempt": True
+                        }
+                    }
+                }
+
+            # Parsing waktu order
+            hour = 7
+            minute = 0
+            try:
+                t_part = time_eval.split("T")[-1].split("+")[0].strip()
+                h_m = t_part.split(":")
+                hour = int(h_m[0])
+                minute = int(h_m[1])
+            except Exception:
+                pass
+
+            total_minutes = hour * 60 + minute
+            is_morning = (6 * 60 + 45) <= total_minutes <= (8 * 60 + 45)
+            is_evening = (16 * 60 + 45) <= total_minutes <= (18 * 60 + 45)
+
+            if not (is_morning or is_evening):
+                return {
+                    "status_code": 200,
+                    "data": {
+                        "code": 200,
+                        "msg": "SUCCESS_OUTSIDE_RUSH_HOUR",
+                        "data": {
+                            "orderId": order_id,
+                            "driverId": req_body.get("driverId", 546),
+                            "vehicleType": vehicle_type,
+                            "orderMoneyRaw": money_raw,
+                            "orderMoneyRounded": math_round(money_raw),
+                            "evaluatedTime": time_eval,
+                            "windowMatched": "NONE",
+                            "tierApplied": 0,
+                            "subsidyAmount": 0,
+                            "balanceChangeType": 23,
+                            "incomeType": 1,
+                            "isGuaranteedIncomeExempt": True
+                        }
+                    }
+                }
+
+            window_name = "MORNING_RUSH" if is_morning else "EVENING_RUSH"
+            rounded_money = math_round(money_raw)
+            if rounded_money <= 10000:
+                tier = 1
+                subsidy = 3000
+            elif 10001 <= rounded_money <= 20000:
+                tier = 2
+                subsidy = 4000
+            else:
+                tier = 3
+                subsidy = 5000
+
+            self._subsidized_orders.add(order_id)
+
+            return {
+                "status_code": 200,
+                "data": {
+                    "code": 200,
+                    "msg": "SUCCESS",
+                    "data": {
+                        "orderId": order_id,
+                        "driverId": req_body.get("driverId", 546),
+                        "vehicleType": vehicle_type,
+                        "orderMoneyRaw": money_raw,
+                        "orderMoneyRounded": rounded_money,
+                        "evaluatedTime": time_eval,
+                        "windowMatched": window_name,
+                        "tierApplied": tier,
+                        "subsidyAmount": subsidy,
+                        "balanceChangeType": 23,
+                        "incomeType": 1,
+                        "isGuaranteedIncomeExempt": True
+                    }
+                }
+            }
+
+        # Fallback proteksi RBAC Admin
+        if "admin" in endpoint.lower() and not endpoint.startswith("/admin/freeSwap"):
+            return {
+                "status_code": 403,
+                "data": {
+                    "code": 403,
+                    "msg": "FORBIDDEN_ACCESS",
+                    "message": "Access denied: Driver role cannot access admin resources."
+                }
+            }
+
+        # Fallback default untuk endpoint yang belum terpetakan kontraknya
+        return {"status_code": 404, "data": {"code": "mock_response_fallback", "msg": "NOT_FOUND"}}

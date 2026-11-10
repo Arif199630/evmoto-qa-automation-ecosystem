@@ -26,23 +26,22 @@ logger = get_logger("TestAdminDispatchBatch")
 
 @pytest.fixture(scope="module")
 def admin_helper():
-    """Fixture inisialisasi helper admin dan otentikasi login."""
+    """Fixture inisialisasi helper admin, otentikasi login, snapshot konfigurasi awal, dan restoration teardown."""
     helper = AdminDispatchBatchHelper()
     success = helper.login()
     assert success, "Admin Dashboard harus berhasil login dengan kredensial staging"
-    yield helper
-    # Teardown: Pastikan pengaturan baseline staging kembali normal
-    helper.submit_dispatch_batch(
-        enabled=True,
-        size=5,
-        delay=10,
-        duration=0,
-        concurrent=5,
-        rescans=2,
-        ordinary_bands=[("0", "1"), ("1", "2"), ("2", "3"), ("3", "4"), ("4", "5")],
-        advance_bands=[("0", "1"), ("1", "2"), ("2", "5"), ("5", "15")]
-    )
-    logger.info("Baseline staging Dispatch Batch berhasil dipulihkan.")
+
+    # 1. SETUP: Capture snapshot konfigurasi awal server staging sebelum testing dijalankan
+    original_settings = helper.parse_dispatch_batch_settings()
+    logger.info(f"[SETUP] Snapshot konfigurasi awal staging berhasil dicatat: {original_settings}")
+
+    try:
+        yield helper
+    finally:
+        # 2. TEARDOWN: Pulihkan seluruh data staging kembali ke snapshot semula secara deterministik
+        helper.restore_settings(original_settings)
+        logger.info(f"[TEARDOWN] Konfigurasi staging Dispatch Batch berhasil dipulihkan ke kondisi semula: {original_settings}")
+
 
 
 @pytest.mark.admin_dashboard

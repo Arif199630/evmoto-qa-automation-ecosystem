@@ -14,6 +14,7 @@ from appium.webdriver.common.appiumby import AppiumBy
 from core.base_page import BasePage
 from utils.logger import get_logger
 
+
 logger = get_logger("DrvHomePage")
 
 

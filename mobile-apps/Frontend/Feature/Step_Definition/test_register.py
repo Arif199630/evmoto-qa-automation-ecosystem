@@ -21,7 +21,7 @@ PILAR 2: POSITIVE FALSE (PF) - Aturan Bisnis (Ekspektasi: DITOLAK)
 - TC_REG_PF_04: Request OTP Berulang Kali Instan (Rate Limiting / Anti-Spam Cooldown)
 
 PILAR 3: NEGATIVE TRUE (NT) - Validasi Input Format (Ekspektasi: PESAN ERROR VALIDASI)
-- TC_REG_NT_01: Registrasi Dengan Kode OTP Salah (Bukan 1234)
+- TC_REG_NT_01: Registrasi Dengan Kode OTP Salah (Bukan <EVMOTO_OTP_BYPASS>)
 - TC_REG_NT_02: Nomor Handphone Tidak Diawali Angka 8 (Diawali 0)
 - TC_REG_NT_03: Nomor Handphone Kurang dari 8 Digit (Terlalu Pendek)
 - TC_REG_NT_04: Field Nama Lengkap Dikosongkan Saat Pendaftaran
@@ -38,6 +38,7 @@ PILAR 4: NEGATIVE FALSE (NF) - Security & Robustness (Ekspektasi: SISTEM AMAN/TI
 - TC_REG_NF_06: Filter Numerik Input Karakter Alfabet pada Field Nomor HP
 ================================================================================
 """
+import os
 import time
 import pytest
 from Pages.login_page import LoginPage
@@ -68,11 +69,11 @@ class TestRegister:
     @pytest.mark.positive_true
     @pytest.mark.smoke
     @pytest.mark.human_like
-    def test_TC_REG_PT_01_registrasi_berhasil_nomor_dev_dan_otp_1234(self, driver):
+    def test_TC_REG_PT_01_registrasi_berhasil_nomor_dev_dan_otp_bypass(self, driver):
         """
         [POSITIVE TRUE - PT-01]
         Deskripsi: Pendaftaran akun baru menggunakan nomor fresh, meminta OTP,
-        menginput OTP Dev 1234, dan menyelesaikan registrasi akun tanpa referral.
+        menginput OTP Dev <EVMOTO_OTP_BYPASS>, dan menyelesaikan registrasi akun tanpa referral.
         Ekspektasi: Berhasil memproses pendaftaran akun baru.
         """
         data = REGISTER_DATA_POSITIVE_TRUE["TC_REG_PT_01"]
@@ -196,7 +197,7 @@ class TestRegister:
     def test_TC_REG_PF_01_registrasi_gagal_nomor_dev_sudah_terdaftar(self, driver):
         """
         [POSITIVE FALSE - PF-01]
-        Deskripsi: Menginput nomor HP Dev 81299990001 yang SUDAH TERDAFTAR di database (duplikat).
+        Deskripsi: Menginput nomor HP Dev <TEST_USER_PHONE> yang SUDAH TERDAFTAR di database (duplikat).
         Ekspektasi: Sistem menolak pendaftaran akun duplikat dan menampilkan peringatan.
         """
         data = REGISTER_DATA_POSITIVE_FALSE["TC_REG_PF_01"]
@@ -298,7 +299,7 @@ class TestRegister:
     def test_TC_REG_NT_01_registrasi_gagal_otp_salah(self, driver):
         """
         [NEGATIVE TRUE - NT-01]
-        Deskripsi: Mengisi kode OTP yang salah (misal: 9999, bukan 1234).
+        Deskripsi: Mengisi kode OTP yang salah (misal: 9999, bukan OTP bypass).
         Ekspektasi: Muncul pesan error 'Kode verifikasi salah / invalid'.
         """
         data = REGISTER_DATA_NEGATIVE_TRUE["TC_REG_NT_01"]
@@ -322,7 +323,7 @@ class TestRegister:
     def test_TC_REG_NT_02_registrasi_gagal_nomor_tidak_diawali_8(self, driver):
         """
         [NEGATIVE TRUE - NT-02]
-        Deskripsi: Menginput nomor HP diawali angka 0 (misal: 082100000000).
+        Deskripsi: Menginput nomor HP diawali angka 0 (misal: 0<TEST_USER_PHONE>).
         Ekspektasi: Muncul pesan validasi 'Nomor telepon harus diawali dengan 8'.
         """
         data = REGISTER_DATA_NEGATIVE_TRUE["TC_REG_NT_02"]
@@ -372,7 +373,7 @@ class TestRegister:
         register_page.fill_phone(fresh_phone)
         register_page.clear_name()
         register_page.request_otp()
-        register_page.fill_otp("1234")
+        register_page.fill_otp(os.environ.get("EVMOTO_OTP_BYPASS", ""))
         register_page.submit_register()
 
         register_page.pause(1.0, 1.8, "Membaca validasi field nama wajib diisi")

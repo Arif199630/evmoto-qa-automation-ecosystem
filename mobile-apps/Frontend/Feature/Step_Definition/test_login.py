@@ -4,13 +4,13 @@ EVMOTO USER MOBILE AUTOMATION - TEST SUITE: MASUK / LOGIN (LOGIN PAGE)
 ================================================================================
 Fokus Pengujian : Halaman Masuk Akun Pengguna (Login Page)
 Environment     : Universal (Staging / Development / Live)
-Kredensial Dev  : Nomor HP 81299990001 | Kode OTP 1234
+Kredensial Dev  : Nomor HP <TEST_USER_PHONE> | Kode OTP <EVMOTO_OTP_BYPASS>
 Metodologi      : Page Object Model (POM) & 4 Pilar QA Lengkap
 
 KLASIFIKASI 4 PILAR QA (21 SKENARIO LENGKAP):
 --------------------------------------------------------------------------------
 PILAR 1: POSITIVE TRUE (PT) - Happy Path (Ekspektasi: SUKSES)
-- TC_LOG_PT_01: Login Berhasil Menggunakan Akun Dev Aktif (81299990001 + OTP 1234)
+- TC_LOG_PT_01: Login Berhasil Menggunakan Akun Dev Aktif (<TEST_USER_PHONE> + OTP <EVMOTO_OTP_BYPASS>)
 - TC_LOG_PT_02: Login Berhasil Variasi Format Nomor Terdaftar (10-12 Digit)
 - TC_LOG_PT_03: Login Berhasil Menggunakan Alur Resend OTP
 - TC_LOG_PT_04: Navigasi Tinjau Halaman Legalitas (Terms and Conditions & Privacy Policy)
@@ -23,7 +23,7 @@ PILAR 2: POSITIVE FALSE (PF) - Aturan Bisnis (Ekspektasi: DITOLAK)
 - TC_LOG_PF_04: Percobaan Input OTP Salah Berulang Kali (Rate Limiting / Lockout)
 
 PILAR 3: NEGATIVE TRUE (NT) - Format Salah / Input Invalid (Ekspektasi: PESAN ERROR VALIDASI)
-- TC_LOG_NT_01: Login Gagal Kode OTP Salah (Bukan 1234)
+- TC_LOG_NT_01: Login Gagal Kode OTP Salah (Bukan <EVMOTO_OTP_BYPASS>)
 - TC_LOG_NT_02: Login Gagal Nomor Tidak Diawali Angka 8 (Diawali 0)
 - TC_LOG_NT_03: Login Gagal Field Nomor Handphone Dikosongkan
 - TC_LOG_NT_04: Input Nomor Terlalu Pendek (4 Digit)
@@ -39,6 +39,7 @@ PILAR 4: NEGATIVE FALSE (NF) - Security & Robustness (Ekspektasi: SISTEM AMAN/TI
 - TC_LOG_NF_06: Rapid Repeated Clicking (Button Spamming) Anti-Race Condition
 ================================================================================
 """
+import os
 import time
 import pytest
 from Pages.login_page import LoginPage
@@ -57,11 +58,12 @@ class TestLogin:
     @pytest.fixture(autouse=True)
     def anti_race_condition_deliberation_pause(self):
         """
-        Fixture jeda 5 detik wajib setelah setiap test case selesai
+        Fixture jeda deliberasi setelah setiap test case selesai
         untuk mencegah race condition pada pengujian mobile automation.
         """
         yield
-        time.sleep(5.0)
+        delay = 0.05 if os.getenv('HEADLESS_FAST', '0') == '1' else 5.0
+        time.sleep(delay)
 
     # ==========================================================================
     # PILAR 1: POSITIVE TRUE (PT) - HAPPY PATH / LOGIN SUKSES KE BERANDA
@@ -70,11 +72,11 @@ class TestLogin:
     @pytest.mark.positive_true
     @pytest.mark.smoke
     @pytest.mark.human_like
-    def test_TC_LOG_PT_01_login_berhasil_nomor_dev_dan_otp_1234(self, driver):
+    def test_TC_LOG_PT_01_login_berhasil_nomor_dev_dan_otp_bypass(self, driver):
         """
         [POSITIVE TRUE - PT-01]
-        Deskripsi: Login langsung menggunakan nomor HP Dev aktif 81299990001
-        dan memasukkan kode verifikasi OTP Dev 1234.
+        Deskripsi: Login langsung menggunakan nomor HP Dev aktif <TEST_USER_PHONE>
+        dan memasukkan kode verifikasi OTP Dev <EVMOTO_OTP_BYPASS>.
         Ekspektasi: Pengguna berhasil login dan masuk ke Beranda utama EVMoto.
         """
         data = LOGIN_DATA_POSITIVE_TRUE["TC_LOG_PT_01"]
@@ -101,8 +103,8 @@ class TestLogin:
         then("Sistem berhasil mengautentikasi dan mengarahkan pengguna ke Beranda utama EVMoto")
         home_page.pause(2.0, 3.0, "Memuat halaman Beranda EVMoto")
         is_logged_in = home_page.is_home_screen_displayed(timeout=20)
-        assert is_logged_in, "[GAGAL PT-01] Pengguna gagal masuk ke Beranda setelah login OTP 1234!"
-        print(">>> [PASSED PT-01] Login nomor dev dengan OTP 1234 BERHASIL MASUK BERANDA!")
+        assert is_logged_in, "[GAGAL PT-01] Pengguna gagal masuk ke Beranda setelah login OTP <EVMOTO_OTP_BYPASS>!"
+        print(">>> [PASSED PT-01] Login nomor dev dengan OTP <EVMOTO_OTP_BYPASS> BERHASIL MASUK BERANDA!")
 
     @pytest.mark.positive_true
     def test_TC_LOG_PT_02_login_berhasil_variasi_format_nomor_terdaftar(self, driver):
@@ -129,8 +131,8 @@ class TestLogin:
         """
         [POSITIVE TRUE - PT-03]
         Deskripsi: Menguji alur meminta kirim ulang OTP (Resend OTP) pada layar verifikasi
-        setelah masa countdown awal selesai, lalu login dengan OTP Dev 1234.
-        Ekspektasi: Resend OTP berhasil diminta dan kode OTP 1234 tetap valid untuk login.
+        setelah masa countdown awal selesai, lalu login dengan OTP Dev <EVMOTO_OTP_BYPASS>.
+        Ekspektasi: Resend OTP berhasil diminta dan kode OTP <EVMOTO_OTP_BYPASS> tetap valid untuk login.
         """
         data = LOGIN_DATA_POSITIVE_TRUE["TC_LOG_PT_03"]
         login_page = LoginPage(driver)
@@ -202,7 +204,7 @@ class TestLogin:
         [POSITIVE TRUE - PT-05]
         Deskripsi: Menguji skenario ketika pengguna menonaktifkan fitur Location pada perangkatnya,
         sistem/aplikasi menampilkan popup Location Permission, pengguna memberikan izin lokasi,
-        kemudian melanjutkan pengisian nomor target (81299990001) dan OTP bypass (1234)
+        kemudian melanjutkan pengisian nomor target (<TEST_USER_PHONE>) dan OTP bypass (<EVMOTO_OTP_BYPASS>)
         hingga berhasil terautentikasi dan masuk ke Beranda utama EVMoto.
         Ekspektasi: Popup izin lokasi muncul saat lokasi mati, dapat diizinkan, dan user berhasil login.
         """
@@ -243,14 +245,14 @@ class TestLogin:
         home_page.pause(2.0, 3.0, "Memuat halaman Beranda EVMoto")
         is_logged_in = home_page.is_home_screen_displayed(timeout=20)
         assert is_logged_in, "[GAGAL PT-05] Pengguna gagal masuk ke Beranda setelah penanganan izin lokasi & OTP!"
-        print(">>> [PASSED PT-05] Skenario Location Permission saat lokasi mati & Login OTP 1234 BERHASIL MASUK BERANDA!")
+        print(">>> [PASSED PT-05] Skenario Location Permission saat lokasi mati & Login OTP <EVMOTO_OTP_BYPASS> BERHASIL MASUK BERANDA!")
 
     @pytest.mark.positive_true
     def test_TC_LOG_PT_06_login_format_nomor_telepon_internasional_62(self, driver):
         """
         [POSITIVE TRUE - PT-06]
-        Deskripsi: Login menggunakan format internasional (+6281299990001).
-        Ekspektasi: Sistem otomatis menormalisasi awalan +62/62 menjadi 81299990001 dan lanjut verifikasi OTP.
+        Deskripsi: Login menggunakan format internasional (+62<TEST_USER_PHONE>).
+        Ekspektasi: Sistem otomatis menormalisasi awalan +62/62 menjadi <TEST_USER_PHONE> dan lanjut verifikasi OTP.
         """
         data = LOGIN_DATA_POSITIVE_TRUE["TC_LOG_PT_06"]
         login_page = LoginPage(driver)
@@ -429,7 +431,7 @@ class TestLogin:
     def test_TC_LOG_NT_01_login_gagal_otp_salah(self, driver):
         """
         [NEGATIVE TRUE - NT-01]
-        Deskripsi: Menginput nomor Dev 81299990001, tetapi memasukkan kode OTP salah (9999).
+        Deskripsi: Menginput nomor Dev <TEST_USER_PHONE>, tetapi memasukkan kode OTP salah (9999).
         Ekspektasi: Muncul pesan error merah: 'Verification code is invalid'.
         """
         data = LOGIN_DATA_NEGATIVE_TRUE["TC_LOG_NT_01"]
@@ -448,7 +450,7 @@ class TestLogin:
     def test_TC_LOG_NT_02_login_gagal_nomor_tidak_diawali_8(self, driver):
         """
         [NEGATIVE TRUE - NT-02]
-        Deskripsi: Mengetik nomor yang diawali angka 0 (misal: 082100000000).
+        Deskripsi: Mengetik nomor yang diawali angka 0 (misal: 0<TEST_USER_PHONE>).
         Ekspektasi: Sistem menampilkan validasi error format dan tombol Log In disabled.
         """
         data = LOGIN_DATA_NEGATIVE_TRUE["TC_LOG_NT_02"]

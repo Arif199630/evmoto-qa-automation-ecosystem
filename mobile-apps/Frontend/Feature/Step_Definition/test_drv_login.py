@@ -4,12 +4,13 @@ EVMOTO DRIVER MOBILE AUTOMATION - TEST SUITE: LOGIN & AUTENTIKASI DRIVER
 ================================================================================
 Aplikasi        : EvMoto Driver Dev (com.evmoto.driver.app)
 Target File     : test_drv_login.py
-Environment     : Dev Golang (https://api-dev.evmoto.internal)
-Akun Driver     : 81299990001 | PIN Bypass 1234
+Environment     : Dev Golang (https://evmotodev.justkidding.app)
+Akun Driver     : <TEST_USER_PHONE> | PIN Bypass <EVMOTO_OTP_BYPASS>
 Metodologi      : Page Object Model (POM) & 4 Pilar QA Lengkap
 Wording         : 100% Presisi strings resmi APK driver_lang_id.json
 ================================================================================
 """
+import os
 import time
 import pytest
 from Pages.drv_login_page import DrvLoginPage
@@ -43,10 +44,10 @@ class TestDrvLogin:
 
     @pytest.mark.positive_true
     @pytest.mark.smoke
-    def test_TC_DRV_LOG_PT_01_login_berhasil_nomor_dev_dan_otp_1234(self, driver_app):
+    def test_TC_DRV_LOG_PT_01_login_berhasil_nomor_dev_dan_otp_bypass(self, driver_app):
         """
         [POSITIVE TRUE - PT-01]
-        Deskripsi : Login langsung menggunakan nomor HP Dev 81299990001 dan OTP bypass 1234.
+        Deskripsi : Login langsung menggunakan nomor HP Dev <TEST_USER_PHONE> dan OTP bypass <EVMOTO_OTP_BYPASS>.
         Ekspektasi: Driver berhasil login dan diarahkan ke Beranda utama EvMoto Driver.
         """
         data = DRV_LOG_DATA_POSITIVE_TRUE["TC_DRV_LOG_PT_01"]
@@ -74,13 +75,13 @@ class TestDrvLogin:
 
         then("Mitra sukses masuk ke Beranda utama Driver")
         assert home_pg.is_home_screen_displayed(), "Beranda Driver harus aktif setelah login sukses"
-        logger.info("[SUCCESS] Login Driver Dev 81299990001 + OTP 1234 Berhasil.")
+        logger.info("[SUCCESS] Login Driver Dev <TEST_USER_PHONE> + OTP <EVMOTO_OTP_BYPASS> Berhasil.")
 
     @pytest.mark.positive_true
     def test_TC_DRV_LOG_PT_02_login_variasi_format_awalan_nol(self, driver_app):
         """
         [POSITIVE TRUE - PT-02]
-        Deskripsi : Login menggunakan format nomor dengan awalan 0 (082100000000).
+        Deskripsi : Login menggunakan format nomor dengan awalan 0 (0<TEST_USER_PHONE>).
         Ekspektasi: Sistem menormalisasi awalan 0 dan memproses login dengan lancar.
         """
         data = DRV_LOG_DATA_POSITIVE_TRUE["TC_DRV_LOG_PT_02"]
@@ -108,7 +109,7 @@ class TestDrvLogin:
     def test_TC_DRV_LOG_PT_03_login_variasi_format_internasional_62(self, driver_app):
         """
         [POSITIVE TRUE - PT-03]
-        Deskripsi : Login menggunakan format nomor internasional (+6281299990001).
+        Deskripsi : Login menggunakan format nomor internasional (+62<TEST_USER_PHONE>).
         Ekspektasi: Sistem mengenali kode negara +62 dan membuka layar OTP.
         """
         data = DRV_LOG_DATA_POSITIVE_TRUE["TC_DRV_LOG_PT_03"]
@@ -319,7 +320,7 @@ class TestDrvLogin:
     def test_TC_DRV_LOG_NT_01_login_gagal_kode_otp_salah(self, driver_app):
         """
         [NEGATIVE TRUE - NT-01]
-        Deskripsi : Memasukkan kode OTP salah (misal: 9999, bukan 1234).
+        Deskripsi : Memasukkan kode OTP salah (misal: 9999, bukan OTP bypass).
         Ekspektasi: Sistem menolak verifikasi dan menampilkan notifikasi kesalahan kode.
         """
         data = DRV_LOG_DATA_NEGATIVE_TRUE["TC_DRV_LOG_NT_01"]
@@ -602,7 +603,7 @@ class TestDrvLogin:
         given("Mitra berada pada layar input OTP verifikasi")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            login_pg.enter_phone_number("81299990001")
+            login_pg.enter_phone_number(os.environ.get("TEST_USER_PHONE", ""))
             login_pg.click_join_sekarang()
 
         when("Layar OTP terbuka")
@@ -621,7 +622,7 @@ class TestDrvLogin:
         login_pg.handle_system_permissions()
 
         when("Mitra mengetuk tautan 'Hubungi CS'")
-        login_pg.click_hubungi_cs()
+        login_pg.click_contact_cs()
         then("Sistem merespons aksi pembukaan saluran bantuan")
         assert login_pg.is_login_screen_displayed()
 

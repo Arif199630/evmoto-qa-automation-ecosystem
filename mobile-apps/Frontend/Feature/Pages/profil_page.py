@@ -448,6 +448,14 @@ class ProfilPage(BasePage):
         logger.info(f"[ANTI RACE CONDITION] Jeda {seconds} detik: {reason}")
         time.sleep(seconds)
 
+    def navigate_to_profil_screen(self):
+        """Menavigasi ke layar Profil / Me melalui tab navigasi bawah."""
+        try:
+            self.click(self.NAV_ME, label="Tab Bar 'Me / Akun'")
+        except Exception:
+            pass
+        time.sleep(1.0)
+
     # 1. Header Identitas
     def is_profile_screen_displayed(self, timeout: int = 15) -> bool:
         """Memeriksa apakah layar Profil/Akun aktif dan elemen utama termuat."""
@@ -736,6 +744,19 @@ class ProfilPage(BasePage):
             self.click(self.BTN_CANCEL_LOGOUT, label="Tombol 'Batal Logout'")
         else:
             self.press_back_key()
+
+    def is_video_error_displayed(self, timeout: int = 2) -> bool:
+        """True bila pesan gagal memuat video tutorial tampil."""
+        return self.is_displayed(self.TEXT_VIDEO_LOAD_FAILED, timeout=timeout)
+
+    def background_and_resume_app(self, duration_seconds: int = 3):
+        """Kirim aplikasi ke background selama beberapa detik, lalu kembali ke depan."""
+        self.driver.background_app(duration_seconds)
+
+    def scroll_to_bottom(self, times: int = 3):
+        """Geser layar ke atas beberapa kali sampai bagian bawah halaman Profil."""
+        for _ in range(times):
+            self.swipe(start_x=540, start_y=1600, end_x=540, end_y=500, duration=400)
 
     def press_back_key(self):
         """Menekan tombol Android Hardware Back Key (Keycode 4)."""

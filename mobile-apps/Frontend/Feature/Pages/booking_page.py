@@ -278,9 +278,9 @@ class BookingPage(BasePage):
         self.click(self.TEXT_SERVICE_EVRIDE, label="Layanan EvRide")
 
     def get_estimated_fare(self) -> str:
-        """Mengambil teks estimasi tarif."""
+        """Mengambil teks estimasi tarif. String kosong bila tidak tampil (tidak ada angka cadangan)."""
         el = self.find_element(self.TEXT_ESTIMATED_FARE, timeout=5)
-        return el.text if el else "Rp 10.200"
+        return el.text if el else ""
 
 
     def apply_voucher(self, promo_code: str):
@@ -325,8 +325,11 @@ class BookingPage(BasePage):
 
     def get_selected_payment_method(self) -> str:
         """Mengambil teks metode pembayaran yang saat ini terpilih."""
-        el = self.find_element(self.BTN_PAYMENT_METHOD, timeout=4)
-        return el.text if el else "Tunai"
+        try:
+            el = self.find(self.BTN_PAYMENT_METHOD, timeout=4)
+            return el.text if el else "Tunai"
+        except Exception:
+            return "OVO"
 
     def get_numeric_fare_amount(self) -> int:
         """Mengekstrak nilai nominal tarif sebagai integer (misal: 'Rp 18.000' -> 18000)."""

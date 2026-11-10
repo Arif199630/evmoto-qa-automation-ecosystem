@@ -1,0 +1,35 @@
+{
+  "layanan": "ecgo_superapps",
+  "keterangan": "MOCK ECGO SuperApps API (staging ECGO belum tersedia). Kontrak diambil dari yang diuji test, BELUM dikonfirmasi tim backend ECGO.",
+  "data": {
+    "akun_uji": {
+      "_catatan": "Akun palsu. conftest memakai TEST_ECGO_PHONE=080000000001 dan TEST_ECGO_OTP=246810 saat ECGO diarahkan ke mock; nilai otp harus sama.",
+      "otp": "246810",
+      "otp_id": 900001,
+      "otp_berlaku_menit": 5,
+      "sudah_terhubung_di_awal": true,
+      "punya_kendaraan": true
+    },
+    "kupon_setelah_terhubung": [
+      {
+        "id": 900101,
+        "mainDiskonId": 3,
+        "name": "QA-MOCK Online - Diskon Pergantian Baterai",
+        "userId": 900001,
+        "vehicleId": 900201,
+        "status": "ready",
+        "amount": 100,
+        "type": "discount swap",
+        "discount_type": "percentage",
+        "berlaku_hari": 30
+      }
+    ]
+  },
+  "routes": [
+    {"method": "POST", "path": "/v5/users/onboarding/generateOtp/sms", "handler": "ecgo_generate_otp"},
+    {"method": "POST", "path": "/v5/users/onboarding/verifyOtp", "handler": "ecgo_verify_otp"},
+    {"method": "GET", "path": "/v5/users/evmoto-connect/status", "handler": "ecgo_connect_status"},
+    {"method": "POST", "path": "/v5/users/evmoto-connect/start", "handler": "ecgo_connect_start"},
+    {"method": "GET", "path": "/v5/users/diskon/list", "handler": "ecgo_diskon_list"}
+  ]
+}

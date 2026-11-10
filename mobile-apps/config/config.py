@@ -39,14 +39,12 @@ APPIUM_SERVER_URL = f"http://{APPIUM_HOST}:{APPIUM_PORT}"
 ENVIRONMENT = os.getenv("ENVIRONMENT", "dev").strip().lower()
 
 # Target Mobile App Presets (Dev vs Production)
-DEV_EVMOTO_USER_APK = os.getenv(
-    "DEV_EVMOTO_USER_APK",
-    str(PROJECT_ROOT.parent / "apps" / "evmoto-user-1.2.33-env-dev_golang-20261020-v8a.apk")
-)
-PROD_EVMOTO_USER_APK = os.getenv(
-    "PROD_EVMOTO_USER_APK",
-    str(PROJECT_ROOT.parent / "apps" / "evmoto-user-1.2.33-env-dev_golang-20261020-v8a.apk")
-)
+_user_apk_default = PROJECT_ROOT.parent / "apps" / "UserApps.apk"
+_user_apk_legacy = PROJECT_ROOT.parent / "apps" / "evmoto-user-1.2.33-env-dev_golang-20261020-v8a.apk"
+_user_apk_resolved = str(_user_apk_default if _user_apk_default.exists() else _user_apk_legacy)
+
+DEV_EVMOTO_USER_APK = os.getenv("DEV_EVMOTO_USER_APK", _user_apk_resolved)
+PROD_EVMOTO_USER_APK = os.getenv("PROD_EVMOTO_USER_APK", _user_apk_resolved)
 
 # Resolusi APK Aktif Dinamis
 if os.getenv("EVMOTO_USER_APK"):
@@ -60,22 +58,33 @@ APP_PACKAGE = "com.evmoto.user.app"
 APP_ACTIVITY = "com.evmoto.user.app.MainActivity"
 APP_WAIT_ACTIVITY = "*"
 
-# Konfigurasi Driver Mobile App (evmoto-driver-1.9.27-env-dev_golang-20261020-v7a.apk)
-DRIVER_APK_PATH = os.getenv(
-    "EVMOTO_DRIVER_APK",
-    str(PROJECT_ROOT.parent / "apps" / "evmoto-driver-1.9.27-env-dev_golang-20261020-v7a.apk")
-)
+# Konfigurasi Driver Mobile App
+DRIVER_VERSION = "latest"
+_driver_apk_latest = PROJECT_ROOT.parent / "apps" / "DriverApps.apk"
+_driver_apk_legacy = PROJECT_ROOT.parent / "apps" / "evmoto-driver-1.9.27-env-dev_golang-20261020-v7a.apk"
+_driver_apk_resolved = str(_driver_apk_latest if _driver_apk_latest.exists() else _driver_apk_legacy)
+
+DEV_EVMOTO_DRIVER_APK = os.getenv("DEV_EVMOTO_DRIVER_APK", _driver_apk_resolved)
+PROD_EVMOTO_DRIVER_APK = os.getenv("PROD_EVMOTO_DRIVER_APK", _driver_apk_resolved)
+
+if os.getenv("EVMOTO_DRIVER_APK"):
+    DRIVER_APK_PATH = os.getenv("EVMOTO_DRIVER_APK")
+elif ENVIRONMENT in ("prod", "production"):
+    DRIVER_APK_PATH = PROD_EVMOTO_DRIVER_APK
+else:
+    DRIVER_APK_PATH = DEV_EVMOTO_DRIVER_APK
+
 DRIVER_PACKAGE = "com.evmoto.driver.app"
 DRIVER_ACTIVITY = "com.evmoto.driver.app.MainActivity"
-DRIVER_ACTIVE_PHONE = os.getenv("EVMOTO_DRIVER_PHONE", os.getenv("TEST_DRIVER_PHONE", "0812XXXXXXXX"))
-DRIVER_ACTIVE_PIN = os.getenv("EVMOTO_DRIVER_PIN", os.getenv("TEST_DRIVER_PIN", "****"))
+DRIVER_ACTIVE_PHONE = os.getenv("EVMOTO_DRIVER_PHONE", "")
+DRIVER_ACTIVE_PIN = os.getenv("EVMOTO_DRIVER_PIN", os.environ.get("EVMOTO_OTP_BYPASS", ""))
 
 # Kredensial Pengujian (Phone & OTP) Dev vs Production
-DEV_PHONE = os.getenv("DEV_PHONE", os.getenv("EVMOTO_DEV_PHONE", "0812XXXXXXXX"))
-DEV_OTP = os.getenv("DEV_OTP", os.getenv("EVMOTO_DEV_OTP", "****"))
+DEV_PHONE = os.getenv("DEV_PHONE", os.getenv("EVMOTO_DEV_PHONE", ""))
+DEV_OTP = os.getenv("DEV_OTP", os.getenv("EVMOTO_DEV_OTP", os.environ.get("EVMOTO_OTP_BYPASS", "")))
 
-PROD_PHONE = os.getenv("PROD_PHONE", os.getenv("EVMOTO_PROD_PHONE", "0812XXXXXXXX"))
-PROD_OTP = os.getenv("PROD_OTP", os.getenv("EVMOTO_PROD_OTP", "****"))
+PROD_PHONE = os.getenv("PROD_PHONE", os.getenv("EVMOTO_PROD_PHONE", ""))
+PROD_OTP = os.getenv("PROD_OTP", os.getenv("EVMOTO_PROD_OTP", os.environ.get("EVMOTO_OTP_BYPASS", "")))
 
 if ENVIRONMENT in ("prod", "production"):
     ACTIVE_PHONE = os.getenv("ACTIVE_PHONE", PROD_PHONE)

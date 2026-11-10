@@ -10,15 +10,16 @@ Alur End-to-End:
 1. Mulai dari Layar Masuk / Login
 2. Sentuh 'Register as a New User' -> Membuka form registrasi
 3. Pengguna meninjau form, mengetik No HP & Nama Lengkap
-4. Menekan 'Request OTP' -> Memasukkan kode OTP Dev 1234
+4. Menekan 'Request OTP' -> Memasukkan kode OTP Dev <EVMOTO_OTP_BYPASS>
 5. Menekan 'Create Account' -> Memproses pendaftaran
 6. Kembali ke Layar Masuk (Login)
-7. Mengisi Nomor HP Dev 81299990001
-8. Menekan 'Log In' -> Memasukkan kode OTP Dev 1234
+7. Mengisi Nomor HP Dev <TEST_USER_PHONE>
+8. Menekan 'Log In' -> Memasukkan kode OTP Dev <EVMOTO_OTP_BYPASS>
 9. Mengonfirmasi izin lokasi Google
 10. Masuk sukses ke Beranda Utama EVMoto (Hi, where are you going today?)
 ================================================================================
 """
+import os
 import time
 import pytest
 from Pages.login_page import LoginPage
@@ -84,14 +85,14 @@ class TestLiveDemoE2E:
         register_page.pause(3.0, 3.0, "Pengguna memeriksa nama yang diketik")
 
         # ----------------------------------------------------------------------
-        # FASE 4: REQUEST OTP & INPUT KODE OTP DEV 1234
+        # FASE 4: REQUEST OTP & INPUT KODE OTP DEV <EVMOTO_OTP_BYPASS>
         # ----------------------------------------------------------------------
         print("\n[FASE 4] Menekan tombol 'Request OTP'...")
         register_page.request_otp()
         register_page.pause(3.0, 3.0, "Menunggu kode verifikasi OTP dev terkirim...")
 
-        print(f"   -> Memasukkan Kode OTP Dev: 1234...")
-        register_page.fill_otp("1234")
+        print(f"   -> Memasukkan Kode OTP Dev: <EVMOTO_OTP_BYPASS>...")
+        register_page.fill_otp(os.environ.get("EVMOTO_OTP_BYPASS", ""))
         register_page.pause(3.0, 3.0, "Jeda deliberasi sebelum konfirmasi pendaftaran")
 
         # ----------------------------------------------------------------------
@@ -114,7 +115,7 @@ class TestLiveDemoE2E:
         login_page.is_login_screen_displayed(timeout=15)
 
         # ----------------------------------------------------------------------
-        # FASE 7: LOGIN MENGGUNAKAN NOMOR DEV 81299990001
+        # FASE 7: LOGIN MENGGUNAKAN NOMOR DEV <TEST_USER_PHONE>
         # ----------------------------------------------------------------------
         print(f"\n[FASE 7] Mengisi Nomor Telepon Dev: {login_creds['phone']}...")
         login_page.input_phone_number(login_creds["phone"])
@@ -124,7 +125,7 @@ class TestLiveDemoE2E:
         login_page.click_submit_login()
 
         # ----------------------------------------------------------------------
-        # FASE 8: VERIFIKASI OTP DEV 1234 & IZIN LOKASI
+        # FASE 8: VERIFIKASI OTP DEV <EVMOTO_OTP_BYPASS> & IZIN LOKASI
         # ----------------------------------------------------------------------
         print(f"\n[FASE 9] Layar Verifikasi OTP 4 digit aktif, menginput OTP {login_creds['otp']}...")
         login_page.input_otp_dev(login_creds["otp"], fast_transition=True)

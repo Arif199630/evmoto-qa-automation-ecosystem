@@ -1,0 +1,50 @@
+{
+  "layanan": "evmoto_new_features",
+  "keterangan": "MOCK endpoint EvMoto fitur 2, 3, 5 yang belum ada / kontraknya belum sama di staging. Aturan bisnis di bawah adalah ASUMSI dari test, wajib dikonfirmasi tim backend.",
+  "data": {
+    "free_swap": {
+      "_catatan": "Fitur 2. Driver eligible bila onlineMinutesWindow >= target_menit dan sudah terhubung ECGO (linkedAt terisi).",
+      "target_menit": 480,
+      "kuota_default": 10,
+      "driver_online": [
+        {"driverId": 546, "onlineMinutesWindow": 485, "linkedAt": "2026-10-01 10:00:00"},
+        {"driverId": 702, "onlineMinutesWindow": 520, "linkedAt": "2026-10-05 14:20:00"},
+        {"driverId": 811, "onlineMinutesWindow": 300, "linkedAt": "2026-10-06 09:00:00"}
+      ],
+      "driver_belum_terhubung": [
+        {"driverId": 999, "onlineMinutesWindow": 490, "linkedAt": ""}
+      ]
+    },
+    "onboarding": {
+      "_catatan": "Fitur 3. Kupon diterbitkan berurutan; loop berhenti saat sisa budget tidak cukup untuk kupon berikutnya.",
+      "company_evmoto": 1,
+      "package_id": 105,
+      "paket_aktif": true,
+      "nilai_kupon": [10000, 10000, 15000],
+      "budget_normal": 1000000,
+      "budget_saat_hampir_habis": 10000,
+      "kupon_berlaku_hari": 7
+    },
+    "rush_hour": {
+      "_catatan": "Fitur 5. Jam dalam WIB, batas mulai & selesai inklusif (menit). Tier dipilih dari tarif yang dibulatkan setengah ke atas.",
+      "vehicle_type_mobil": 2,
+      "jendela_wib": [
+        {"nama": "MORNING_RUSH", "mulai": "06:45", "selesai": "08:45"},
+        {"nama": "EVENING_RUSH", "mulai": "16:45", "selesai": "18:45"}
+      ],
+      "tier": [
+        {"tier": 1, "sampai": 10000, "subsidi": 3000},
+        {"tier": 2, "sampai": 20000, "subsidi": 4000},
+        {"tier": 3, "sampai": null, "subsidi": 5000}
+      ],
+      "balance_change_type": 23,
+      "income_type": 1
+    }
+  },
+  "routes": [
+    {"method": "GET", "path": "/account/base/driver/freeSwapDaily", "handler": "free_swap_daily"},
+    {"method": "PUT", "path": "/account/base/user", "handler": "onboarding_voucher"},
+    {"method": "POST", "path": "/account/base/user/threeLogin", "handler": "onboarding_voucher"},
+    {"method": "POST", "path": "/order/api/order/rushHourSubsidy", "handler": "rush_hour_subsidy"}
+  ]
+}

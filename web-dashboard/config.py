@@ -122,16 +122,16 @@ class Config(metaclass=ConfigMeta):
        - Config.set_environment("dev")
     """
 
-    DEFAULT_BASE_URL = os.getenv("EVMOTO_ADMIN_PORTAL_URL", "https://admin-staging.evmoto.internal")
+    DEFAULT_BASE_URL = "https://dashboard.evmotoid.com"
 
-    # Pemetaan URL default per Environment (Masked Internal Domains)
+    # Pemetaan URL default per Environment
     ENV_BASE_URLS = {
-        "production": "https://admin.evmoto.internal",
-        "prod": "https://admin.evmoto.internal",
-        "staging": "https://admin-staging.evmoto.internal",
-        "dev": "https://admin-dev.evmoto.internal",
-        "development": "https://admin-dev.evmoto.internal",
-        "qa": "https://admin-qa.evmoto.internal",
+        "production": "https://dashboard.evmotoid.com",
+        "prod": "https://dashboard.evmotoid.com",
+        "staging": "https://staging-dashboard.evmotoid.com",
+        "dev": "https://dev-dashboard.evmotoid.com",
+        "development": "https://dev-dashboard.evmotoid.com",
+        "qa": "https://qa-dashboard.evmotoid.com",
         "local": "http://localhost:3000",
         "localhost": "http://localhost:3000",
     }
@@ -140,8 +140,8 @@ class Config(metaclass=ConfigMeta):
 
     @classmethod
     def get_environment(cls) -> str:
-        """Mendapatkan nama environment aktif (default: 'staging')."""
-        return os.getenv("ENVIRONMENT", "staging").strip().lower()
+        """Mendapatkan nama environment aktif (default: 'dev' = staging, agar tidak menyentuh production)."""
+        return os.getenv("ENVIRONMENT", "dev").strip().lower()
 
     @classmethod
     def get_valid_user(cls) -> str:
@@ -151,8 +151,8 @@ class Config(metaclass=ConfigMeta):
             return explicit.strip()
         env_name = cls.get_environment()
         if env_name in ("dev", "development"):
-            return os.getenv("DEV_USER", "admin_dev").strip()
-        return os.getenv("PROD_USER", "admin_qa").strip()
+            return os.getenv("DEV_USER", "dev_qa").strip()
+        return os.getenv("PROD_USER", "").strip()
 
     @classmethod
     def get_valid_pass(cls) -> str:
@@ -162,8 +162,8 @@ class Config(metaclass=ConfigMeta):
             return explicit.strip()
         env_name = cls.get_environment()
         if env_name in ("dev", "development"):
-            return os.getenv("DEV_PASS", "********").strip()
-        return os.getenv("PROD_PASS", "********").strip()
+            return os.getenv("DEV_PASS", "DevSecret123").strip()
+        return os.getenv("PROD_PASS", "").strip()
 
     @classmethod
     def get_base_url(cls) -> str:
@@ -173,7 +173,7 @@ class Config(metaclass=ConfigMeta):
         2. Environment variable: BASE_URL / EVMOTO_BASE_URL / APP_URL
         3. Environment variable per environment: DEV_BASE_URL (jika dev) / PROD_BASE_URL (jika prod)
         4. Environment preset: ENVIRONMENT (production, staging, dev, qa, local)
-        5. Default: https://admin-staging.evmoto.internal
+        5. Default: https://dashboard.evmotoid.com
         """
         if cls._custom_base_url:
             return cls._custom_base_url.rstrip("/")
@@ -224,7 +224,7 @@ class Config(metaclass=ConfigMeta):
         """
         Membangun URL lengkap dari path atau URL relatif secara dinamis.
         Contoh:
-          Config.get_url("/login") -> "https://admin-staging.evmoto.internal/login"
+          Config.get_url("/login") -> "https://dashboard.evmotoid.com/login"
           Config.get_url("https://example.com/custom") -> "https://example.com/custom"
         """
         if not path:
@@ -242,12 +242,12 @@ class Config(metaclass=ConfigMeta):
     # =========================================================================
     # BACKEND API ENDPOINTS (JAVA & GOLANG)
     # =========================================================================
-    JAVA_DEV_API_URL        = os.getenv("JAVA_DEV_API_URL", "https://dev-api.evmoto.internal")
-    JAVA_PROD_API_URL       = os.getenv("JAVA_PROD_API_URL", "https://api.evmoto.internal")
-    GOLANG_DEV_API_IP       = os.getenv("GOLANG_DEV_API_IP", "http://10.0.0.10")
-    GOLANG_DEV_API_DOMAIN   = os.getenv("EVMOTO_API_BASE_URL", "https://api-dev.evmoto.internal")
-    GOLANG_DEV_API_URL      = os.getenv("EVMOTO_API_BASE_URL", "https://api-dev.evmoto.internal")
-    GOLANG_PROD_API_URL     = os.getenv("GOLANG_PROD_API_URL", "https://new-api.evmoto.internal")
+    JAVA_DEV_API_URL        = "https://dev-api.evmotoid.com"
+    JAVA_PROD_API_URL       = "https://api.evmotoid.com"
+    GOLANG_DEV_API_IP       = "http://139.162.60.46"
+    GOLANG_DEV_API_DOMAIN   = "https://evmotodev.justkidding.app"
+    GOLANG_DEV_API_URL      = "https://evmotodev.justkidding.app"
+    GOLANG_PROD_API_URL     = "https://new-api.evmotoid.com"
 
     BACKEND_API_MAP = {
         "java_dev": JAVA_DEV_API_URL,

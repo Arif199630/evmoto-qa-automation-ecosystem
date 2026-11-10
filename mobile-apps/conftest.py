@@ -44,7 +44,6 @@ for mod_name, mod_dir in [
         spec.loader.exec_module(mod)
 
 # Registrasi terpadu test_data & Data (1 File dalam folder Data)
-import types
 for td_alias in ['test_data', 'Data']:
     if td_alias not in sys.modules:
         _td_mod = types.ModuleType(td_alias)
@@ -69,12 +68,18 @@ from core.driver_factory import DriverFactory
 from utils.video_recorder import start_screen_recording, stop_and_save_recording
 from utils.logger import get_logger
 from config import config
+from core.staging_guard import ensure_not_production
+
+
+def pytest_sessionstart(session):
+    """Batalkan run bila target mengarah ke production (hanya dev/staging yang diizinkan)."""
+    ensure_not_production(extra_urls=[getattr(config, "BACKEND_API_URL", "")])
 
 logger = get_logger("Conftest")
 
 def check_backend_server_status() -> tuple:
     """
-    Memeriksa status kesehatan server development backend (api-dev.evmoto.internal).
+    Memeriksa status kesehatan server development backend (dev-api.evmotoid.com).
     Returns (status_code, status_message).
     0 = OK / Online
     500 = Server mati / Internal Server Error
@@ -85,7 +90,7 @@ def check_backend_server_status() -> tuple:
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
-        target_host = os.getenv("BACKEND_API_URL", "https://api-dev.evmoto.internal")
+        target_host = os.getenv("BACKEND_API_URL", "https://new-api.evmotoid.com")
         req = urllib.request.Request(target_host, headers={"User-Agent": "Dart/3.5"})
         urllib.request.urlopen(req, context=ctx, timeout=3)
         return (200, "Online")
@@ -119,7 +124,7 @@ def driver(request):
         warning_msg = (
             "\n" + "=" * 78 + "\n"
             "[PERINGATAN KRITIKAL: SERVER MATI (ERROR 500)]\n"
-            "Server backend 'api-dev.evmoto.internal' MATI atau mengalami Internal Server Error!\n"
+            "Server backend 'dev-api.evmotoid.com' MATI atau mengalami Internal Server Error!\n"
             "Automasi testing langsung dihentikan untuk menghindari kegagalan uji palsu.\n"
             "Silakan periksa atau hubungi tim Backend untuk menyalakan/memperbaiki server.\n"
             + "=" * 78
@@ -134,7 +139,7 @@ def driver(request):
         pytest.skip(f"[WARNING: SERVER MATI] Terjadi Error 500 ({status_msg}). Automasi dibatalkan.")
 
     elif status_code == 502:
-        logger.warning("[SERVER 502] Server development api-dev.evmoto.internal sedang direstart oleh developer.")
+        logger.warning("[SERVER 502] Server development dev-api.evmotoid.com sedang direstart oleh developer.")
         try:
             from utils.lark_notifier import send_server_alert_to_lark
             send_server_alert_to_lark(502, status_msg)
@@ -215,9 +220,16 @@ def pytest_runtest_makereport(item, call):
     report = outcome.get_result()
 
     if report.when == "call" and report.failed:
-        driver_instance = getattr(item, "driver", None)
+        driver_instance = getattr(item, "driver", None) or item.funcargs.get("driver") or item.funcargs.get("driver_app")
         screenshot_path = None
         if driver_instance:
+            # Bukti untuk memilah bug aplikasi vs bug automation: struktur layar (XML) saat test gagal.
+            target_dir = getattr(config, "SCREENSHOTS_DIR", getattr(config, "SCREENSHOTSDIR", None))
+            if target_dir:
+                try:
+                    (target_dir / f"{item.name}_FAILED.xml").write_text(driver_instance.page_source or "", encoding="utf-8")
+                except Exception as e:
+                    logger.warning(f"Gagal menyimpan page source: {e}")
             target_dir = getattr(config, "SCREENSHOTS_DIR", getattr(config, "SCREENSHOTSDIR", None))
             screenshot_path = target_dir / f"{item.name}_FAILED.png" if target_dir else None
             try:
@@ -240,3 +252,17 @@ def pytest_runtest_makereport(item, call):
             )
         except Exception as e:
             logger.warning(f"[LarkAutoSync] Gagal memicu notifikasi Lark: {e}")
+
+
+def pytest_terminal_summary(terminalreporter):
+    """Menyebut dengan jelas bila test berjalan di simulator, bukan di aplikasi sungguhan."""
+    from core.headless_mobile_driver import HeadlessMobileDriver
+
+    sessions = HeadlessMobileDriver.sessions_created
+    if sessions:
+        terminalreporter.write_sep(
+            "!",
+            f"{sessions} sesi memakai HeadlessMobileDriver (simulator), bukan aplikasi di device. "
+            "Hasil ini menguji alur test dan Page Object, bukan perilaku aplikasi EvMoto.",
+            yellow=True,
+        )

@@ -4,7 +4,7 @@ EVMOTO USER MOBILE AUTOMATION - COMPREHENSIVE END-TO-END (E2E) MASTER SUITE
 ================================================================================
 Tujuan: Pengujian End-To-End menyeluruh (E2E) TANPA ORDER yang mencakup:
   1. Izin & Sensor: Runtime Permission (Location 'Saat Aplikasi Digunakan', GPS)
-  2. Autentikasi: Registrasi form tinjauan & Login kredensial Dev (OTP 1234)
+  2. Autentikasi: Registrasi form tinjauan & Login kredensial Dev (OTP <EVMOTO_OTP_BYPASS>)
   3. Beranda: Header, Top Up, QRIS scanner, Search, Grid EvRide/Send/Rent, Promo Carousel
   4. Tinjauan Pemesanan (Review Placing Order): Estimasi tarif, rute, batal pesan (TANPA ORDER)
   5. Aktivitas: Tab Regular (Normal Booking) & Tab Booking (Advance Booking), Reschedule, E-Receipt
@@ -25,6 +25,7 @@ from utils.bdd_helper import given, when, then, and_step
 from Frontend.Feature.Pages.login_page import LoginPage
 from Frontend.Feature.Pages.register_page import RegisterPage
 from Frontend.Feature.Pages.home_page import HomePage
+from Frontend.Feature.Pages.booking_page import BookingPage
 from Frontend.Feature.Pages.activity_page import ActivityPage
 from Frontend.Feature.Pages.profil_page import ProfilPage
 from Frontend.Feature.Data.user_data import (
@@ -72,7 +73,7 @@ class TestComprehensiveE2E:
         1. Memeriksa runtime permission (Izin Lokasi Android 'Saat Aplikasi Digunakan').
         2. Menavigasi ke formulir pendaftaran akun (Register).
         3. Meninjau input nomor HP dan nama lengkap, serta tombol Request OTP dev.
-        4. Kembali ke layar Login, mengisi nomor Dev & OTP 1234, dan masuk sukses ke Beranda.
+        4. Kembali ke layar Login, mengisi nomor Dev & OTP <EVMOTO_OTP_BYPASS>, dan masuk sukses ke Beranda.
         """
         print("\n" + "=" * 80)
         print(">>> [E2E-01] RUNTIME PERMISSION & AUTENTIKASI (REGISTER & LOGIN) <<<")
@@ -83,7 +84,7 @@ class TestComprehensiveE2E:
 
         when("Menangani dialog runtime permission lokasi jika muncul")
         try:
-            self.login_page.handle_location_permission(allow=True)
+            self.login_page.handle_location_prompt_if_present()
             time.sleep(1.0)
         except Exception:
             pass
@@ -102,7 +103,7 @@ class TestComprehensiveE2E:
         self.register_page.navigate_back_to_login()
         time.sleep(1.5)
 
-        when("Melakukan login menggunakan nomor Dev dan kode OTP 1234")
+        when("Melakukan login menggunakan nomor Dev dan kode OTP <EVMOTO_OTP_BYPASS>")
         self.login_page.login(phone=dev_phone, otp=dev_otp)
         time.sleep(2.5)
 
@@ -143,9 +144,7 @@ class TestComprehensiveE2E:
         print(f"  [Header] Sapaan: '{greeting}' | Lokasi: '{loc}'")
 
         and_step("Menutup popup sambutan jika muncul")
-        if self.home_page.is_welcome_modal_displayed(timeout=3):
-            self.home_page.dismiss_welcome_modal()
-            time.sleep(1.0)
+        self.home_page.dismiss_welcome_popup_if_present()  # aman bila pop-up tidak muncul
 
         # Kartu Dompet: Top Up & QRIS
         and_step("Menguji modal Top Up dan Pemindai QRIS pada kartu saldo")
@@ -155,7 +154,7 @@ class TestComprehensiveE2E:
             self.home_page.cancel_top_up_modal()
             time.sleep(1.0)
 
-        self.home_page.open_qris_scanner()
+        self.home_page.open_wallet_pay_qr()
         time.sleep(1.0)
         if self.home_page.is_qris_scanner_displayed(timeout=3):
             self.home_page.close_qris_scanner()
@@ -163,21 +162,21 @@ class TestComprehensiveE2E:
 
         # Bilah Pencarian & Quick Chips
         when("Menguji bilah pencarian tujuan dan shortcut lokasi cepat")
-        self.home_page.open_destination_search()
+        self.home_page.open_search_destination()
         time.sleep(1.0)
-        self.home_page.type_destination_query("Stasiun Gambir Pintu Timur")
+        self.home_page.input_destination_search("Stasiun Gambir Pintu Timur")
         time.sleep(1.0)
-        self.home_page.click_quick_chip_coffee()
+        self.home_page.select_quick_destination("coffee")
         time.sleep(1.0)
 
         # Review Placing Order (STRICTLY EXCLUDE PLACING ORDER)
         when("Membuka peninjauan rute EvRide (Review Placing Order)")
-        self.home_page.click_evride_service()
+        self.home_page.click_service_evride()
         time.sleep(2.0)
 
         then("Memverifikasi layar Review Placing Order memuat estimasi tarif dan ringkasan rute")
         is_review = self.home_page.is_review_placing_order_displayed(timeout=5)
-        fare = self.home_page.get_estimated_fare_text()
+        fare = BookingPage(self.driver).get_estimated_fare()
         print(f"  [Review Placing Order] Status: {is_review} | Estimasi Biaya: '{fare}'")
 
         and_step("Membatalkan peninjauan dan kembali ke Beranda TANPA ORDER (EXCLUDE PLACING ORDER)")
@@ -187,7 +186,7 @@ class TestComprehensiveE2E:
 
         # Promo Carousel & Pull to refresh
         when("Menguji carousel banner promo dengan gestur swipe horizontal")
-        self.home_page.swipe_promo_banner(direction="left")
+        self.home_page.swipe_promo_banner_next(direction="left")
         time.sleep(1.0)
         self.home_page.pull_to_refresh_home()
         time.sleep(1.5)
@@ -369,11 +368,11 @@ class TestComprehensiveE2E:
         given("Pengguna menavigasi ke Halaman Profil ('Me')")
         self.profil_page.navigate_to_profil_screen()
         time.sleep(1.5)
-        assert self.profil_page.is_profil_screen_displayed(timeout=10), "[E2E-05] Layar Profil tidak aktif!"
+        assert self.profil_page.is_profile_screen_displayed(timeout=10), "[E2E-05] Layar Profil tidak aktif!"
 
         # Avatar & Modal Picker Gambar
         when("Mengetuk foto avatar pengguna untuk membuka Modal Picker Gambar")
-        self.profil_page.click_user_avatar()
+        self.profil_page.open_avatar_picker()
         time.sleep(1.5)
 
         then("Bottom Sheet pemilih gambar (Kamera vs Galeri) terbuka")
@@ -384,20 +383,20 @@ class TestComprehensiveE2E:
 
         # Kontak Darurat
         when("Membuka menu Kontak Darurat (Emergency Contact)")
-        self.profil_page.open_emergency_contacts()
+        self.profil_page.navigate_to_emergency_contacts()
         time.sleep(1.5)
         self.profil_page.click_add_emergency_contact()
         time.sleep(1.0)
-        self.profil_page.fill_emergency_contact(name="Budi Pratama", phone="81234567890")
+        self.profil_page.input_emergency_contact_form(name="Budi Pratama", phone="81234567890")
         time.sleep(1.0)
-        self.profil_page.back_from_subpage()
+        self.profil_page.press_back_key()
         time.sleep(1.5)
 
         # Alamat Tersimpan
         when("Membuka menu Alamat Tersimpan / Favorit (Saved Addresses)")
-        self.profil_page.open_saved_addresses()
+        self.profil_page.navigate_to_saved_addresses()
         time.sleep(1.5)
-        self.profil_page.back_from_subpage()
+        self.profil_page.press_back_key()
         time.sleep(1.5)
 
         print(">>> [E2E-05] Berhasil Menguji Avatar Gambar, Kontak Darurat & Alamat Favorit! <<<")
@@ -426,30 +425,30 @@ class TestComprehensiveE2E:
 
         # Video Tutorial FAQ
         when("Membuka menu Panduan & Video Tutorial FAQ")
-        self.profil_page.open_help_faq()
+        self.profil_page.navigate_to_help_center()
         time.sleep(2.0)
 
         then("Memverifikasi elemen Video Player aktif dan tidak mengalami error pemuatan media")
-        has_video = self.profil_page.is_video_player_present(timeout=5)
+        has_video = self.profil_page.is_video_player_functional(timeout=5)
         has_error = self.profil_page.is_video_error_displayed(timeout=2)
         print(f"  [Video Player] Elemen Video Tampil: {has_video} | Media Error: {has_error}")
         assert not has_error, "[E2E-06] Terjadi error pemuatan video tutorial FAQ!"
 
-        self.profil_page.back_from_subpage()
+        self.profil_page.press_back_key()
         time.sleep(1.5)
 
         # Banner CS Support & Popup Aturan Foto
         when("Membuka banner Hubungi Customer Service")
-        self.profil_page.open_customer_service()
+        self.profil_page.open_cs_ticket_form()
         time.sleep(1.5)
-        self.profil_page.back_from_subpage()
+        self.profil_page.press_back_key()
         time.sleep(1.5)
 
         # Dokumen Legalitas
         when("Membuka dokumen Syarat & Ketentuan dan Kebijakan Privasi")
-        self.profil_page.open_terms_conditions()
+        self.profil_page.navigate_to_terms()
         time.sleep(1.0)
-        self.profil_page.back_from_subpage()
+        self.profil_page.press_back_key()
         time.sleep(1.0)
 
         print(">>> [E2E-06] Berhasil Menguji Video Tutorial FAQ, CS Banner & Legalitas! <<<")
@@ -476,9 +475,9 @@ class TestComprehensiveE2E:
         time.sleep(1.5)
 
         when("Membuka Pengaturan Bahasa dan memilih bahasa 'English'")
-        self.profil_page.open_language_settings()
+        self.profil_page.navigate_to_language()
         time.sleep(1.5)
-        self.profil_page.switch_language_to_english()
+        self.profil_page.select_language("en")
         time.sleep(2.0)
 
         then("Bahasa antarmuka berhasil beralih ke Bahasa Inggris")
@@ -486,9 +485,9 @@ class TestComprehensiveE2E:
         print(f"  [Bilingual] Snackbar Switch to English: {has_english_snackbar}")
 
         when("Membuka kembali Pengaturan Bahasa dan mengembalikan ke 'Indonesia'")
-        self.profil_page.open_language_settings()
+        self.profil_page.navigate_to_language()
         time.sleep(1.5)
-        self.profil_page.switch_language_to_indonesian()
+        self.profil_page.select_language("id")
         time.sleep(2.0)
 
         then("Bahasa antarmuka berhasil kembali ke Bahasa Indonesia")
@@ -523,26 +522,26 @@ class TestComprehensiveE2E:
         when("Aplikasi di-minimize ke background selama 3 detik lalu di-resume")
         self.profil_page.background_and_resume_app(duration_seconds=3)
         time.sleep(1.5)
-        assert self.profil_page.is_profil_screen_displayed(timeout=8), "[E2E-08] State Profil hilang setelah resume!"
+        assert self.profil_page.is_profile_screen_displayed(timeout=8), "[E2E-08] State Profil hilang setelah resume!"
 
         and_step("Menggulir ke bagian paling bawah Profil untuk menemukan tombol Log Out")
         self.profil_page.scroll_to_bottom()
         time.sleep(1.5)
 
         when("Mengetuk tombol 'Log Out' untuk memicu Dialog Konfirmasi")
-        self.profil_page.click_logout()
+        self.profil_page.open_logout_dialog()
         time.sleep(1.5)
 
         then("Dialog konfirmasi keluar aplikasi tampil dengan pilihan Batal & Konfirmasi")
-        assert self.profil_page.is_logout_confirm_modal_displayed(timeout=5), "[E2E-08] Dialog logout tidak muncul!"
+        assert self.profil_page.is_logout_dialog_displayed(timeout=5), "[E2E-08] Dialog logout tidak muncul!"
 
         and_step("Menguji penolakan logout dengan menekan tombol 'Batal'")
         self.profil_page.cancel_logout()
         time.sleep(1.5)
-        assert self.profil_page.is_profil_screen_displayed(timeout=5), "[E2E-08] Tidak kembali ke Profil setelah Batal Logout!"
+        assert self.profil_page.is_profile_screen_displayed(timeout=5), "[E2E-08] Tidak kembali ke Profil setelah Batal Logout!"
 
         when("Mengetuk kembali tombol 'Log Out' lalu menekan 'Ya, Keluar'")
-        self.profil_page.click_logout()
+        self.profil_page.open_logout_dialog()
         time.sleep(1.5)
         self.profil_page.confirm_logout()
         time.sleep(2.5)

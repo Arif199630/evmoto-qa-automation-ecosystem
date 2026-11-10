@@ -35,7 +35,9 @@ Daftar Cakupan Pengujian:
    - Resiliensi Minimize / Backgrounding Aplikasi saat Mencari Driver
 ================================================================================
 """
+import os
 import time
+import math
 import pytest
 from appium.webdriver.common.appiumby import AppiumBy
 
@@ -79,7 +81,7 @@ def activity_page(driver):
 
 @pytest.fixture(scope="function")
 def driver_simulator():
-    """Simulator peran Driver (Budi Setiawan 81299990006, APK com.evmoto.driver.app)."""
+    """Simulator peran Driver (Budi Setiawan <TEST_DRIVER_PHONE>, APK com.evmoto.driver.app)."""
     simulator = DriverRoleSimulator()
     simulator.set_online(is_online=True)
     yield simulator
@@ -101,19 +103,19 @@ def authenticated_home(driver, login_page, home_page):
     """Prasyarat global: Pastikan aplikasi sudah masuk ke layar Beranda."""
     try:
         # Dismiss welcome popup jika ada
-        home_page.dismiss_welcome_popup()
+        home_page.dismiss_welcome_popup_if_present()
     except Exception:
         pass
 
-    if not home_page.is_home_displayed(timeout=3):
+    if not home_page.is_home_screen_displayed(timeout=3):
         # Jalankan autentikasi dev cepat
         try:
-            login_page.enter_phone(Config.ACTIVE_PHONE)
-            login_page.click_login_button()
+            login_page.input_phone_number(Config.ACTIVE_PHONE)
+            login_page.click_submit_login()
             time.sleep(1)
-            login_page.enter_otp(Config.ACTIVE_OTP)
+            login_page.input_otp_dev(Config.ACTIVE_OTP)
             time.sleep(2)
-            home_page.dismiss_welcome_popup()
+            home_page.dismiss_welcome_popup_if_present()
         except Exception as e:
             logger.info(f"State login setup: {e}")
     return home_page
@@ -138,18 +140,17 @@ class TestNormalBookingSuite:
 
         then("Peta kembali terpusat ke koordinat lokasi pengguna secara akurat")
         time.sleep(1)
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_NORM_05_verify_popup_operational_hours_notice(self, authenticated_home, home_page):
         """[TC05] Verify Popup Operational Hours Notice: Popup ditutup dengan tombol Continue / X."""
         given("Pengguna berada di layar Beranda dan popup jam operasional tampil")
         when("Pengguna mengetuk tombol Continue atau tombol X")
-        home_page.dismiss_welcome_popup()
+        home_page.dismiss_welcome_popup_if_present()
 
         then("Popup menghilang dan antarmuka Beranda dapat diakses penuh")
-        assert home_page.is_home_displayed() or True
+        assert home_page.is_home_screen_displayed()
 
     # --------------------------------------------------------------------------
     # 2. Saved Places under Pickup Section (Home, Work, Others)
@@ -168,8 +169,7 @@ class TestNormalBookingSuite:
         booking_page.fill_saved_location_details(name="Rumah Idaman", detail_address="Tower 2 Lantai 15")
 
         then("Data alamat rumah berhasil tersimpan")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar3
     def test_TC_NORM_11_verify_saved_home_mandatory_field_validation(self, authenticated_home, booking_page):
@@ -181,7 +181,7 @@ class TestNormalBookingSuite:
         booking_page.fill_saved_location_details(name="", detail_address="Jalan Thamrin No 1")
 
         then("Sistem menampilkan pesan peringatan kolom wajib (mandatory warning)")
-        assert booking_page.is_mandatory_warning_displayed() or True
+        assert booking_page.is_mandatory_warning_displayed()
 
     @pytest.mark.booking
     @pytest.mark.pilar2
@@ -194,8 +194,7 @@ class TestNormalBookingSuite:
         booking_page.click_back()
 
         then("Layar kembali menampilkan Beranda dengan aman")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_NORM_15_to_23_verify_saved_work_location(self, authenticated_home, booking_page):
@@ -209,8 +208,7 @@ class TestNormalBookingSuite:
         booking_page.fill_saved_location_details(name="Kantor Pusat Astra", detail_address="Lantai 30")
 
         then("Alamat kantor berhasil disimpan dalam daftar lokasi favorit")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_NORM_24_to_32_verify_saved_other_location(self, authenticated_home, booking_page):
@@ -224,8 +222,7 @@ class TestNormalBookingSuite:
         booking_page.fill_saved_location_details(name="Tempat Nongkrong", detail_address="East Mall Lobby")
 
         then("Lokasi lainnya berhasil disimpan")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     # --------------------------------------------------------------------------
     # 3. Pickup Point Section & Destination Suggestions
     # --------------------------------------------------------------------------
@@ -238,8 +235,7 @@ class TestNormalBookingSuite:
         booking_page.open_pickup_section()
 
         then("Layar beralih ke form destinasi dengan titik jemput otomatis terisi")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_NORM_34_verify_cta_set_on_map(self, authenticated_home, booking_page):
@@ -251,8 +247,7 @@ class TestNormalBookingSuite:
         booking_page.click_set_on_map()
 
         then("Peta penentuan titik tampil dan pin pointer aktif")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_NORM_35_verify_field_destination_auto_suggest(self, authenticated_home, booking_page):
@@ -266,8 +261,7 @@ class TestNormalBookingSuite:
         booking_page.select_first_suggestion()
 
         then("Data destinasi tersimpan dan aplikasi beralih ke layar Place Order")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar2
     def test_TC_NORM_36_37_verify_cta_back_from_place_order(self, authenticated_home, booking_page):
@@ -277,8 +271,7 @@ class TestNormalBookingSuite:
         booking_page.click_back()
 
         then("Aplikasi kembali ke halaman Beranda tanpa membuat order")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     # --------------------------------------------------------------------------
     # 4. Place Order, Searching Driver & Cancel Flow (TC38 - TC42)
     # --------------------------------------------------------------------------
@@ -295,7 +288,7 @@ class TestNormalBookingSuite:
         booking_page.submit_book_evmoto()
 
         then("Sistem mengalihkan ke layar pencarian mitra driver (Searching Driver on progress)")
-        assert tracking_page.is_searching_driver() or True
+        assert tracking_page.is_searching_driver()
 
     @pytest.mark.booking
     @pytest.mark.pilar1
@@ -306,8 +299,7 @@ class TestNormalBookingSuite:
         booking_page.click_back()
 
         then("Snackbar aktivitas pencarian driver yang sedang berjalan tampil di bagian bawah")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_NORM_41_verify_popup_confirmation_cancel_order(self, authenticated_home, tracking_page):
@@ -317,8 +309,7 @@ class TestNormalBookingSuite:
         tracking_page.cancel_searching_driver(confirm=True)
 
         then("Pencarian driver berhasil dibatalkan dan pengguna kembali ke Beranda")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar2
     def test_TC_NORM_42_verify_popup_confirmation_cancel_close(self, authenticated_home, tracking_page):
@@ -328,8 +319,7 @@ class TestNormalBookingSuite:
         tracking_page.cancel_searching_driver(confirm=False)
 
         then("Popup tertutup dan pencarian driver tetap berlanjut secara aman")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     # --------------------------------------------------------------------------
     # 5. Order Complete Lifecycle Flow (TC61 - TC71)
     # --------------------------------------------------------------------------
@@ -344,8 +334,7 @@ class TestNormalBookingSuite:
         booking_page.submit_book_evmoto()
 
         then("Saat driver ditugaskan, kontainer informasi driver (nama, nomor plat, estimasi waktu) tampil")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_NORM_66_verify_cta_chat_driver_text_and_photo(self, authenticated_home, tracking_page):
@@ -355,8 +344,7 @@ class TestNormalBookingSuite:
         tracking_page.send_chat_message("Saya di lobi barat memakai jaket hitam")
 
         then("Pesan berhasil terkirim ke obrolan driver secara realtime")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_NORM_67_68_verify_driver_container_scroll_expand_collapse(self, authenticated_home, tracking_page):
@@ -368,8 +356,7 @@ class TestNormalBookingSuite:
         tracking_page.collapse_driver_container()
 
         then("Kontainer driver merespons gesture ekspansi dan kolaps secara mulus")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_NORM_69_verify_cta_emergency_sos_icon(self, authenticated_home, tracking_page):
@@ -379,8 +366,7 @@ class TestNormalBookingSuite:
         tracking_page.click(tracking_page.BTN_EMERGENCY_ICON, label="Tombol SOS Darurat")
 
         then("Sistem membuka shortcut panggilan darurat telepon")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_NORM_70_verify_cta_customer_service_whatsapp(self, authenticated_home, tracking_page):
@@ -390,8 +376,7 @@ class TestNormalBookingSuite:
         tracking_page.click(tracking_page.BTN_CUSTOMER_SERVICE_ICON, label="Tombol CS WhatsApp")
 
         then("Sistem mengalihkan ke kontak Customer Service WhatsApp")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_NORM_71_verify_order_complete_and_driver_rating(self, authenticated_home, tracking_page):
@@ -401,8 +386,7 @@ class TestNormalBookingSuite:
         tracking_page.submit_driver_review(stars=5, comment="Perjalanan sangat nyaman dan driver ramah")
 
         then("Penilaian berhasil disimpan dan snackbar hijau konfirmasi rating tampil")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     # --------------------------------------------------------------------------
     # 6. Cancellation Flows & Boundaries (TC72 - TC89)
     # --------------------------------------------------------------------------
@@ -415,8 +399,7 @@ class TestNormalBookingSuite:
         tracking_page.cancel_trip_with_reason()
 
         then("Pesanan dibatalkan secara resmi dan pengguna diarahkan kembali ke Beranda")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_NORM_80_to_83_verify_driver_cancel_and_try_again(self, authenticated_home, tracking_page):
@@ -426,16 +409,14 @@ class TestNormalBookingSuite:
         tracking_page.click_try_again_after_driver_cancel()
 
         then("Sistem secara otomatis melanjutkan pencarian driver pengganti")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar3
     def test_TC_NORM_84_to_87_verify_driver_not_available_timeout(self, authenticated_home, tracking_page):
         """[TC84-TC87] Verify Timeout 5 Menit: Driver tidak ditemukan mengalihkan ke Beranda dengan snackbar."""
         given("Pencarian driver berjalan hingga batas waktu timeout")
         then("Aplikasi otomatis kembali ke Beranda dan menampilkan snackbar 'Driver not available'")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar3
     def test_TC_NORM_88_89_verify_destination_more_than_60km_boundary(self, authenticated_home, booking_page):
@@ -448,7 +429,7 @@ class TestNormalBookingSuite:
         booking_page.select_first_suggestion()
 
         then("Sistem menolak rute dan menampilkan popup peringatan jarak melebihi batas 60 km")
-        assert booking_page.is_distance_exceeded_warning_displayed() or True
+        assert booking_page.is_distance_exceeded_warning_displayed()
 
 
 # ==============================================================================
@@ -472,8 +453,7 @@ class TestAdvanceBookingSuite:
         booking_page.confirm_scheduled_time()
 
         then("Jadwal penjemputan berhasil terpasang dan halaman Place Order menampilkan waktu jadwal")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.advance_booking
     @pytest.mark.pilar2
@@ -489,8 +469,7 @@ class TestAdvanceBookingSuite:
         booking_page.cancel_scheduled_time()
 
         then("Modal tertutup dan pesanan tetap dalam mode reguler tanpa mutasi waktu")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.advance_booking
     @pytest.mark.pilar1
@@ -507,22 +486,19 @@ class TestAdvanceBookingSuite:
         booking_page.submit_book_evmoto()
 
         then("Notifikasi 'Pesanan Terjadwal Berhasil Dibuat' tampil dan detail jadwal muncul di Tab Booking")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.advance_booking
     @pytest.mark.pilar1
     def test_TC_ADV_44_45_verify_reschedule_and_cancel_from_activity_tab_booking(self, authenticated_home, activity_page):
         """[TC_ADV_44-45] Verify Reschedule & Cancel Scheduled Trip dari Halaman Aktivitas Tab Booking."""
         given("Pengguna membuka Halaman Aktivitas dan memilih 'Tab Booking'")
-        activity_page.open_activity_tab()
-        activity_page.switch_to_tab_booking()
+        activity_page.navigate_to_activity_screen()
+        activity_page.select_booking_tab()
 
         when("Pengguna meninjau pesanan terjadwal dan menekan 'Ubah Jadwal'")
         then("Modal penyesuaian waktu tampil dan jadwal dapat diperbarui dengan sinkronisasi server")
-        assert True
-
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
 # ==============================================================================
 # PART 3: EXTENDED CORE QA 4-PILLARS ENHANCEMENTS (CRITICAL GAPS IDENTIFIED)
 # ==============================================================================
@@ -539,8 +515,7 @@ class TestBookingCoreEnhancements:
         booking_page.click(booking_page.OPTION_PAYMENT_CASH, label="Pilihan Tunai")
 
         then("Metode pembayaran aktif berhasil diperbarui ke 'Tunai'")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_EXT_PT_02_verify_voucher_promo_discount_application(self, authenticated_home, booking_page):
@@ -550,8 +525,7 @@ class TestBookingCoreEnhancements:
         booking_page.apply_voucher("EVMOTOBARU")
 
         then("Total tarif terpotong diskon secara realtime")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar2
     def test_TC_EXT_PF_01_verify_insufficient_wallet_balance_modal(self, authenticated_home, booking_page):
@@ -559,8 +533,7 @@ class TestBookingCoreEnhancements:
         given("Pengguna memiliki saldo EvWallet Rp 0")
         when("Pengguna mencoba order layanan dengan metode EvWallet")
         then("Sistem menampilkan dialog 'Saldo EvWallet Tidak Cukup' dengan opsi Isi Saldo atau Ganti Tunai")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar3
     def test_TC_EXT_NT_01_verify_same_pickup_and_destination_boundary(self, authenticated_home, booking_page):
@@ -570,8 +543,7 @@ class TestBookingCoreEnhancements:
         booking_page.enter_destination("Menara Astra Sudirman")
 
         then("Sistem menampilkan validasi 'Titik penjemputan dan tujuan tidak boleh sama'")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar3
     def test_TC_EXT_NT_02_verify_advance_booking_less_than_30min_rejected(self, authenticated_home, booking_page):
@@ -579,8 +551,7 @@ class TestBookingCoreEnhancements:
         given("Pengguna membuka modal jadwal advance booking")
         when("Pengguna mencoba memilih waktu 10 menit ke depan")
         then("Sistem menolak dan menampilkan pesan 'Waktu penjemputan minimal 30 menit dari sekarang'")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar4
     def test_TC_EXT_NF_01_verify_chat_and_notes_sqli_xss_sanitization(self, authenticated_home, tracking_page):
@@ -592,8 +563,7 @@ class TestBookingCoreEnhancements:
         tracking_page.send_chat_message(payload)
 
         then("Pesan tersanitasi aman oleh backend/Flutter layer tanpa memicu eksekusi skrip atau crash")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar4
     def test_TC_EXT_NF_02_verify_rapid_multi_tap_on_book_button(self, authenticated_home, booking_page):
@@ -607,8 +577,7 @@ class TestBookingCoreEnhancements:
                 pass
 
         then("Sistem mendebounce request, hanya membuat tepat 1 pesanan, dan tidak terjadi duplikasi transaksi")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.pilar4
     def test_TC_EXT_NF_03_verify_app_backgrounding_during_driver_search(self, driver, authenticated_home, booking_page):
@@ -618,8 +587,7 @@ class TestBookingCoreEnhancements:
         driver.background_app(4)
 
         then("Status pencarian driver tetap aktif dan sesi pesanan tidak hilang")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.booking
     @pytest.mark.happy_flow
     def test_TC_EXT_HF_01_master_e2e_booking_lifecycle_happy_flow(self, authenticated_home, booking_page, tracking_page):
@@ -639,9 +607,7 @@ class TestBookingCoreEnhancements:
         tracking_page.submit_driver_review(stars=5, comment="Sangat cepat dan ramah!")
 
         then("Seluruh siklus booking order selesai dengan status sukses 100%")
-        assert True
-
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
 # ==============================================================================
 # PART 4: SKENARIO KHUSUS USER APPS & INTEGRASI PERAN DRIVER DEV (TC01 s/d TC06)
 # ==============================================================================
@@ -662,10 +628,10 @@ class TestSpecializedUserBookingSuite:
     def test_TC_SPEC_RC_01_verify_race_condition_two_users_one_driver_no_bug(self, authenticated_home, booking_page, driver_simulator):
         """
         [Pilar 4 - Negative False] Race Condition Concurrency: 1 Driver, 2 User Order Bersamaan.
-        Deskripsi: Menguji ketahanan sistem saat 1 Mitra Driver online (81299990006) menerima 2 pesanan pengguna (User 1: 81299990001 dan User 2: 81299990003) secara bersamaan (concurrent race condition). Memastikan sistem tidak mengalami crash, tidak ada double booking, dan User 2 dialihkan secara aman ke antrean pencarian driver lain.
+        Deskripsi: Menguji ketahanan sistem saat 1 Mitra Driver online (<TEST_DRIVER_PHONE>) menerima 2 pesanan pengguna (User 1: <TEST_USER_PHONE> dan User 2: <EVMOTO_PHONE_EXTRA_2>) secara bersamaan (concurrent race condition). Memastikan sistem tidak mengalami crash, tidak ada double booking, dan User 2 dialihkan secara aman ke antrean pencarian driver lain.
         Ekspektasi: Sistem menangani race condition secara atomic, User 1 terhubung ke driver, User 2 tetap berada di antrean pencarian tanpa bug atau data error.
         """
-        given("1 Mitra Driver (81299990006) berstatus Online pada environment Dev Golang")
+        given("1 Mitra Driver (<TEST_DRIVER_PHONE>) berstatus Online pada environment Dev Golang")
         driver_simulator.set_online(is_online=True, latitude=-6.2088, longitude=106.8456)
         assert driver_simulator.is_driver_online() is True
 
@@ -680,13 +646,13 @@ class TestSpecializedUserBookingSuite:
         # Simulasi penyelesaian race condition secara atomic pada dispatcher
         user_1_payload = {
             "order_id": "ORD-DEV-RC01-A",
-            "user_phone": "81299990001",
+            "user_phone": os.environ.get("TEST_USER_PHONE", ""),
             "pickup": "Menara Astra",
             "destination": "Grand Indonesia"
         }
         user_2_payload = {
             "order_id": "ORD-DEV-RC01-B",
-            "user_phone": "81299990003",
+            "user_phone": os.environ.get("EVMOTO_PHONE_EXTRA_2", ""),
             "pickup": "Menara BCA",
             "destination": "Plaza Indonesia"
         }
@@ -694,7 +660,7 @@ class TestSpecializedUserBookingSuite:
 
         then("Driver ditugaskan secara eksklusif ke Pengguna 1 tanpa double booking")
         assert rc_result["race_condition_prevented"] is True
-        assert rc_result["assigned_to"]["user_phone"] == "81299990001"
+        assert rc_result["assigned_to"]["user_phone"] == os.environ.get("TEST_USER_PHONE", "")
 
         and_step("Pengguna 2 tetap dalam antrean pencarian mitra lain tanpa error atau aplikasi crash")
         assert rc_result["rejected_or_queued"]["error"] is None
@@ -707,8 +673,8 @@ class TestSpecializedUserBookingSuite:
     def test_TC_SPEC_ARGO_02_verify_fare_calculated_from_admin_dashboard_settings(self, authenticated_home, booking_page, fare_calculator):
         """
         [Pilar 1 - Positive True] Validasi Harga Argo Berdasarkan Konfigurasi Dashboard Admin EvMoto.
-        Deskripsi: Memastikan kalkulasi harga argo pada aplikasi User dihitung secara presisi berdasarkan formula pengaturan tarif pada Dashboard Admin EvMoto Production (User: https://admin-staging.evmoto.internal/tSystemPrice/tSystemPrice_update/1626, Driver: https://admin-staging.evmoto.internal/tSystemPrice/tSystemPrice_update/1619 - Model: ECGO 3 Jakarta: Tarif Awal startPrice Rp 6.000 untuk 2 KM pertama, Tarif Jarak mileageFee Rp 2.800/KM).
-        Ekspektasi: Estimasi tarif argo yang tampil pada layar aplikasi User (Rp 10.200 untuk rute 3.5 KM) sesuai 100% secara matematis dengan rumus Dashboard Admin Production.
+        Deskripsi: Memastikan kalkulasi harga argo pada aplikasi User dihitung secara presisi berdasarkan formula pengaturan tarif pada Dashboard Admin EvMoto (User: <ADMIN_URL>/tSystemPrice/tSystemPrice_update/1626, Driver: <ADMIN_URL>/tSystemPrice/tSystemPrice_update/1619 - Model: ECGO 3 Jakarta: Tarif Awal startPrice Rp 6.000 untuk 2 KM pertama, Tarif Jarak mileageFee Rp 2.800/KM).
+        Ekspektasi: Estimasi tarif argo yang tampil pada layar aplikasi User (Rp 10.200 untuk rute 3.5 KM) sesuai 100% secara matematis dengan rumus Dashboard Admin environment aktif.
         """
         given("Pengguna berada di layar penentuan rute penjemputan dan tujuan")
         booking_page.open_pickup_section()
@@ -736,7 +702,7 @@ class TestSpecializedUserBookingSuite:
         Deskripsi: Menguji alur ketika Mitra Driver berstatus Online dan siap menerima order, lalu Pengguna melakukan pemesanan (Book EVMoto). Memastikan sistem berhasil mendispatch pesanan ke driver, driver menerima order, dan layar User bertransisi ke antarmuka Driver Assigned dengan live tracking.
         Ekspektasi: Driver berhasil menerima pesanan pengguna dan informasi driver (nama, nomor plat, estimasi waktu) tampil lengkap di aplikasi User.
         """
-        given("Mitra Driver (81299990006) berstatus Online dan tersedia di sekitar lokasi jemput")
+        given("Mitra Driver (<TEST_DRIVER_PHONE>) berstatus Online dan tersedia di sekitar lokasi jemput")
         driver_simulator.set_online(is_online=True)
         assert driver_simulator.is_driver_available() is True
 
@@ -758,7 +724,7 @@ class TestSpecializedUserBookingSuite:
         then("Aplikasi User beralih menampilkan detail Driver Budi Setiawan (B 1234 EVM) dan estimasi penjemputan")
         assert accepted_trip["status"] == "driver_assigned"
         assert driver_simulator.is_driver_available() is False
-        assert tracking_page.is_driver_assigned() or True
+        assert tracking_page.is_driver_assigned()
         time.sleep(Config.HUMAN_PACING_MIN)
 
     @pytest.mark.booking
@@ -770,7 +736,7 @@ class TestSpecializedUserBookingSuite:
         Deskripsi: Menguji kondisi di mana Mitra Driver sedang dalam perjalanan aktif mengantar penumpang (In-Progress / Busy). Pengguna lain kemudian membuat pesanan baru. Memastikan sistem mengisolasi driver yang sedang sibuk, tidak menugaskan order baru kepadanya, dan perjalanan penumpang pertama tidak terganggu.
         Ekspektasi: Pesanan pengguna baru tidak di-assign ke driver yang sedang sibuk, driver tetap fokus pada trip aktif, dan pengguna baru tetap mencari armada lain.
         """
-        given("Mitra Driver (81299990006) sedang aktif menjalankan pengantaran order penumpang lain")
+        given("Mitra Driver (<TEST_DRIVER_PHONE>) sedang aktif menjalankan pengantaran order penumpang lain")
         driver_simulator.set_active_trip_busy(
             order_id="TRIP-ONGOING-881",
             customer_name="Siti Rahma",
@@ -788,14 +754,14 @@ class TestSpecializedUserBookingSuite:
         and_step("Sistem memverifikasi ketersediaan armada terdekat")
         dispatch_attempt = driver_simulator.attempt_dispatch_to_busy_driver({
             "order_id": "ORD-NEW-USER-202",
-            "user_phone": "81299990003"
+            "user_phone": os.environ.get("EVMOTO_PHONE_EXTRA_2", "")
         })
 
         then("Sistem menolak penugasan ke driver sibuk dan menjaga perjalanan penumpang pertama tetap aman")
         assert dispatch_attempt["dispatched_to_driver"] is False
         assert dispatch_attempt["reason"] == "DRIVER_BUSY_WITH_TRIP"
         assert dispatch_attempt["active_trip_preserved"] is True
-        assert tracking_page.is_searching_driver() or True
+        assert tracking_page.is_searching_driver()
         time.sleep(Config.HUMAN_PACING_MIN)
 
     @pytest.mark.booking
@@ -915,25 +881,25 @@ class TestEvMotoFarePricingEngineSuite:
     @pytest.mark.platform_fee
     def test_TC_FARE_02_verify_seamless_platform_fee_10_percent(self, authenticated_home, booking_page):
         """
-        [Pilar 1 - Positive True] Verifikasi Platform Fee 10% Seamless pada User Apps.
-        Deskripsi: Memastikan sistem menambahkan Platform Fee sebesar 10% dari tarif argo dasar secara seamless.
+        [Pilar 1 - Positive True] Verifikasi Platform Fee 0% pada Tagihan User Apps.
+        Deskripsi: Memastikan tagihan dasar pengguna adalah tarif argo murni tanpa potongan/tambahan platform fee terpisah.
           - Rute 3.5 KM: Argo Rp 10.200
-          - Platform Fee (10%): Rp 1.020
-          - Grand Total: Rp 10.200 + Rp 1.020 = Rp 11.220 (Metode Tunai / EvWallet).
-        Ekspektasi: Platform fee terakumulasi seamless sebesar Rp 1.020 dan total invoice menjadi Rp 11.220.
+          - Platform Fee: Rp 0
+          - Grand Total: Rp 10.200 (Metode Tunai / EvWallet).
+        Ekspektasi: Grand total invoice pengguna menjadi Rp 10.200.
         """
         calc = AdminDashboardFareCalculator()
         given("Pengguna memesan rute standar 3.5 KM dengan metode bayar Tunai")
         breakdown = calc.calculate_grand_total(3.5, payment_method="cash")
 
-        then("Platform Fee dihitung tepat 10% dari tarif argo (Rp 1.020)")
+        then("Platform Fee tambahan pada invoice customer adalah Rp 0")
         assert breakdown["total_argo"] == 10200.0
-        assert breakdown["platform_fee"] == 1020.0
-        assert breakdown["formatted_platform_fee"] == "Rp 1.020"
+        assert breakdown["platform_fee"] == 0.0
+        assert breakdown["formatted_platform_fee"] == "Rp 0"
 
-        and_step("Grand total tagihan pengguna terhitung tepat Rp 11.220")
-        assert breakdown["grand_total"] == 11220.0
-        assert breakdown["formatted_grand_total"] == "Rp 11.220"
+        and_step("Grand total tagihan pengguna terhitung tepat Rp 10.200")
+        assert breakdown["grand_total"] == 10200.0
+        assert breakdown["formatted_grand_total"] == "Rp 10.200"
 
     @pytest.mark.booking
     @pytest.mark.pilar1
@@ -944,7 +910,7 @@ class TestEvMotoFarePricingEngineSuite:
         Deskripsi: Menguji pengenaan biaya tunggu driver di titik jemput (Rp 500 / menit setelah 15 menit):
           - Tunggu 12 Menit: Di bawah batas 15 menit -> Waiting Fee = Rp 0
           - Tunggu 20 Menit: Kelebihan 5 menit x Rp 500 = Rp 2.500
-          - Grand Total (3.5 KM): Rp 11.220 + Rp 2.500 = Rp 13.720.
+          - Grand Total (3.5 KM): Rp 10.200 + Rp 2.500 = Rp 12.700.
         Ekspektasi: Biaya tunggu bertambah secara proporsional hanya untuk menit kelebihan.
         """
         calc = AdminDashboardFareCalculator()
@@ -962,9 +928,9 @@ class TestEvMotoFarePricingEngineSuite:
         assert res_charged["waiting_fee"] == 2500.0
         assert res_charged["formatted_waiting_fee"] == "Rp 2.500"
 
-        and_step("Grand total tagihan menjadi Rp 11.220 + Rp 2.500 = Rp 13.720")
-        assert res_charged["grand_total"] == 13720.0
-        assert res_charged["formatted_grand_total"] == "Rp 13.720"
+        and_step("Grand total tagihan menjadi Rp 10.200 + Rp 2.500 = Rp 12.700")
+        assert res_charged["grand_total"] == 12700.0
+        assert res_charged["formatted_grand_total"] == "Rp 12.700"
 
     @pytest.mark.booking
     @pytest.mark.pilar1
@@ -973,10 +939,10 @@ class TestEvMotoFarePricingEngineSuite:
         """
         [Pilar 1 - Positive True] Verifikasi Pemotongan Kupon Diskon Promosi Rp 5.000.
         Deskripsi: Menguji pengurangan voucher kupon diskon Rp 5.000 pada rute 3.5 KM:
-          - Subtotal Awal (Argo Rp 10.200 + Plat Rp 1.020): Rp 11.220
+          - Subtotal Awal (Argo Rp 10.200): Rp 10.200
           - Kupon Diskon: - Rp 5.000
-          - Grand Total Setelah Diskon: Rp 11.220 - Rp 5.000 = Rp 6.220.
-        Ekspektasi: Tagihan berkurang tepat Rp 5.000 tanpa memengaruhi tarif argo pengemudi.
+          - Grand Total Setelah Diskon: Rp 10.200 - Rp 5.000 = Rp 5.200.
+        Ekspektasi: Tagihan berkurang tepat Rp 5.000 tanpa memengaruhi hak pengemudi.
         """
         calc = AdminDashboardFareCalculator()
 
@@ -987,9 +953,9 @@ class TestEvMotoFarePricingEngineSuite:
         assert res_coupon["coupon_discount"] == 5000.0
         assert res_coupon["formatted_coupon"] == "Rp 5.000"
 
-        and_step("Grand total akhir tagihan berkurang menjadi Rp 6.220")
-        assert res_coupon["grand_total"] == 6220.0
-        assert res_coupon["formatted_grand_total"] == "Rp 6.220"
+        and_step("Grand total akhir tagihan berkurang menjadi Rp 5.200")
+        assert res_coupon["grand_total"] == 5200.0
+        assert res_coupon["formatted_grand_total"] == "Rp 5.200"
 
     @pytest.mark.booking
     @pytest.mark.pilar1
@@ -998,9 +964,9 @@ class TestEvMotoFarePricingEngineSuite:
         """
         [Pilar 1 - Positive True] Verifikasi Penambahan Denda / Penalty Biaya Pembatalan Rp 5.000.
         Deskripsi: Menguji penambahan biaya penalty pembatalan perjalanan terlambat (Rp 5.000):
-          - Subtotal (Argo Rp 10.200 + Plat Rp 1.020): Rp 11.220
+          - Subtotal (Argo Rp 10.200): Rp 10.200
           - Penalty: + Rp 5.000
-          - Grand Total: Rp 11.220 + Rp 5.000 = Rp 16.220.
+          - Grand Total: Rp 10.200 + Rp 5.000 = Rp 15.200.
         Ekspektasi: Penalty pembatalan tercatat valid sebesar Rp 5.000 pada invoice pengguna.
         """
         calc = AdminDashboardFareCalculator()
@@ -1012,21 +978,20 @@ class TestEvMotoFarePricingEngineSuite:
         assert res_pen["penalty_fee"] == 5000.0
         assert res_pen["formatted_penalty"] == "Rp 5.000"
 
-        and_step("Grand total tagihan bertambah menjadi Rp 16.220")
-        assert res_pen["grand_total"] == 16220.0
-        assert res_pen["formatted_grand_total"] == "Rp 16.220"
+        and_step("Grand total tagihan bertambah menjadi Rp 15.200")
+        assert res_pen["grand_total"] == 15200.0
+        assert res_pen["formatted_grand_total"] == "Rp 15.200"
 
     @pytest.mark.booking
     @pytest.mark.pilar1
     @pytest.mark.ewallet_charge
     def test_TC_FARE_06_verify_ewallet_gopay_ovo_2_percent_charge_fee(self, authenticated_home, booking_page):
         """
-        [Pilar 1 - Positive True] Verifikasi Charge Fee 2% untuk Pembayaran E-Wallet (GoPay & OVO).
-        Deskripsi: Menguji pengenaan surcharge 2% untuk metode bayar GoPay dan OVO:
-          - Tunai & EvWallet: Charge Fee = Rp 0 (0%)
-          - GoPay (Rute 3.5 KM, Subtotal Rp 11.220): Charge Fee = 2% x Rp 11.220 = Rp 224,4 -> Grand Total = Rp 11.444,4
-          - OVO (Rute 3.5 KM, Subtotal Rp 11.220): Charge Fee = 2% x Rp 11.220 = Rp 224,4 -> Grand Total = Rp 11.444,4
-        Ekspektasi: Charge Fee 2% terhitung eksak tanpa pembulatan untuk GoPay & OVO, serta Rp 0 untuk Tunai.
+        [Pilar 1 - Positive True] Verifikasi Handling Fee Gross-Up E-Wallet (GoPay 2% & OVO 1.665%).
+        Deskripsi: Menguji pengenaan gross-up handling fee untuk GoPay & OVO:
+          - Tunai & EvWallet: Charge Fee = Rp 0 (0%), Grand Total = Rp 10.200
+          - GoPay: math.ceil(10.200 * (100 / 98)) = Rp 10.409 (Handling Fee = Rp 209)
+          - OVO: math.ceil(10.200 * (100 / 98.335)) = Rp 10.373 (Handling Fee = Rp 173)
         """
         calc = AdminDashboardFareCalculator()
 
@@ -1034,22 +999,24 @@ class TestEvMotoFarePricingEngineSuite:
         res_cash = calc.calculate_grand_total(3.5, payment_method="cash")
         then("Tidak ada Charge Fee yang dikenakan (Rp 0)")
         assert res_cash["charge_fee_amount"] == 0.0
-        assert res_cash["grand_total"] == 11220.0
+        assert res_cash["grand_total"] == 10200.0
 
-        when("Pengguna memilih metode pembayaran GoPay (E-Wallet)")
+        when("Pengguna memilih metode pembayaran GoPay (E-Wallet 2% Gross-Up)")
         res_gopay = calc.calculate_grand_total(3.5, payment_method="gopay")
-        then("Charge Fee 2% dikenakan sebesar Rp 224,4 dan total tagihan menjadi Rp 11.444,4")
+        then("Handling Fee 2% Gross-Up dikenakan sebesar Rp 209 dan total tagihan menjadi Rp 10.409")
         assert res_gopay["is_ewallet_surcharge"] is True
-        assert res_gopay["charge_fee_amount"] == 224.4
-        assert res_gopay["formatted_charge_fee"] == "Rp 224,4"
-        assert res_gopay["grand_total"] == 11444.4
-        assert res_gopay["formatted_grand_total"] == "Rp 11.444,4"
+        assert res_gopay["charge_fee_amount"] == 209.0
+        assert res_gopay["formatted_charge_fee"] == "Rp 209"
+        assert res_gopay["grand_total"] == 10409.0
+        assert res_gopay["formatted_grand_total"] == "Rp 10.409"
 
-        and_step("Pengguna memilih metode pembayaran OVO (E-Wallet)")
+        and_step("Pengguna memilih metode pembayaran OVO (E-Wallet 1.665% Gross-Up)")
         res_ovo = calc.calculate_grand_total(3.5, payment_method="ovo")
-        then("Charge Fee 2% pada OVO identik sebesar Rp 224,4 dan total tagihan Rp 11.444,4")
-        assert res_ovo["charge_fee_amount"] == 224.4
-        assert res_ovo["grand_total"] == 11444.4
+        then("Handling Fee 1.665% Gross-Up pada OVO sebesar Rp 173 dan total tagihan Rp 10.373")
+        assert res_ovo["charge_fee_amount"] == 173.0
+        assert res_ovo["formatted_charge_fee"] == "Rp 173"
+        assert res_ovo["grand_total"] == 10373.0
+        assert res_ovo["formatted_grand_total"] == "Rp 10.373"
 
     @pytest.mark.booking
     @pytest.mark.pilar1
@@ -1059,21 +1026,18 @@ class TestEvMotoFarePricingEngineSuite:
         [Pilar 1 - Positive True] Verifikasi Kombo Menyeluruh (All-in-One 6 Kondisi Bisnis).
         Deskripsi: Menguji kombinasi lengkap seluruh parameter dalam satu transaksi:
           - Jarak 3.5 KM (Argo Rp 10.200)
-          - Platform Fee 10% (Rp 1.020) -> Base Subtotal: Rp 11.220
           - Waiting Fee 20 menit (+ Rp 2.500)
           - Penalty (+ Rp 5.000)
           - Kupon Diskon (- Rp 5.000)
-          - Adjusted Subtotal: 11.220 + 2.500 + 5.000 - 5.000 = Rp 13.720
-          - Metode Bayar: OVO (E-Wallet) -> Charge Fee 2% x Rp 13.720 = Rp 274,4
-          - GRAND TOTAL: 13.720 + 274,4 = Rp 13.994,4.
-        Ekspektasi: Grand Total akhir terhitung presisi Rp 13.994,4 tanpa ada selisih nilai sepeserpun.
+          - Adjusted Subtotal: 10.200 + 2.500 + 5.000 - 5.000 = Rp 12.700
+          - Metode Bayar: GoPay -> Gross-Up 2% = math.ceil(12.700 * 100 / 98) = Rp 12.960 (Fee Rp 260)
         """
         calc = AdminDashboardFareCalculator()
 
-        given("Pengguna melakukan perjalanan 3.5 KM dengan OVO, kena Waiting Fee, Penalty, dan memakai Kupon")
+        given("Pengguna melakukan perjalanan 3.5 KM dengan GoPay, kena Waiting Fee, Penalty, dan memakai Kupon")
         breakdown = calc.calculate_grand_total(
             distance_km=3.5,
-            payment_method="ovo",
+            payment_method="gopay",
             waiting_minutes=20,
             use_coupon=True,
             coupon_amount=5000.0,
@@ -1081,21 +1045,21 @@ class TestEvMotoFarePricingEngineSuite:
             penalty_amount=5000.0
         )
 
-        then("Subtotal akumulatif terhitung tepat Rp 13.720")
+        then("Subtotal akumulatif terhitung tepat Rp 12.700")
         assert breakdown["total_argo"] == 10200.0
-        assert breakdown["platform_fee"] == 1020.0
+        assert breakdown["platform_fee"] == 0.0
         assert breakdown["waiting_fee"] == 2500.0
         assert breakdown["penalty_fee"] == 5000.0
         assert breakdown["coupon_discount"] == 5000.0
-        assert breakdown["adjusted_subtotal"] == 13720.0
+        assert breakdown["adjusted_subtotal"] == 12700.0
 
-        and_step("Charge Fee 2% dihitung dari Grand Total akumulatif sebesar Rp 274,4")
-        assert breakdown["charge_fee_amount"] == 274.4
-        assert breakdown["formatted_charge_fee"] == "Rp 274,4"
+        and_step("Handling Fee 2% Gross-Up dihitung dari Grand Total akumulatif sebesar Rp 260")
+        assert breakdown["charge_fee_amount"] == 260.0
+        assert breakdown["formatted_charge_fee"] == "Rp 260"
 
-        and_step("Grand Total akhir adalah persis Rp 13.994,4 tanpa pembulatan")
-        assert breakdown["grand_total"] == 13994.4
-        assert breakdown["formatted_grand_total"] == "Rp 13.994,4"
+        and_step("Grand Total akhir adalah persis Rp 12.960 tanpa pembulatan")
+        assert breakdown["grand_total"] == 12960.0
+        assert breakdown["formatted_grand_total"] == "Rp 12.960"
 
 
 # ==============================================================================
@@ -1161,7 +1125,7 @@ class TestEvMotoWaitingFeeCancellationPRDSuite:
         Deskripsi: Menguji alur saat Mitra Driver membatalkan pesanan sebelum tiba di lokasi (Fase A). Pengguna tidak dikenakan biaya apapun (Rp 0), driver dikenakan penalti saldo Rp 2.000 (dan GI adjustment jika mitra GI), dan aplikasi User menampilkan dialog Try Again secara anggun.
         Ekspektasi: Pengguna tidak membayar sepeserpun dan dapat langsung mencari armada baru via 'Try Again'.
         """
-        given("Pengguna memesan perjalanan dan driver 81299990006 ditugaskan (Fase A)")
+        given("Pengguna memesan perjalanan dan driver <TEST_DRIVER_PHONE> ditugaskan (Fase A)")
         booking_page.open_pickup_section()
         booking_page.enter_destination("Grand Indonesia")
         booking_page.select_first_suggestion()
@@ -1176,7 +1140,7 @@ class TestEvMotoWaitingFeeCancellationPRDSuite:
         driver_simulator.driver_cancel_order(reason="Ban bocor", schema="GI")
 
         then("Aplikasi User menampilkan dialog 'Driver has cancelled' dan tombol Try Again")
-        assert tracking_page.is_displayed(tracking_page.POPUP_DRIVER_CANCELLED, timeout=5) or True
+        assert tracking_page.is_displayed(tracking_page.POPUP_DRIVER_CANCELLED, timeout=5)
 
         and_step("Ledger memverifikasi Customer Charge Rp 0, Driver Penalty Rp 2.000, dan GI Event -Rp 10.000")
         res = fare_calculator.calculate_cancellation_settlement(
@@ -1448,11 +1412,11 @@ class TestEvMotoWaitingFeeCancellationPRDSuite:
             elapsed_seconds=300,
             payment_method="gopay"
         )
-        then("Grand Total GoPay terhitung tepat Rp 5.100 (Rp 5.000 + Rp 100)")
+        then("Grand Total GoPay terhitung tepat Rp 5.103 (gross-up 2%)")
         assert res_gopay["customer_charge"] == 5000.0
-        assert res_gopay["charge_fee_amount"] == 100.0
-        assert res_gopay["grand_total_customer"] == 5100.0
-        assert res_gopay["formatted_grand_total"] == "Rp 5.100"
+        assert res_gopay["charge_fee_amount"] == 103.0  # gross-up: ceil(5.000 x 100/98) = 5.103
+        assert res_gopay["grand_total_customer"] == 5103.0
+        assert res_gopay["formatted_grand_total"] == "Rp 5.103"
 
         when("Pengguna menggunakan metode pembayaran OVO dan terkena denda No-Show Fase D (Rp 17.500)")
         res_ovo = fare_calculator.calculate_cancellation_settlement(
@@ -1461,11 +1425,10 @@ class TestEvMotoWaitingFeeCancellationPRDSuite:
             elapsed_seconds=1800,
             payment_method="ovo"
         )
-        then("Grand Total OVO terhitung tepat Rp 17.850 (Rp 17.500 + Rp 350)")
+        then("Grand Total OVO terhitung tepat Rp 17.797 (gross-up 1,665%)")
         assert res_ovo["customer_charge"] == 17500.0
-        assert res_ovo["charge_fee_amount"] == 350.0
-        assert res_ovo["grand_total_customer"] == 17850.0
-        assert res_ovo["formatted_grand_total"] == "Rp 17.850"
+        assert res_ovo["charge_fee_amount"] == 297.0  # gross-up: ceil(17.500 x 100/98,335) = 17.797
+        assert res_ovo["grand_total_customer"] == 17797.0
 
 
 # ==============================================================================
@@ -1503,8 +1466,8 @@ class TestOrderBehaviourMatrix:
             "long_distance_fee": 0.0,
             "total_argo": 6000.0,
             "base_argo": 6000.0,
-            "plat_fee": 600.0,
-            "subtotal": 6600.0
+            "plat_fee": 0.0,
+            "subtotal": 6000.0
         },
         {
             "tier": "Jarak Sedang",
@@ -1514,8 +1477,8 @@ class TestOrderBehaviourMatrix:
             "long_distance_fee": 0.0,
             "total_argo": 10200.0,
             "base_argo": 10200.0,
-            "plat_fee": 1020.0,
-            "subtotal": 11220.0
+            "plat_fee": 0.0,
+            "subtotal": 10200.0
         },
         {
             "tier": "Jarak Jauh",
@@ -1525,8 +1488,8 @@ class TestOrderBehaviourMatrix:
             "long_distance_fee": 10000.0,
             "total_argo": 38400.0,
             "base_argo": 38400.0,
-            "plat_fee": 3840.0,
-            "subtotal": 42240.0
+            "plat_fee": 0.0,
+            "subtotal": 38400.0
         },
         {
             "tier": "Jarak Sangat Jauh",
@@ -1536,8 +1499,8 @@ class TestOrderBehaviourMatrix:
             "long_distance_fee": 33500.0,
             "total_argo": 89900.0,
             "base_argo": 89900.0,
-            "plat_fee": 8990.0,
-            "subtotal": 98890.0
+            "plat_fee": 0.0,
+            "subtotal": 89900.0
         },
     ]
 
@@ -1545,7 +1508,7 @@ class TestOrderBehaviourMatrix:
         {"code": "cash", "name": "Tunai", "rate": 0.0, "is_ewallet": False},
         {"code": "evwallet", "name": "EvWallet", "rate": 0.0, "is_ewallet": False},
         {"code": "gopay", "name": "GoPay", "rate": 0.02, "is_ewallet": True},
-        {"code": "ovo", "name": "OVO", "rate": 0.02, "is_ewallet": True},
+        {"code": "ovo", "name": "OVO", "rate": 0.01665, "is_ewallet": True},
     ]
 
     def _verify_combo(
@@ -1564,7 +1527,7 @@ class TestOrderBehaviourMatrix:
         - Tarif Dasar (Start Price) wajib Rp 6.000 untuk 2 KM pertama.
         - Total Argo = Start Price Rp 6.000 + Mileage Fee + Long Distance Fee.
         - Tunai & EvWallet: Surcharge 0%, Grand Total = Adjusted Subtotal.
-        - GoPay & OVO: Surcharge 2%, Grand Total = Adjusted Subtotal + (2% x Adjusted Subtotal).
+        - GoPay (2%) & OVO (1.665%): Formula Gross-Up: Grand Total = math.ceil(Adjusted Subtotal * (100 / (100 - Fee Rate))).
         """
         for d in self.DISTANCES:
             excess_wait_min = max(0, waiting_minutes - 15)
@@ -1593,11 +1556,12 @@ class TestOrderBehaviourMatrix:
                 assert res["penalty_fee"] == penalty_val, f"Mismatch penalty {d['tier']} ({p['name']})"
                 assert res["adjusted_subtotal"] == expected_adj_subtotal, f"Mismatch adjusted subtotal {d['tier']} ({p['name']})"
 
-                # Validasi surcharge metode pembayaran
-                if p["is_ewallet"]:
-                    expected_charge = round(expected_adj_subtotal * 0.02, 2)
-                    expected_grand = round(expected_adj_subtotal + expected_charge, 2)
-                    assert res["charge_fee_amount"] == expected_charge, f"Mismatch surcharge 2% {p['name']} on {d['tier']}"
+                # Validasi surcharge metode pembayaran dengan Gross-Up
+                if p["is_ewallet"] and expected_adj_subtotal > 0:
+                    rate_pct = 1.665 if p["code"] == "ovo" else 2.0
+                    expected_grand = float(math.ceil(expected_adj_subtotal * (100.0 / (100.0 - rate_pct))))
+                    expected_charge = float(expected_grand - expected_adj_subtotal)
+                    assert res["charge_fee_amount"] == expected_charge, f"Mismatch surcharge {rate_pct}% {p['name']} on {d['tier']}"
                     assert res["grand_total"] == expected_grand, f"Mismatch grand total {p['name']} on {d['tier']}"
                 else:
                     assert res["charge_fee_amount"] == 0.0, f"Surcharge cash/evwallet must be 0 for {p['name']}"

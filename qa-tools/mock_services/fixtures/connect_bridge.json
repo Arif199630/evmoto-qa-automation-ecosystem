@@ -1,0 +1,8 @@
+{
+  "layanan": "connect_bridge",
+  "keterangan": "MOCK jembatan web ECGO Connect (CONNECT_BRIDGE_URL). Token connect diterbitkan oleh /v5/users/evmoto-connect/start di mock ECGO.",
+  "data": {},
+  "routes": [
+    {"method": "POST", "path": "/connect/link", "handler": "bridge_connect_link"}
+  ]
+}

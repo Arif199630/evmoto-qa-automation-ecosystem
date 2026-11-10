@@ -15,6 +15,7 @@ Aturan Bisnis    :
   - 100% Deterministic & Zero Crash
 ================================================================================
 """
+import os
 import pytest
 import time
 from Frontend.Feature.Helper.admin_dispatch_batch_helper import AdminDispatchBatchHelper
@@ -27,27 +28,27 @@ logger = get_logger("TestE2EDispatchBatch")
 
 @pytest.fixture(scope="module")
 def admin_actor():
-    """Actor 1: Superadmin pada Admin Dashboard."""
+    """Actor 1: Superadmin pada Admin Dashboard dengan Snapshot & Teardown Restoration."""
     helper = AdminDispatchBatchHelper()
     assert helper.login(), "Superadmin harus berhasil login ke Admin Dashboard Staging"
-    yield helper
-    # Restore baseline
-    helper.submit_dispatch_batch(
-        enabled=True,
-        size=5,
-        delay=10,
-        duration=0,
-        concurrent=5,
-        rescans=2,
-        ordinary_bands=[("0", "1"), ("1", "2"), ("2", "3"), ("3", "4"), ("4", "5")],
-        advance_bands=[("0", "1"), ("1", "2"), ("2", "5"), ("5", "15")]
-    )
+
+    # 1. SETUP: Ambil snapshot konfigurasi awal staging
+    original_settings = helper.parse_dispatch_batch_settings()
+    logger.info(f"[SETUP] Snapshot konfigurasi awal staging berhasil dicatat: {original_settings}")
+
+    try:
+        yield helper
+    finally:
+        # 2. TEARDOWN: Kembalikan persis ke konfigurasi awal
+        helper.restore_settings(original_settings)
+        logger.info(f"[TEARDOWN] Konfigurasi staging Dispatch Batch berhasil dipulihkan: {original_settings}")
+
 
 
 @pytest.fixture(scope="function")
 def driver_actor():
-    """Actor 2: Mitra Driver EvMoto (82283737237)."""
-    driver = DriverRoleSimulator(driver_phone="82283737237", driver_name="Driver E2E Master")
+    """Actor 2: Mitra Driver EvMoto (<EVMOTO_PHONE_EXTRA_1>)."""
+    driver = DriverRoleSimulator(driver_phone=os.environ.get("EVMOTO_PHONE_EXTRA_1", ""), driver_name="Driver E2E Master")
     driver.set_online(is_online=True)
     yield driver
     driver.set_offline()

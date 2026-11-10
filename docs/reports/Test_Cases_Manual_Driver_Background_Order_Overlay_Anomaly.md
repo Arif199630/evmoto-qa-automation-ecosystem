@@ -40,7 +40,7 @@ Investigasi teknis membuktikan anomali ini berakar pada kombinasi:
 
 ### TC-DRV-BG-01: Verifikasi Pop-Up Order Muncul dan Bertahan Utuh saat Driver Membuka App Lain
 - **Tujuan:** Memastikan floating overlay window bertahan minimal 20 detik saat driver sedang membuka WhatsApp.
-- **Pra-Kondisi:** Driver akun 82283737237 status Online, EVMoto di background, WhatsApp aktif di layar. Izin overlay diizinkan.
+- **Pra-Kondisi:** Driver akun <EVMOTO_PHONE_EXTRA_1> status Online, EVMoto di background, WhatsApp aktif di layar. Izin overlay diizinkan.
 - **Langkah-Langkah:**
   1. Trigger order baru dari backend ke driver.
   2. Amati floating overlay muncul di atas layar WhatsApp bersamaan dengan audio alert `new_order_incoming_1.mp3`.

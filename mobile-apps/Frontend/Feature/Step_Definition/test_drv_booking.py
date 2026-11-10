@@ -4,15 +4,16 @@ EVMOTO DRIVER MOBILE AUTOMATION - BOOKING & FARE PRICING ENGINE TEST SUITE
 ================================================================================
 Aplikasi        : EvMoto Driver Dev (com.evmoto.driver.app) & User Dev (com.evmoto.user.app)
 Target File     : test_drv_booking.py
-Environment     : Dev Golang (https://api-dev.evmoto.internal)
-Akun Driver     : Mitra Driver Active | PIN Bypass 1234 (Mitra Driver Dev)
-Akun User       : 81299990001 | PIN Bypass 1234 (Pengguna EvMoto Dev)
+Environment     : Dev Golang (https://evmotodev.justkidding.app)
+Akun Driver     : <EVMOTO_PHONE_EXTRA_1> | PIN Bypass <EVMOTO_OTP_BYPASS> (Mitra Driver Dev)
+Akun User       : <TEST_USER_PHONE> | PIN Bypass <EVMOTO_OTP_BYPASS> (Pengguna EvMoto Dev)
 Metodologi      : Dual-Role Synchronization, 4 Pilar QA, BDD, Human-Like Pacing
 Wording         : 100% Presisi bersumber dari strings resmi APK driver_strings_id.json
 Pricing Engine  : Formula Argo Admin Dashboard, Platform Fee 10%, Waiting Fee (Grace 15m),
                   Cancellation Fees (Fase A-D), Subsidi Kupon Rp 5.000, E-Wallet Fee 2%
 ================================================================================
 """
+import os
 import time
 import pytest
 from Pages.drv_login_page import DrvLoginPage
@@ -27,15 +28,15 @@ from utils.logger import get_logger
 
 logger = get_logger("TestDrvBooking")
 
-DRIVER_PHONE = Config.DRIVER_ACTIVE_PHONE  # Mitra Driver Active
-DRIVER_PIN = Config.DRIVER_ACTIVE_PIN      # 1234
-USER_PHONE = Config.DEV_PHONE              # 81299990001
-USER_OTP = Config.DEV_OTP                  # 1234
+DRIVER_PHONE = Config.DRIVER_ACTIVE_PHONE  # <EVMOTO_PHONE_EXTRA_1>
+DRIVER_PIN = Config.DRIVER_ACTIVE_PIN      # <EVMOTO_OTP_BYPASS>
+USER_PHONE = Config.DEV_PHONE              # <TEST_USER_PHONE>
+USER_OTP = Config.DEV_OTP                  # <EVMOTO_OTP_BYPASS>
 
 
 @pytest.fixture(scope="function")
 def driver_simulator():
-    """Helper Simulator Peran Driver (Mitra Driver Active, PIN 1234)."""
+    """Helper Simulator Peran Driver (<EVMOTO_PHONE_EXTRA_1>, PIN <EVMOTO_OTP_BYPASS>)."""
     sim = DriverRoleSimulator(driver_phone=DRIVER_PHONE, driver_name="Driver Dev")
     sim.set_online(is_online=True)
     yield sim
@@ -85,7 +86,7 @@ class TestDrvBooking:
     def test_TC_DRV_BOOK_PT_01_driver_menerima_notifikasi_pesanan_masuk(self, driver_app, driver_simulator):
         """
         [POSITIVE TRUE - PT-01]
-        Deskripsi : Driver berstatus Online (Mitra Driver Active) menerima pop-up orderan masuk ('Order EVMoto Motor').
+        Deskripsi : Driver berstatus Online (<EVMOTO_PHONE_EXTRA_1>) menerima pop-up orderan masuk ('Order EVMoto Motor').
         Ekspektasi: Tampil rincian titik jemput (Pick Up Point), tujuan (Destination), dan estimasi pendapatan.
         """
         self._ensure_driver_online(driver_app)
@@ -94,14 +95,14 @@ class TestDrvBooking:
         given(f"Driver {DRIVER_PHONE} berstatus Online di Beranda")
         when(f"Pengguna {USER_PHONE} memesan layanan EvRide Motor Listrik")
         then("Aplikasi Driver memunculkan pop-up 'Order EVMoto Motor'")
-        assert drv_book_pg.is_incoming_order_displayed() or True
+        assert drv_book_pg.is_incoming_order_displayed()
 
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_PT_02_driver_swipe_terima_pesanan_reguler(self, driver_app, driver_simulator):
         """
         [POSITIVE TRUE - PT-02]
         Deskripsi : Driver menekan atau swipe 'Swipe untuk mendapatkan orderan' / 'Terima Pesanan'.
-        Ekspektasi: Pesanan terkunci untuk Driver Mitra Driver Active dan status beralih ke 'Sedang Menjemput'.
+        Ekspektasi: Pesanan terkunci untuk Driver <EVMOTO_PHONE_EXTRA_1> dan status beralih ke 'Sedang Menjemput'.
         """
         self._ensure_driver_online(driver_app)
         drv_book_pg = DrvBookingPage(driver_app)
@@ -111,7 +112,7 @@ class TestDrvBooking:
         drv_book_pg.swipe_accept_order()
         driver_simulator.accept_order({"pickup": "Menara Astra", "destination": "Grand Indonesia"})
         then("Status perjalanan beralih ke 'Sedang Menjemput' (Picking Up)")
-        assert drv_book_pg.is_picking_up_state_active() or True
+        assert drv_book_pg.is_picking_up_state_active()
 
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_PT_03_driver_menavigasi_ke_titik_penjemputan(self, driver_app, driver_simulator):
@@ -126,7 +127,7 @@ class TestDrvBooking:
         given("Driver dalam fase perjalanan penjemputan")
         when("Driver memantau layar navigasi 'Sedang Menjemput'")
         then("Rute peta penjemputan dan tombol aksi 'Sudah Tiba' tampil valid")
-        assert drv_book_pg.is_picking_up_state_active() or True
+        assert drv_book_pg.is_picking_up_state_active()
 
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_PT_04_driver_konfirmasi_sudah_tiba_di_lokasi_jemput(self, driver_app, driver_simulator):
@@ -143,7 +144,7 @@ class TestDrvBooking:
         drv_book_pg.click_arrived_at_pickup()
         driver_simulator.driver_arrived_at_pickup()
         then("Status berubah menjadi 'Tunggu Penumpang untuk Naik' dan timer toleransi aktif")
-        assert drv_book_pg.is_waiting_board_state_active() or True
+        assert drv_book_pg.is_waiting_board_state_active()
 
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_PT_05_driver_memantau_banner_bebas_biaya_tunggu_15_menit(self, driver_app):
@@ -158,7 +159,7 @@ class TestDrvBooking:
         given("Driver berada dalam status 'Tunggu Penumpang untuk Naik'")
         when("Driver memantau kartu informasi waktu tunggu")
         then("Banner 'Bebas biaya tunggu sampai 15 menit' ditampilkan")
-        assert drv_book_pg.is_waiting_board_state_active() or True
+        assert drv_book_pg.is_waiting_board_state_active()
 
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_PT_06_driver_memulai_perjalanan_setelah_penumpang_naik(self, driver_app, driver_simulator):
@@ -174,21 +175,20 @@ class TestDrvBooking:
         when("Driver menekan tombol 'Mulai Perjalanan'")
         drv_book_pg.click_start_trip()
         then("Status beralih ke 'Sedang Berlangsung' / 'Dalam Layanan'")
-        assert drv_book_pg.is_serving_trip_active() or True
+        assert drv_book_pg.is_serving_trip_active()
 
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_PT_07_fitur_komunikasi_chat_dan_telepon_dalam_perjalanan(self, driver_app):
         """
         [POSITIVE TRUE - PT-07]
-        Deskripsi : Driver membuka fitur Chat bawaan untuk berkomunikasi dengan penumpang 81299990001.
+        Deskripsi : Driver membuka fitur Chat bawaan untuk berkomunikasi dengan penumpang <TEST_USER_PHONE>.
         Ekspektasi: Obrolan instan dua arah terbuka lancar tanpa lag atau kendala perizinan.
         """
         self._ensure_driver_online(driver_app)
         given("Perjalanan sedang berlangsung")
         when("Driver mengetuk ikon Chat / Pesan")
         then("Layar pesan obrolan in-trip dengan penumpang terbuka aktif")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_PT_08_driver_menyelesaikan_perjalanan_di_titik_tujuan(self, driver_app, driver_simulator):
         """
@@ -204,7 +204,7 @@ class TestDrvBooking:
         drv_book_pg.click_finish_dropping_off()
         driver_simulator.complete_trip(payment_method="cash", fare_amount=10200)
         then("Aplikasi memunculkan modal 'Konfirmasi Pembayaran'")
-        assert drv_book_pg.is_payment_summary_displayed() or True
+        assert drv_book_pg.is_payment_summary_displayed()
 
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_PT_09_driver_konfirmasi_pembayaran_tunai_cash_collected(self, driver_app, driver_simulator):
@@ -220,8 +220,7 @@ class TestDrvBooking:
         when("Driver menekan tombol 'Sudah Terima Pembayaran'")
         drv_book_pg.click_already_received_payment()
         then("Sistem mengonfirmasi penerimaan kas dan menutup pesanan")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_PT_10_driver_verifikasi_pelunasan_cashless_evwallet(self, driver_app, wallet_helper):
         """
@@ -233,8 +232,7 @@ class TestDrvBooking:
         given("Pesanan diselesaikan dengan metode pembayaran EvWallet")
         when("Driver memeriksa badge pembayaran")
         then("Keterangan 'Pembayaran Online' tertera dan pelunasan diproses otomatis")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_PT_11_driver_memeriksa_rincian_struk_pendapatan_bersih(self, driver_app, fare_calculator):
         """
@@ -247,8 +245,7 @@ class TestDrvBooking:
         given("Struk pembayaran pesanan tampil di layar")
         when("Driver membaca rincian biaya")
         then(f"Argo Rp {calc['fare']:,} dan platform fee Rp {calc['platform_fee']:,} terverifikasi")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_PT_12_driver_memberikan_penilaian_rating_penumpang(self, driver_app):
         """
@@ -263,8 +260,7 @@ class TestDrvBooking:
         when("Driver memilih bintang 5 dan menekan 'Kirim'")
         drv_book_pg.submit_rating()
         then("Aplikasi kembali ke Beranda siap menerima order berikutnya")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_PT_13_driver_menerima_pesanan_terjadwal_advance_booking(self, driver_app):
         """
@@ -274,10 +270,9 @@ class TestDrvBooking:
         """
         self._ensure_driver_online(driver_app)
         given("Terdapat pemesanan terjadwal (minimal 30 menit ke depan)")
-        when("Sistem mengalokasikan pesanan ke Driver Mitra Driver Active")
+        when("Sistem mengalokasikan pesanan ke Driver <EVMOTO_PHONE_EXTRA_1>")
         then("Badge 'Pesanan Terjadwal' tertera pada daftar pesanan aktif")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     # ==========================================================================
     # PILAR 1.1: AUTO SLIDE & GESTURE DISPATCH LIFECYCLE (SLIDE-01 s.d. SLIDE-08)
     # ==========================================================================
@@ -287,7 +282,7 @@ class TestDrvBooking:
         """
         [POSITIVE TRUE - SLIDE-01]
         Deskripsi : Gestur Auto-Slide horizontal penuh pada slider 'Swipe untuk mendapatkan orderan'.
-        Ekspektasi: Slider bergeser mulus ke kanan 100%, pesanan terkunci untuk Driver Mitra Driver Active, dan state beralih ke 'Sedang Menjemput'.
+        Ekspektasi: Slider bergeser mulus ke kanan 100%, pesanan terkunci untuk Driver <EVMOTO_PHONE_EXTRA_1>, dan state beralih ke 'Sedang Menjemput'.
         """
         self._ensure_driver_online(driver_app)
         drv_book_pg = DrvBookingPage(driver_app)
@@ -298,7 +293,7 @@ class TestDrvBooking:
         driver_simulator.accept_order({"pickup": "Menara Astra", "destination": "Grand Indonesia"})
         then("Slider terkonfirmasi penuh dan status pesanan beralih ke 'Sedang Menjemput'")
         assert res is True
-        assert drv_book_pg.is_picking_up_state_active() or True
+        assert drv_book_pg.is_picking_up_state_active()
 
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_SLIDE_02_auto_slide_berangkat_ke_titik_jemput(self, driver_app, driver_simulator):
@@ -332,7 +327,7 @@ class TestDrvBooking:
         driver_simulator.driver_arrived_at_pickup()
         then("Status perjalanan beralih ke 'Tunggu Penumpang untuk Naik' dan timer toleransi aktif")
         assert res is True
-        assert drv_book_pg.is_waiting_board_state_active() or True
+        assert drv_book_pg.is_waiting_board_state_active()
 
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_SLIDE_04_auto_slide_berangkat_ke_tujuan_mulai_perjalanan(self, driver_app, driver_simulator):
@@ -350,7 +345,7 @@ class TestDrvBooking:
         driver_simulator.start_trip()
         then("Status beralih ke 'Sedang Berlangsung' (Serving) dan rute destinasi penumpang aktif")
         assert res is True
-        assert drv_book_pg.is_serving_trip_active() or True
+        assert drv_book_pg.is_serving_trip_active()
 
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_SLIDE_05_auto_slide_selesai_orderan_pengantaran(self, driver_app, driver_simulator):
@@ -368,7 +363,7 @@ class TestDrvBooking:
         driver_simulator.complete_trip(payment_method="cash", fare_amount=10200)
         then("Perjalanan berhasil diselesaikan dan struk konfirmasi pembayaran tampil")
         assert res is True
-        assert drv_book_pg.is_payment_summary_displayed() or True
+        assert drv_book_pg.is_payment_summary_displayed()
 
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_SLIDE_06_bva_incomplete_slide_slider_auto_reset(self, driver_app):
@@ -412,7 +407,7 @@ class TestDrvBooking:
         self._ensure_driver_online(driver_app)
         drv_book_pg = DrvBookingPage(driver_app)
 
-        given("Siklus pesanan EvRide baru diinisiasi oleh pengguna 81299990001")
+        given("Siklus pesanan EvRide baru diinisiasi oleh pengguna <TEST_USER_PHONE>")
         when("Driver mengeksekusi Slide 1: Terima Pesanan")
         drv_book_pg.slide_to_accept_order()
         driver_simulator.accept_order({"pickup": "Menara Astra", "destination": "Grand Indonesia"})
@@ -433,7 +428,7 @@ class TestDrvBooking:
         driver_simulator.complete_trip(payment_method="cash", fare_amount=10200)
 
         then("Seluruh 5 tahapan Auto-Slide sukses 100% dan struk konfirmasi pembayaran tampil")
-        assert drv_book_pg.is_payment_summary_displayed() or True
+        assert drv_book_pg.is_payment_summary_displayed()
 
     # ==========================================================================
     # PILAR 2: CRITICAL FARE PRICING ENGINE (EDGE CASES & MATHEMATICAL ACCURACY)
@@ -584,7 +579,7 @@ class TestDrvBooking:
         """
         [FARE ENGINE - FARE-11]
         Deskripsi : Skenario Pembatalan Fase C (Customer cancel setelah menit ke-23 / 8 menit wait fee).
-        Formula   : Denda Rp 5.000 + Wait Fee (8 x Rp 500 = Rp 4.000) = Rp 9.000. Driver Payout (60%) = Rp 5.400.
+        Formula   : Denda Rp 5.000 + Wait Fee (8 x Rp 500 = Rp 4.000) = Rp 9.000. Driver Payout = Rp 3.000 + 8 x Rp 300 = Rp 5.400 (QC Form).
         Ekspektasi: Perhitungan denda dan pembagian payout 60% driver sinkron akurat.
         """
         res = fare_calculator.calculate_cancellation_fase_c(waiting_minutes=23)
@@ -598,12 +593,12 @@ class TestDrvBooking:
         """
         [FARE ENGINE - FARE-12]
         Deskripsi : Skenario Pembatalan Fase D (No-Show >= 30 menit).
-        Formula   : No-show fee Rp 10.000 + Wait Fee 15 min (Rp 7.500) = Rp 17.500. Driver Payout (60%) = Rp 10.500.
+        Formula   : No-show fee Rp 10.000 + Wait Fee 15 min (Rp 7.500) = Rp 17.500. Driver Payout = 15 x Rp 300 + kompensasi Rp 7.000 = Rp 11.500 (QC Form PRD Case 8).
         Ekspektasi: Sistem otomatis membatalkan pesanan no-show dan mencairkan hak payout mitra driver.
         """
         res = fare_calculator.calculate_no_show_fase_d()
         assert res["total_customer_charge"] == 17500, f"Expected No-Show Rp 17.500, got {res['total_customer_charge']}"
-        assert res["driver_payout"] == 10500, f"Expected Payout Rp 10.500, got {res['driver_payout']}"
+        assert res["driver_payout"] == 11500, f"Expected Payout Rp 11.500 (QC Form PRD Case 8: 15 x Rp 300 + Rp 7.000), got {res['driver_payout']}"
         logger.info(f"[FARE PASS] Fase D No-Show Terverifikasi: Denda Rp {res['total_customer_charge']}, Payout Driver Rp {res['driver_payout']}.")
 
     @pytest.mark.pricing_engine
@@ -622,7 +617,8 @@ class TestDrvBooking:
             coupon_discount=5000,
             payment_method="gopay"
         )
-        assert abs(res["grand_total_user"] - 13994.4) < 0.1, f"Expected Rp 13.994,4, got {res['grand_total_user']}"
+        # Argo 10.200 + waiting 2.500 + penalti 5.000 - kupon 5.000 = 12.700; gross-up GoPay 2%: ceil(12.700 x 100/98) = 12.960
+        assert res["grand_total_user"] == 12960.0, f"Expected Rp 12.960, got {res['grand_total_user']}"
         logger.info(f"[FARE PASS] All-in-One Pricing Engine Terverifikasi Presisi: Rp {res['grand_total_user']}.")
 
     # ==========================================================================
@@ -648,12 +644,12 @@ class TestDrvBooking:
     def test_TC_DRV_BOOK_BL_02_concurrency_race_condition_dua_user_menembak_driver_sama(self, driver_simulator):
         """
         [BUSINESS LOGIC - BL-02]
-        Deskripsi : Menguji penanganan Race Condition saat 2 Pengguna menembak Driver Mitra Driver Active simultan.
+        Deskripsi : Menguji penanganan Race Condition saat 2 Pengguna menembak Driver <EVMOTO_PHONE_EXTRA_1> simultan.
         Ekspektasi: Mutex lock mengalokasikan driver ke user tercepat, user kedua dialihkan ke antrean pencarian (Searching).
         """
         res = driver_simulator.resolve_concurrent_orders(
             {"order_user": USER_PHONE, "order_id": "ORD-USER-1"},
-            {"order_user": "81299990003", "order_id": "ORD-USER-2"}
+            {"order_user": os.environ.get("EVMOTO_PHONE_EXTRA_2", ""), "order_id": "ORD-USER-2"}
         )
         assert res["race_condition_prevented"] is True
         assert res["data_integrity_verified"] is True
@@ -668,10 +664,9 @@ class TestDrvBooking:
         """
         self._ensure_driver_online(driver_app)
         given("Orderan telah diambil oleh mitra driver terdekat lainnya")
-        when("Driver Mitra Driver Active mencoba menekan terima")
+        when("Driver <EVMOTO_PHONE_EXTRA_1> mencoba menekan terima")
         then("Aplikasi menampilkan notifikasi 'Orderan sudah diambil' secara anggun")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.business_logic
     def test_TC_DRV_BOOK_BL_04_penanganan_pelanggan_membatalkan_pesanan_realtime(self, driver_app, driver_simulator):
         """
@@ -682,8 +677,7 @@ class TestDrvBooking:
         self._ensure_driver_online(driver_app)
         driver_simulator.customer_cancel_order(reason="Terlalu lama menunggu")
         then("Driver menerima konfirmasi 'Pelanggan membatalkan pesanan' dan siap menerima order baru")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.business_logic
     def test_TC_DRV_BOOK_BL_05_driver_batalkan_pesanan_dengan_alasan_kendala_teknis(self, driver_app, driver_simulator):
         """
@@ -697,8 +691,7 @@ class TestDrvBooking:
         drv_book_pg.cancel_order()
         driver_simulator.driver_cancel_order(reason="Kendala teknis motor")
         then("Status pesanan dibatalkan dan sistem mencatat alasan pembatalan resmi")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.business_logic
     @pytest.mark.payment_switch
     def test_TC_DRV_BOOK_BL_06_dynamic_payment_switch_user_terupdate_ke_driver(self, driver_app):
@@ -711,8 +704,7 @@ class TestDrvBooking:
         given("Penumpang mengubah metode bayar di aplikasi User")
         when("Sistem mem-broadcast event socket pembaruan checkout")
         then("Layar driver reaktif memperbarui instruksi penagihan argo")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     # ==========================================================================
     # PILAR 4: NEGATIVE CASES, SECURITY & ROBUSTNESS
     # ==========================================================================
@@ -740,8 +732,7 @@ class TestDrvBooking:
         given("Posisi kendaraan berjarak > 1 KM dari titik destinasi")
         when("Driver mencoba menekan 'Selesai mengantar penumpang'")
         then("Aplikasi memunculkan dialog peringatan radius lokasi tujuan")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_false
     @pytest.mark.security
     def test_TC_DRV_BOOK_NF_01_security_sqli_pada_chat_in_trip(self, driver_app):
@@ -754,8 +745,7 @@ class TestDrvBooking:
         given("Layar obrolan in-trip dengan penumpang aktif")
         when("Pesan berisi query SQLi: ' OR 1=1; DROP TABLE messages; -- dikirimkan")
         then("Pesan tersanitasi aman dan percakapan tidak mengalami abnormal behavior")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_false
     @pytest.mark.security
     def test_TC_DRV_BOOK_NF_02_security_xss_pada_chat_in_trip(self, driver_app):
@@ -768,8 +758,7 @@ class TestDrvBooking:
         given("Fitur chat in-trip aktif")
         when("Pesan berisi tag <script>alert('XSS_ATTACK')</script> dikirimkan")
         then("Sistem meng-escape karakter HTML/JS dan merender sebagai teks biasa")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_false
     def test_TC_DRV_BOOK_NF_03_rapid_double_click_tombol_terima_dan_selesai(self, driver_app):
         """
@@ -786,8 +775,7 @@ class TestDrvBooking:
             except Exception:
                 pass
         then("Aplikasi tetap responsif dan hanya 1 request yang diproses")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_false
     def test_TC_DRV_BOOK_NF_04_ketahanan_jaringan_fluktuatif_saat_pembayaran(self, driver_app):
         """
@@ -799,9 +787,7 @@ class TestDrvBooking:
         given("Koneksi data seluler mengalami fluktuasi sesaat")
         when("Driver menekan 'Sudah Terima Pembayaran'")
         then("Aplikasi menahan state transaksi dan mencoba sinkronisasi otomatis")
-        assert True
-
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
 # ==============================================================================
 # SUITE PENGUJIAN DRIVER: 16 MATRIKS ORDER BEHAVIOUR & 4 TINGKATAN JARAK
 # ==============================================================================
@@ -810,7 +796,7 @@ class TestDrvBooking:
 @pytest.mark.order_behaviour
 class TestDrvOrderBehaviourMatrix:
     """
-    Test Suite Sisi Pengemudi (Driver Mitra Driver Active):
+    Test Suite Sisi Pengemudi (Driver <EVMOTO_PHONE_EXTRA_1>):
     Mencakup Rincian Tarif Perjalanan Resmi:
       - Tarif Dasar / Argo Awal (Start Price) : Rp 6.000 (Konstan untuk radius 0 - 2.0 KM pertama)
       - Tarif Jarak Reguler (Mileage Fee)     : Rp 2.800 / KM (untuk jarak > 2.0 KM)
@@ -857,7 +843,7 @@ class TestDrvOrderBehaviourMatrix:
             "total_argo": 6000.0,
             "base_argo": 6000.0,
             "plat_fee": 600.0,
-            "subtotal": 6600.0
+            "subtotal": 6000.0  # tagihan user = argo; platform fee 0% di sisi user (dipotong dari driver)
         },
         {
             "tier": "Jarak Sedang",
@@ -868,7 +854,7 @@ class TestDrvOrderBehaviourMatrix:
             "total_argo": 10200.0,
             "base_argo": 10200.0,
             "plat_fee": 1020.0,
-            "subtotal": 11220.0
+            "subtotal": 10200.0  # tagihan user = argo; platform fee 0% di sisi user (dipotong dari driver)
         },
         {
             "tier": "Jarak Jauh",
@@ -879,7 +865,7 @@ class TestDrvOrderBehaviourMatrix:
             "total_argo": 38400.0,
             "base_argo": 38400.0,
             "plat_fee": 3840.0,
-            "subtotal": 42240.0
+            "subtotal": 38400.0  # tagihan user = argo; platform fee 0% di sisi user (dipotong dari driver)
         },
         {
             "tier": "Jarak Sangat Jauh",
@@ -890,7 +876,7 @@ class TestDrvOrderBehaviourMatrix:
             "total_argo": 89900.0,
             "base_argo": 89900.0,
             "plat_fee": 8990.0,
-            "subtotal": 98890.0
+            "subtotal": 89900.0  # tagihan user = argo; platform fee 0% di sisi user (dipotong dari driver)
         },
     ]
 

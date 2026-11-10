@@ -97,7 +97,7 @@ def stop_and_save_recording(driver, file_name: str = "demo_evmoto_user.mp4") -> 
                 logger.info(f"[REC SAVED] Video Live Demo tersimpan: {output_path} ({size_kb} KB)")
 
                 # Salin juga ke direktori artifact conversation jika ada
-                artifact_dir = Path(r"C:\Users\ASUS\.gemini\antigravity\brain\beb4ebc7-14a5-4fe6-987b-c18630fbbf02")
+                artifact_dir = Path(os.getenv("QA_ARTIFACTS_DIR", "reports"))
                 if artifact_dir.exists():
                     artifact_dest = artifact_dir / file_name
                     shutil.copy2(output_path, artifact_dest)

@@ -30,8 +30,8 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 # Konfigurasi Path
 PERF_DIR = Path(__file__).resolve().parent
 REPORTS_DIR = PERF_DIR / "reports"
-DOWNLOADS_DIR = Path(r"C:\Users\ASUS\Downloads")
-DOCS_DIR = Path(r"C:\Users\ASUS\Documents\EVMoto Apps\Test Case Manual\Mobile Apps (User & Driver)")
+DOWNLOADS_DIR = Path.home() / "Downloads"
+DOCS_DIR = Path(os.getenv("QA_DOCS_DIR", "docs"))
 OUTPUT_FILENAME = "LAPORAN_TEKNIKAL_PERFORMANCE_UNTUK_DEVELOPER.pdf"
 
 PROJECT_PDF_PATH = REPORTS_DIR / OUTPUT_FILENAME

@@ -2,10 +2,10 @@
 ================================================================================
 EVMOTO DRIVER ROLE SIMULATOR & CLIENT HELPER (DEV ENVIRONMENT)
 ================================================================================
-Aplikasi: EvMoto Driver Dev (APK: evmoto-driver-1.9.27-env-dev_golang-20261020-v7a.apk)
+Aplikasi: EvMoto Driver Dev (APK: evmoto-driver-1.9.29-env-dev_golang-20261020-v7a.apk | v1.9.29)
 Package : com.evmoto.driver.app
 Activity: com.evmoto.driver.app.MainActivity
-Akun    : 85156125633 / OTP Bypass 1234 (Budi Setiawan)
+Akun    : <TEST_DRIVER_PHONE> / OTP Bypass <EVMOTO_OTP_BYPASS> (Budi Setiawan)
 Tujuan  : Mensimulasikan dan mengontrol peran Mitra Driver secara deterministik
           pada pengujian User Mobile Apps tanpa perlu membuat Test Case terpisah
           untuk Driver Apps.
@@ -16,6 +16,7 @@ Fitur   :
   4. Isolasi Driver Sibuk: Memastikan driver yang sedang mengantar tidak menerima order baru
 ================================================================================
 """
+import os
 import time
 import threading
 from typing import Dict, Any, Optional
@@ -33,7 +34,7 @@ class DriverRoleSimulator:
 
     def __init__(
         self,
-        driver_phone: str = "82283737237",
+        driver_phone: str = os.environ.get("EVMOTO_PHONE_EXTRA_1", ""),
         driver_name: str = "Driver Dev",
         plate_number: str = "B 1234 EVM",
         vehicle_model: str = "ECGO 3 (Motor Listrik)"
@@ -104,7 +105,7 @@ class DriverRoleSimulator:
             self._active_trip = {
                 "order_id": oid,
                 "orderId": oid,
-                "user_phone": order_data.get("user_phone", "82146625856"),
+                "user_phone": order_data.get("user_phone", os.environ.get("TEST_USER_PHONE", "")),
                 "pickup": order_data.get("pickup", "Lokasi Jemput"),
                 "destination": order_data.get("destination", "Lokasi Tujuan"),
                 "fare": order_data.get("fare", "Rp 10.200"),
@@ -228,6 +229,106 @@ class DriverRoleSimulator:
             return target
 
     # ==========================================================================
+    # 2.C ORDER HALL & MULTIPLE ORDERS ADVANCED EDGE CASES
+    # ==========================================================================
+    def enter_order_hall(self, active_tab: str = "regular") -> Dict[str, Any]:
+        """
+        Membuka layar Order Hall (Lobi Pesanan / Ruang Pesanan).
+        Mengembalikan daftar order yang tersedia sesuai tab ('regular' atau 'advance').
+        """
+        if not self._is_online:
+            return {
+                "status": "OFFLINE",
+                "orders": [],
+                "message": "Driver Offline - Aktifkan status kerja untuk melihat Order Hall",
+                "active_tab": active_tab,
+                "is_empty": True
+            }
+
+        all_offers = [o for o in self._batch_offers if o.get("status") == "OFFERED"]
+        filtered = [o for o in all_offers if o.get("order_type") == active_tab]
+
+        return {
+            "status": "ONLINE",
+            "active_tab": active_tab,
+            "total_available": len(filtered),
+            "orders": filtered,
+            "is_empty": len(filtered) == 0,
+            "empty_state_message": "Belum ada orderan di sekitar Anda" if len(filtered) == 0 else ""
+        }
+
+    def customer_cancels_in_order_hall(self, order_id: str, reason: str = "Customer batalkan sebelum diterima") -> bool:
+        """
+        Customer membatalkan order saat order masih tayang di Order Hall / Batch Pool.
+        Order otomatis dicabut seketika dari pool tanpa merusak order lainnya.
+        """
+        with self._order_lock:
+            for o in self._batch_offers:
+                if o.get("order_id") == order_id:
+                    o["status"] = "CANCELLED_BY_CUSTOMER"
+                    o["cancel_reason"] = reason
+                    logger.info(f"[ORDER HALL] Order {order_id} dibatalkan Customer saat di Order Hall. Dicabut otomatis.")
+                    return True
+        return False
+
+    def peer_claims_in_order_hall(self, order_id: str, peer_driver_id: str = "DRV-PEER-01") -> Dict[str, Any]:
+        """
+        Mitra driver lain berhasil mengklaim order saat order masih tayang di Order Hall driver ini.
+        Order otomatis hilang dari Order Hall driver ini dengan notifikasi / banner.
+        """
+        with self._order_lock:
+            for o in self._batch_offers:
+                if o.get("order_id") == order_id:
+                    o["status"] = "CLAIMED_BY_PEER"
+                    o["claimed_by"] = peer_driver_id
+                    logger.info(f"[ORDER HALL] Order {order_id} diklaim oleh {peer_driver_id}. Dicabut dari Order Hall.")
+                    return {
+                        "revoked": True,
+                        "order_id": order_id,
+                        "notification": "Orderan sudah diambil oleh pengemudi lain",
+                        "status": "CLAIMED_BY_PEER"
+                    }
+        return {"revoked": False, "order_id": order_id, "notification": "Order tidak ditemukan"}
+
+    def sort_order_hall(self, by: str = "fare", reverse: bool = True) -> list:
+        """
+        Mengurutkan daftar order di Order Hall berdasarkan tarif ('fare') atau jarak ('distance_km').
+        """
+        available = [o for o in self._batch_offers if o.get("status") == "OFFERED"]
+        if by == "fare":
+            return sorted(available, key=lambda x: x.get("fare", 0), reverse=reverse)
+        elif by == "distance":
+            return sorted(available, key=lambda x: x.get("distance_km", 0), reverse=not reverse)  # nearest first
+        return available
+
+    def simulate_network_reconnect_sync(self, current_server_orders: list):
+        """
+        Mensimulasikan sinkronisasi Order Hall setelah gangguan jaringan sementara (reconnect).
+        Reconcile local offers dengan status realtime dari server.
+        """
+        with self._order_lock:
+            server_ids = {item.get("order_id") for item in current_server_orders}
+            for o in self._batch_offers:
+                if o.get("order_id") not in server_ids and o.get("status") == "OFFERED":
+                    o["status"] = "EXPIRED_ON_RECONNECT"
+
+            existing_ids = {o.get("order_id") for o in self._batch_offers}
+            for item in current_server_orders:
+                if item.get("order_id") not in existing_ids:
+                    self._batch_offers.append({
+                        "order_id": item.get("order_id"),
+                        "order_type": item.get("order_type", "regular"),
+                        "pickup": item.get("pickup", "Titik Jemput"),
+                        "destination": item.get("destination", "Titik Antar"),
+                        "distance_km": item.get("distance_km", 2.0),
+                        "fare": item.get("fare", 12000),
+                        "has_countdown": False,
+                        "dispatched_at": time.time(),
+                        "status": "OFFERED"
+                    })
+            logger.info(f"[ORDER HALL] Reconnection sync selesai. Total order aktif: {len(self.get_batch_offers())}")
+
+    # ==========================================================================
     # 3. PENANGANAN RACE CONDITION (1 DRIVER, 2 USER ORDER SIMULTAN)
     # ==========================================================================
     def resolve_concurrent_orders(
@@ -247,12 +348,12 @@ class DriverRoleSimulator:
         - Tidak terjadi double-booking atau konflik data transaksi.
         """
         with self._order_lock:
-            logger.info("[RACE CONDITION TEST] Menguji 2 Order masuk secara simultan ke Driver 82283737237...")
+            logger.info("[RACE CONDITION TEST] Menguji 2 Order masuk secara simultan ke Driver <EVMOTO_PHONE_EXTRA_1>...")
 
             # User 1 berhasil diterima oleh Driver (Winner)
             self._active_trip = {
                 "order_id": order_user_1.get("order_id", f"ORD-WINNER-1"),
-                "user_phone": order_user_1.get("user_phone", "82146625856"),
+                "user_phone": order_user_1.get("user_phone", os.environ.get("TEST_USER_PHONE", "")),
                 "pickup": order_user_1.get("pickup", "Menara Astra"),
                 "destination": order_user_1.get("destination", "Grand Indonesia"),
                 "status": "driver_assigned"
@@ -262,7 +363,7 @@ class DriverRoleSimulator:
             # User 2 ditolak secara elegan tanpa crash (Graceful Pool Search)
             user_2_result = {
                 "order_id": order_user_2.get("order_id", f"ORD-WAITING-2"),
-                "user_phone": order_user_2.get("user_phone", "82446628856"),
+                "user_phone": order_user_2.get("user_phone", os.environ.get("EVMOTO_PHONE_EXTRA_2", "")),
                 "status": "searching_other_driver",
                 "driver_assigned": None,
                 "has_conflict": False,

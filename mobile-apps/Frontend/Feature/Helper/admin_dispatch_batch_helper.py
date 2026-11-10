@@ -25,8 +25,8 @@ class AdminDispatchBatchHelper:
     """Helper & Actor untuk menguji fitur Dispatch Batch pada Admin Dashboard."""
 
     DEFAULT_ADMIN_URL = os.getenv("ADMIN_DEV_URL", "https://evmotoadmin.justkidding.app")
-    DEFAULT_ADMIN_USER = os.getenv("ADMIN_DEV_USER", "admin_temp")
-    DEFAULT_ADMIN_PASS = os.getenv("ADMIN_DEV_PASS", "123456")
+    DEFAULT_ADMIN_USER = os.getenv("ADMIN_DEV_USER", "")
+    DEFAULT_ADMIN_PASS = os.getenv("ADMIN_DEV_PASS", "")
 
     def __init__(self, base_url: Optional[str] = None):
         self.base_url = (base_url or self.DEFAULT_ADMIN_URL).rstrip("/")
@@ -245,3 +245,21 @@ class AdminDispatchBatchHelper:
     def is_saved_successfully(self, resp: requests.Response) -> bool:
         """Memeriksa apakah pengiriman berhasil disimpan ('saved=1' atau teks 'Pengaturan tersimpan')."""
         return "saved=1" in resp.url or "Pengaturan tersimpan." in resp.text
+
+    def restore_settings(self, original_settings: Dict[str, Any]) -> requests.Response:
+        """
+        Mengembalikan konfigurasi form /dispatchBatch ke snapshot data semula (Teardown Cleanup).
+        Memastikan lingkungan dev/staging tetap bersih dan data kembali persis seperti semula.
+        """
+        logger.info(f"Mengembalikan pengaturan Dispatch Batch ke snapshot semula: {original_settings}")
+        return self.submit_dispatch_batch(
+            enabled=original_settings.get("enabled", True),
+            size=original_settings.get("size", 2),
+            delay=original_settings.get("delay", 10),
+            duration=original_settings.get("duration", 0),
+            concurrent=original_settings.get("concurrent", 5),
+            rescans=original_settings.get("rescans", 2),
+            ordinary_bands=original_settings.get("ordinary_bands") or [("0", "1"), ("1", "2"), ("2", "3"), ("3", "4"), ("4", "5")],
+            advance_bands=original_settings.get("advance_bands") or [("0", "1"), ("1", "2"), ("2", "5"), ("5", "15")],
+        )
+

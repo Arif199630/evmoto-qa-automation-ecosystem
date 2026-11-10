@@ -12,6 +12,7 @@ Urutan Field Sign Up:
 5. Button 'Create Account'
 ================================================================================
 """
+import os
 import time
 from appium.webdriver.common.appiumby import AppiumBy
 from core.base_page import BasePage
@@ -37,7 +38,7 @@ class RegisterPage(BasePage):
         return self.is_displayed(self.TITLE_REGISTER, timeout=timeout)
 
     def fill_phone(self, phone: str):
-        """Mengisi nomor telepon (misal: 81299990001)."""
+        """Mengisi nomor telepon (misal: <TEST_USER_PHONE>)."""
         self.type_text(self.FIELD_PHONE, phone, label="Nomor Telepon Dev")
 
     def fill_name(self, name: str):
@@ -64,8 +65,8 @@ class RegisterPage(BasePage):
         time.sleep(0.5)
         self.click(self.BTN_REQUEST_OTP, label="Tombol 'Request OTP'")
 
-    def fill_otp(self, otp_code: str = "1234"):
-        """Mengisi kode OTP (default dev: 1234)."""
+    def fill_otp(self, otp_code: str = os.environ.get("EVMOTO_OTP_BYPASS", "")):
+        """Mengisi kode OTP (default dev: <EVMOTO_OTP_BYPASS>)."""
         self.type_text(self.FIELD_OTP, otp_code, label=f"Kode OTP Dev ({otp_code})")
         try:
             self.driver.hide_keyboard()
@@ -140,6 +141,10 @@ class RegisterPage(BasePage):
             self.click(self.LINK_ALREADY_HAVE_ACCOUNT, label="Tautan 'Sudah Punya Akun? Masuk'")
         else:
             self.click_back()
+
+    def navigate_back_to_login(self):
+        """Kembali ke layar login melalui tautan 'Sudah punya akun' atau tombol kembali."""
+        self.navigate_to_login_via_link()
 
 
 # Backward compatibility alias

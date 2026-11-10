@@ -6,6 +6,7 @@ Membangun spesifikasi kemampuan perangkat (UiAutomator2Options) khusus
 untuk aplikasi Flutter/Android EvMoto pada emulator Samsung Galaxy S25.
 ================================================================================
 """
+import os
 from appium.options.android import UiAutomator2Options
 from config import config
 
@@ -34,6 +35,12 @@ def get_capabilities(no_reset: bool = False, full_reset: bool = False, is_driver
         options.app_activity = config.APP_ACTIVITY
     options.app_wait_activity = config.APP_WAIT_ACTIVITY
     options.app_wait_duration = config.SPLASH_WAIT_DURATION
+
+    # Konfigurasi instalasi otomatis APK jika diaktifkan (via INSTALL_APK / AUTO_INSTALL_APK)
+    target_apk = getattr(config, "DRIVER_APK_PATH", None) if is_driver_app else getattr(config, "APK_PATH", None)
+    if os.getenv("INSTALL_APK", "0") in ("1", "true", "True") or os.getenv("AUTO_INSTALL_APK", "0") in ("1", "true", "True"):
+        if target_apk and os.path.exists(target_apk):
+            options.app = target_apk
 
     # Otomatis izinkan permission lokasi, notifikasi, dll
     options.auto_grant_permissions = True

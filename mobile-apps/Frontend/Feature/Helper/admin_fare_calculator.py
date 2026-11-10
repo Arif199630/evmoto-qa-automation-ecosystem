@@ -28,7 +28,7 @@ Modul kalkulator harga resmi EvMoto yang mengimplementasikan 6 kondisi bisnis:
 
 import re
 import math
-from typing import Dict, Any, Union
+from typing import Dict, Any, Union, Optional
 from utils.logger import get_logger
 
 logger = get_logger("AdminFareCalculator")
@@ -62,12 +62,14 @@ class AdminDashboardFareCalculator:
     START_KM = 2.0            # 2.0 KM radius awal
     MILEAGE_FEE = 2800.0      # Rp 2.800 / KM (tarif jarak reguler)
     DURATION_FEE = 0.0        # Rp 0 / menit
-    PLATFORM_FEE_RATE = 0.10  # 10% Platform fee (seamless)
+    PLATFORM_FEE_RATE = 0.0   # 0% Platform fee tambahan pada tagihan invoice pengguna
     WAIT_MINUTES_FREE = 15    # 15 Menit tunggu gratis
     WAIT_FEE_PER_MIN = 500.0  # Rp 500 / menit setelah 15 menit
     DEFAULT_COUPON = 5000.0   # Voucher Kupon Rp 5.000
     DEFAULT_PENALTY = 5000.0  # Penalty pembatalan / denda Rp 5.000
-    EWALLET_CHARGE_RATE = 0.02# 2% Charge fee untuk GoPay & OVO
+    GOPAY_CHARGE_RATE = 0.02  # 2.0% Charge / Handling Fee untuk GoPay
+    OVO_CHARGE_RATE = 0.01665 # 1.665% Handling Fee untuk OVO
+    EWALLET_CHARGE_RATE = 0.02# Default fallback Charge fee e-wallet
 
     # Konfigurasi Long Distance Fee resmi Dashboard Admin Production (ID 1626 / 1619)
     FAR_FROM_1 = 6.0          # Batas awal Jarak Jauh Tier 1 (6.0 KM)
@@ -162,6 +164,7 @@ class AdminDashboardFareCalculator:
         distance_km: float,
         payment_method: str = "cash",
         waiting_minutes: int = 0,
+        waiting_fee: Optional[float] = None,
         use_coupon: bool = False,
         coupon_amount: float = 5000.0,
         apply_penalty: bool = False,
@@ -171,7 +174,7 @@ class AdminDashboardFareCalculator:
         Kalkulator Menyeluruh untuk 6 Kondisi Bisnis EvMoto:
         1. Jarak (Dekat, Sedang, Jauh)
         2. Platform Fee (10%)
-        3. Waiting Fee (Setelah 15 menit, Rp 500/menit)
+        3. Waiting Fee (Setelah 15 menit, Rp 500/menit, atau nominal langsung)
         4. Kupon Diskon (Rp 5.000)
         5. Penalty (Rp 5.000)
         6. Charge Fee 2% untuk E-Wallet (GoPay & OVO) pada Grand Total akumulatif
@@ -180,13 +183,18 @@ class AdminDashboardFareCalculator:
         argo_info = self.calculate_base_argo(distance_km)
         total_argo = argo_info["total_argo"]
 
-        # 2. Platform Fee 10% (Seamless)
+        # 2. Platform Fee (Seamless 0% pada tagihan invoice customer)
         platform_fee = total_argo * self.PLATFORM_FEE_RATE
         base_subtotal = total_argo + platform_fee
 
         # 3. Waiting Fee
-        excess_wait_minutes = max(0, int(waiting_minutes) - self.WAIT_MINUTES_FREE)
-        waiting_fee = float(excess_wait_minutes * self.WAIT_FEE_PER_MIN)
+        if waiting_fee is not None:
+            waiting_fee_val = float(waiting_fee)
+            excess_wait_minutes = int(waiting_fee_val / self.WAIT_FEE_PER_MIN)
+        else:
+            # QC Form: menit tertagih maksimal 15 (menit 15:01 sampai 30:00)
+            excess_wait_minutes = min(max(0, int(waiting_minutes) - self.WAIT_MINUTES_FREE), self.MAX_BILLABLE_MINUTES)
+            waiting_fee_val = float(excess_wait_minutes * self.WAIT_FEE_PER_MIN)
 
         # 4. Kupon Diskon
         discount_applied = float(coupon_amount) if use_coupon else 0.0
@@ -194,23 +202,26 @@ class AdminDashboardFareCalculator:
         # 5. Penalty
         penalty_fee = float(penalty_amount) if apply_penalty else 0.0
 
-        # Subtotal Akumulatif Sebelum Charge Fee
-        # Grand Total Dasar = Argo + Platform Fee (10%) + Waiting Fee + Penalty - Kupon
-        adjusted_subtotal = base_subtotal + waiting_fee + penalty_fee - discount_applied
+        # Subtotal Akumulatif Sebelum Charge Fee (Harga Order Awal)
+        # Harga Order Awal = Argo + Waiting Fee + Penalty - Kupon
+        adjusted_subtotal = base_subtotal + waiting_fee_val + penalty_fee - discount_applied
         adjusted_subtotal = max(0.0, adjusted_subtotal)
 
-        # 6. Charge Fee 2% E-Wallet (GoPay & OVO)
+        # 6. Charge Fee / Handling Fee E-Wallet (GoPay 2% & OVO 1.665%) dengan Rumus Gross-Up:
+        # Formula Resmi: Harga order final = math.ceil(harga order awal * ( 100 / ( 100 - rate ) ))
+        # Handling Fee = Harga order final - harga order awal
         clean_method = payment_method.strip().lower()
         is_ewallet_surcharge = clean_method in ["gopay", "ovo", "e-wallet", "ewallet"]
         
-        if is_ewallet_surcharge:
-            charge_fee_rate = self.EWALLET_CHARGE_RATE
-            charge_fee_amount = round(adjusted_subtotal * charge_fee_rate, 2)
+        if is_ewallet_surcharge and adjusted_subtotal > 0:
+            rate_percent = 1.665 if clean_method == "ovo" else 2.0
+            charge_fee_rate = rate_percent / 100.0
+            grand_total = float(math.ceil(adjusted_subtotal * (100.0 / (100.0 - rate_percent))))
+            charge_fee_amount = float(grand_total - adjusted_subtotal)
         else:
             charge_fee_rate = 0.0
             charge_fee_amount = 0.0
-
-        grand_total = round(adjusted_subtotal + charge_fee_amount, 2)
+            grand_total = float(adjusted_subtotal)
 
         result = {
             "distance_km": argo_info["distance_km"],
@@ -224,7 +235,7 @@ class AdminDashboardFareCalculator:
             "base_subtotal": base_subtotal,
             "waiting_minutes": waiting_minutes,
             "excess_wait_minutes": excess_wait_minutes,
-            "waiting_fee": waiting_fee,
+            "waiting_fee": waiting_fee_val,
             "coupon_discount": discount_applied,
             "penalty_fee": penalty_fee,
             "adjusted_subtotal": adjusted_subtotal,
@@ -235,7 +246,7 @@ class AdminDashboardFareCalculator:
             # Format Rupiah Persis Tanpa Pembulatan
             "formatted_argo": format_rupiah_exact(total_argo),
             "formatted_platform_fee": format_rupiah_exact(platform_fee),
-            "formatted_waiting_fee": format_rupiah_exact(waiting_fee),
+            "formatted_waiting_fee": format_rupiah_exact(waiting_fee_val),
             "formatted_coupon": format_rupiah_exact(discount_applied),
             "formatted_penalty": format_rupiah_exact(penalty_fee),
             "formatted_charge_fee": format_rupiah_exact(charge_fee_amount),
@@ -247,16 +258,17 @@ class AdminDashboardFareCalculator:
             f"Argo: {result['formatted_argo']} | Plat(10%): {result['formatted_platform_fee']} | "
             f"Wait({waiting_minutes}m): {result['formatted_waiting_fee']} | "
             f"Kupon: -{result['formatted_coupon']} | Penalty: +{result['formatted_penalty']} | "
-            f"Method: {payment_method.upper()} (Charge 2%: {result['formatted_charge_fee']}) -> "
+            f"Method: {payment_method.upper()} (Handling Fee {charge_fee_rate*100:g}%: {result['formatted_charge_fee']}) -> "
             f"GRAND TOTAL: {result['formatted_grand_total']}"
         )
         return result
 
     # Metode backward-compatible untuk skrip lama
-    def calculate_fare(self, distance_km: float, is_night: bool = False) -> Dict[str, Any]:
-        """Kompatibilitas mundur dengan penambahan platform fee 10%."""
+    def calculate_fare(self, distance_km: float, is_night: bool = False, far_distance_fee: float = 0.0) -> Dict[str, Any]:
+        """Kompatibilitas mundur dengan driver and legacy suites."""
         base = self.calculate_base_argo(distance_km)
         breakdown = self.calculate_grand_total(distance_km, payment_method="cash")
+        plat_fee = base["total_argo"] * 0.10
         return {
             "distance_km": base["distance_km"],
             "is_night": False,
@@ -266,8 +278,10 @@ class AdminDashboardFareCalculator:
             "distance_charge": base["mileage_charge"],
             "long_distance_charge": base["long_distance_charge"],
             "total_argo": base["total_argo"],
-            "platform_fee": breakdown["platform_fee"],
+            "fare": base["total_argo"],
+            "platform_fee": plat_fee,
             "total_fare": breakdown["grand_total"],
+            "grand_total_user": base["total_argo"] + plat_fee,
             "formatted_total": breakdown["formatted_grand_total"]
         }
 
@@ -414,11 +428,16 @@ class AdminDashboardFareCalculator:
         # = Customer Charge + Driver Penalty - Driver Payout
         platform_net = customer_charge + driver_penalty - driver_payout
 
-        # 10. Integrasi Surcharge E-Wallet (GoPay & OVO) 2%
+        # 10. Integrasi Surcharge / Handling Fee E-Wallet (GoPay 2% & OVO 1.665%) menggunakan Gross-Up:
         clean_method = payment_method.strip().lower()
         is_ewallet = clean_method in ["gopay", "ovo", "e-wallet", "ewallet"]
-        charge_fee_amount = round(customer_charge * self.EWALLET_CHARGE_RATE, 2) if is_ewallet else 0.0
-        grand_total_customer = round(customer_charge + charge_fee_amount, 2)
+        if is_ewallet and customer_charge > 0:
+            rate_percent = 1.665 if clean_method == "ovo" else 2.0
+            grand_total_customer = float(math.ceil(customer_charge * (100.0 / (100.0 - rate_percent))))
+            charge_fee_amount = float(grand_total_customer - customer_charge)
+        else:
+            charge_fee_amount = 0.0
+            grand_total_customer = float(customer_charge)
 
         res = {
             "status": "VALID",
@@ -460,4 +479,214 @@ class AdminDashboardFareCalculator:
             f"Method: {clean_method.upper()} -> Grand Total: {res['formatted_grand_total']}"
         )
         return res
+
+    # ------------------------------------------------------------------
+    # Pembungkus singkat yang dipakai test_drv_booking.py (TC_DRV_BOOK_FARE_*)
+    # Semua angka diambil dari konstanta QC Form Waiting Fee & Cancellation.
+    # ------------------------------------------------------------------
+    def verify_ui_fare(self, ui_fare_text: str, distance_km: float):
+        """Bandingkan teks tarif di layar (mis. 'Rp 10.200') dengan argo hasil rumus. Hasil: (cocok?, pesan)."""
+        digits = re.sub(r"[^0-9]", "", (ui_fare_text or "").split(",")[0])
+        if not digits:
+            return False, f"Tarif tidak terbaca dari layar: {ui_fare_text!r}"
+        expected = self.calculate_base_argo(distance_km)["total_argo"]
+        actual = float(digits)
+        if actual == expected:
+            return True, f"Cocok: {format_rupiah_exact(actual)}"
+        return False, f"Layar {format_rupiah_exact(actual)} vs rumus {format_rupiah_exact(expected)} untuk {distance_km} KM"
+
+    def calculate_waiting_fee(self, waiting_minutes: int) -> float:
+        """Waiting fee customer: gratis 15 menit pertama, lalu Rp 500/menit, maksimal 15 menit (Rp 7.500)."""
+        billable = min(max(0, int(waiting_minutes) - self.WAIT_MINUTES_FREE), self.MAX_BILLABLE_MINUTES)
+        return float(billable * self.WAIT_FEE_CUSTOMER_PER_MIN)
+
+    def calculate_all_in_one(
+        self,
+        distance_km: float,
+        waiting_minutes: int = 0,
+        penalty_fee: float = 0.0,
+        coupon_discount: float = 0.0,
+        payment_method: str = "cash",
+    ) -> Dict[str, Any]:
+        """Total tagihan user untuk satu order: argo + waiting fee + penalti - kupon + handling fee e-wallet."""
+        res = self.calculate_grand_total(
+            distance_km=distance_km,
+            payment_method=payment_method,
+            waiting_minutes=waiting_minutes,
+            use_coupon=coupon_discount > 0,
+            coupon_amount=coupon_discount,
+            apply_penalty=penalty_fee > 0,
+            penalty_amount=penalty_fee,
+        )
+        return {
+            **res,
+            "coupon_discount": res["coupon_discount"],
+            "ewallet_charge_fee": res["charge_fee_amount"],
+            "grand_total_user": res["grand_total"],
+        }
+
+    def calculate_cancellation_fase_c(self, waiting_minutes: int, payment_method: str = "cash") -> Dict[str, Any]:
+        """Customer membatalkan di Fase C (lewat 15 menit sejak driver tiba)."""
+        elapsed = self.GRACE_PERIOD_SECONDS + max(0, int(waiting_minutes) - self.WAIT_MINUTES_FREE) * 60
+        res = self.calculate_cancellation_settlement(
+            cancelled_by="Customer", driver_arrived=True, elapsed_seconds=elapsed, payment_method=payment_method)
+        return {**res, "total_customer_charge": res["customer_charge"]}
+
+    def calculate_no_show_fase_d(self, payment_method: str = "cash") -> Dict[str, Any]:
+        """Auto-cancel sistem karena customer tidak muncul 30 menit (Fase D)."""
+        res = self.calculate_cancellation_settlement(
+            cancelled_by="System", driver_arrived=True, elapsed_seconds=self.AUTO_CANCEL_SECONDS,
+            payment_method=payment_method)
+        return {**res, "total_customer_charge": res["customer_charge"]}
+
+    def generate_dual_side_invoice(
+        self,
+        distance_km: float,
+        payment_method: str = "cash",
+        waiting_minutes: int = 0,
+        waiting_fee: Optional[float] = None,
+        use_coupon: bool = False,
+        coupon_amount: float = 5000.0,
+        apply_penalty: bool = False,
+        penalty_amount: float = 5000.0,
+        order_id: str = "ORD-EVM-DEV-001"
+    ) -> Dict[str, Any]:
+        """
+        Sinkronisasi dan Rekonsiliasi Invoice Dua Sisi (User Apps & Driver Apps):
+        1. SISI USER APPS (Customer Invoice):
+           - Tarif Dasar Argo (Berdasarkan Tier Jarak)
+           - Biaya Menunggu / Waiting Fee (Rp 500/menit setelah 15 menit, atau nominal spesifik)
+           - Voucher Kupon Diskon (-Rp 5.000 jika digunakan)
+           - Penalty / Denda Pembatalan (+Rp 5.000 jika ada)
+           - Handling Fee E-Wallet Gross-Up (OVO 1.665%, GoPay 2%, Tunai/EvWallet 0%)
+           - Total Tagihan Penumpang (Grand Total)
+           - Tagihan Kas Fisik Penumpang (Grand Total untuk Tunai, Rp 0 untuk Cashless)
+
+        2. SISI DRIVER APPS (Driver Invoice):
+           - Biaya Jarak Tempuh / Argo Kotor
+           - Biaya Jarak Jauh / Far Distance Fee (jika > 6 KM)
+           - Biaya Waktu Tunggu Driver (Rp 300/menit setelah 15 menit)
+           - Potongan Platform Fee Driver 10% dari Argo Kotor
+           - Subsidi Kupon (Platform menanggung kupon, hak argo driver utuh)
+           - Yang Dibayarkan Penumpang (Display nilai yang dibayar user)
+           - Tagihan Uang Tunai ke Penumpang (Wajib Rp 0 untuk OVO/GoPay/EvWallet - Zero Cash Policy)
+           - Total Hak Pendapatan Bersih Driver (Masuk ke Dompet Driver):
+             = Argo Kotor - Potongan Platform (10%) + Waiting Fee Driver
+
+        3. REKONSILIASI & CROSS-CHECK DUA SISI:
+           - Kesesuaian Display Yang Dibayarkan Penumpang == Grand Total User
+           - Kepatuhan Kebijakan Zero Cash pada Metode Non-Tunai
+           - Integritas Komisi Driver (Argo tidak dipotong kupon & handling fee terisolasi)
+        """
+        # 1. Kalkulasi Sisi User Apps
+        user_calc = self.calculate_grand_total(
+            distance_km=distance_km,
+            payment_method=payment_method,
+            waiting_minutes=waiting_minutes,
+            waiting_fee=waiting_fee,
+            use_coupon=use_coupon,
+            coupon_amount=coupon_amount,
+            apply_penalty=apply_penalty,
+            penalty_amount=penalty_amount
+        )
+
+        clean_method = payment_method.strip().lower()
+        is_cashless = clean_method in ["ovo", "gopay", "evwallet", "e-wallet", "ewallet"]
+
+        # Tagihan kas fisik ke penumpang (0 untuk cashless, total untuk cash)
+        cash_to_collect_physical = 0.0 if is_cashless else user_calc["grand_total"]
+
+        user_invoice = {
+            "order_id": order_id,
+            "title": "E-Receipt Perjalanan EvRide",
+            "distance_km": user_calc["distance_km"],
+            "category": user_calc["category"],
+            "base_argo": user_calc["total_argo"],
+            "waiting_minutes": user_calc["waiting_minutes"],
+            "waiting_fee": user_calc["waiting_fee"],
+            "coupon_discount": user_calc["coupon_discount"],
+            "penalty_fee": user_calc["penalty_fee"],
+            "adjusted_subtotal": user_calc["adjusted_subtotal"],
+            "payment_method": user_calc["payment_method"],
+            "is_cashless": is_cashless,
+            "handling_fee_rate": user_calc["charge_fee_rate"],
+            "handling_fee_amount": user_calc["charge_fee_amount"],
+            "total_customer_paid": user_calc["grand_total"],
+            "cash_to_pay_physically": cash_to_collect_physical,
+            "formatted_base_argo": user_calc["formatted_argo"],
+            "formatted_waiting_fee": user_calc["formatted_waiting_fee"],
+            "formatted_coupon": user_calc["formatted_coupon"],
+            "formatted_penalty": user_calc["formatted_penalty"],
+            "formatted_handling_fee": user_calc["formatted_charge_fee"],
+            "formatted_total_customer_paid": user_calc["formatted_grand_total"],
+            "formatted_cash_to_pay": format_rupiah_exact(cash_to_collect_physical)
+        }
+
+        # 2. Kalkulasi Sisi Driver Apps
+        base_argo = user_calc["total_argo"]
+        long_distance_charge = user_calc["long_distance_charge"]
+        excess_wait_min = user_calc["excess_wait_minutes"]
+        driver_waiting_fee = float(excess_wait_min * self.WAIT_FEE_DRIVER_PER_MIN)
+
+        # Potongan Platform 10% dari argo kotor perjalanan
+        driver_platform_fee = round(base_argo * 0.10, 2)
+
+        # Subsidi kupon dari platform (argo driver tidak berkurang oleh voucher user)
+        coupon_subsidy = user_calc["coupon_discount"]
+
+        # Total yang diterima driver bersih (masuk ke dompet driver)
+        # = Argo Kotor - Potongan Platform 10% + Waiting Fee Driver
+        net_driver_earnings = round(base_argo - driver_platform_fee + driver_waiting_fee, 2)
+
+        driver_invoice = {
+            "order_id": order_id,
+            "title": "Rincian Pembayaran & Pendapatan Driver",
+            "distance_km": user_calc["distance_km"],
+            "fare_argo": base_argo,
+            "long_distance_charge": long_distance_charge,
+            "waiting_fee_driver": driver_waiting_fee,
+            "coupon_subsidy": coupon_subsidy,
+            "platform_fee_driver": driver_platform_fee,
+            "net_driver_earnings": net_driver_earnings,
+            "payment_method": user_calc["payment_method"],
+            "is_cashless": is_cashless,
+            "paid_by_passenger_display": user_calc["grand_total"],
+            "cash_collected_from_passenger": cash_to_collect_physical,
+            "formatted_fare_argo": format_rupiah_exact(base_argo),
+            "formatted_long_distance_fee": format_rupiah_exact(long_distance_charge),
+            "formatted_waiting_fee_driver": format_rupiah_exact(driver_waiting_fee),
+            "formatted_coupon_subsidy": format_rupiah_exact(coupon_subsidy),
+            "formatted_platform_fee_driver": format_rupiah_exact(driver_platform_fee),
+            "formatted_net_driver_earnings": format_rupiah_exact(net_driver_earnings),
+            "formatted_paid_by_passenger": user_calc["formatted_grand_total"],
+            "formatted_cash_collected": format_rupiah_exact(cash_to_collect_physical)
+        }
+
+        # 3. Rekonsiliasi & Cross-Check Integritas
+        invoice_match = (driver_invoice["paid_by_passenger_display"] == user_invoice["total_customer_paid"])
+        zero_cash_compliance = (driver_invoice["cash_collected_from_passenger"] == 0.0) if is_cashless else (driver_invoice["cash_collected_from_passenger"] == user_invoice["total_customer_paid"])
+        driver_protected_from_discount = (driver_invoice["fare_argo"] == user_calc["total_argo"])
+
+        reconciliation = {
+            "is_synced": invoice_match and zero_cash_compliance and driver_protected_from_discount,
+            "invoice_match": invoice_match,
+            "zero_cash_compliance": zero_cash_compliance,
+            "driver_protected_from_discount": driver_protected_from_discount,
+            "platform_gross_margin": round(driver_platform_fee - coupon_subsidy, 2),
+            "gateway_handling_fee": user_invoice["handling_fee_amount"]
+        }
+
+        logger.info(
+            f"[DUAL INVOICE RECONCILED] Order: {order_id} | Jarak: {distance_km} KM | Method: {user_invoice['payment_method']} | "
+            f"User Paid: {user_invoice['formatted_total_customer_paid']} (Cash: {user_invoice['formatted_cash_to_pay']}) | "
+            f"Driver Net: {driver_invoice['formatted_net_driver_earnings']} (Cash Collect: {driver_invoice['formatted_cash_collected']}) | "
+            f"Sync Status: {'SYNCHRONIZED' if reconciliation['is_synced'] else 'DISCREPANCY'}"
+        )
+
+        return {
+            "order_id": order_id,
+            "user_invoice": user_invoice,
+            "driver_invoice": driver_invoice,
+            "reconciliation": reconciliation
+        }
 

@@ -8,6 +8,7 @@ Target  : Layar Masuk / Login Mitra Driver, Input Nomor HP, OTP 4 Digit,
 Wording : Bersumber 100% dari strings resmi APK driver_lang_id.json
 ================================================================================
 """
+import os
 import time
 from appium.webdriver.common.appiumby import AppiumBy
 from core.base_page import BasePage
@@ -148,7 +149,7 @@ class DrvLoginPage(BasePage):
         """Memeriksa apakah layar verifikasi kode OTP tampil."""
         return self.is_displayed(self.TITLE_OTP, timeout=6) or self.is_displayed(self.SUBTITLE_OTP, timeout=4)
 
-    def enter_otp(self, otp: str = "1234"):
+    def enter_otp(self, otp: str = os.environ.get("EVMOTO_OTP_BYPASS", "")):
         """Memasukkan 4 digit kode OTP verifikasi bypass dev."""
         logger.info(f"Input kode OTP verifikasi driver: {otp}")
         self.type_text(self.FIELD_OTP, otp, label="Field Input 4 Kode OTP")
@@ -198,7 +199,7 @@ class DrvLoginPage(BasePage):
     def login_as_driver(self, phone: str = Config.DRIVER_ACTIVE_PHONE, otp: str = Config.DRIVER_ACTIVE_PIN):
         """
         Alur lengkap end-to-end login Driver ke aplikasi Dev Golang.
-        Input nomor -> Join Sekarang -> Masukkan OTP 1234 -> Handle Izin Lokasi.
+        Input nomor -> Join Sekarang -> Masukkan OTP <EVMOTO_OTP_BYPASS> -> Handle Izin Lokasi.
         """
         logger.info(f"Melakukan proses login driver dengan nomor: {phone}")
         self.handle_system_permissions()

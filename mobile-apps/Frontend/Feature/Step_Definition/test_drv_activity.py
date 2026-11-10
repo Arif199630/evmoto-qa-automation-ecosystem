@@ -4,8 +4,8 @@ EVMOTO DRIVER MOBILE AUTOMATION - TEST SUITE: AKTIVITAS SAYA & GUARANTEE INCOME
 ================================================================================
 Aplikasi        : EvMoto Driver Dev (com.evmoto.driver.app)
 Target File     : test_drv_activity.py
-Environment     : Dev Golang (https://api-dev.evmoto.internal)
-Akun Driver     : 81299990001 | PIN Bypass 1234
+Environment     : Dev Golang (https://evmotodev.justkidding.app)
+Akun Driver     : <TEST_USER_PHONE> | PIN Bypass <EVMOTO_OTP_BYPASS>
 Metodologi      : Page Object Model (POM) & 4 Pilar QA Lengkap
 Wording         : 100% Presisi strings resmi APK driver_strings_id.json
 ================================================================================
@@ -70,7 +70,7 @@ class TestDrvActivity:
         given("Driver berada pada Halaman Beranda utama")
         when("Driver mengetuk tab navigasi 'Aktivitas Saya' pada Bottom Navigation Bar")
         then("Sistem mengarahkan driver ke Halaman Aktivitas Saya")
-        assert act_pg.is_activity_screen_displayed() or True
+        assert act_pg.is_activity_screen_displayed()
 
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_02_beralih_ke_tab_guarantee_income(self, driver_app):
@@ -86,7 +86,7 @@ class TestDrvActivity:
         when("Driver mengetuk tab 'Guarantee Income'")
         act_pg.switch_to_gi_tab()
         then("Layar beralih menampilkan metrik jaminan pendapatan")
-        assert act_pg.is_gi_dashboard_displayed() or True
+        assert act_pg.is_gi_dashboard_displayed()
 
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_03_verifikasi_kartu_total_guarantee_income(self, driver_app):
@@ -102,8 +102,7 @@ class TestDrvActivity:
         given("Driver berada pada Tab Guarantee Income")
         when("Driver memeriksa kartu header utama")
         then("Komponen 'TOTAL GUARANTEE INCOME' tertera dengan jelas")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_04_verifikasi_rate_gi_per_hour(self, driver_app):
         """
@@ -118,8 +117,7 @@ class TestDrvActivity:
         given("Driver berada pada Tab Guarantee Income")
         when("Driver meninjau rate insentif per jam")
         then("Keterangan rate per jam tercantum pada antarmuka")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_05_verifikasi_kartu_total_akumulasi_gi(self, driver_app):
         """
@@ -134,8 +132,7 @@ class TestDrvActivity:
         given("Driver berada pada Tab Guarantee Income")
         when("Driver meninjau kartu 'Total Akumulasi Guarantee Income'")
         then("Nilai akumulasi pendapatan jaminan ditampilkan")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_06_verifikasi_kartu_net_payment_of_guarantee(self, driver_app):
         """
@@ -150,8 +147,7 @@ class TestDrvActivity:
         given("Driver berada pada Tab Guarantee Income")
         when("Driver memeriksa kartu 'Net Payment of Guarantee'")
         then("Nominal net payment ditampilkan sesuai hak subsidi mitra")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_07_verifikasi_komponen_dipotong_dari_gi(self, driver_app):
         """
@@ -166,8 +162,7 @@ class TestDrvActivity:
         given("Driver berada pada Tab Guarantee Income")
         when("Driver meninjau potongan pendapatan pesanan aktif")
         then("Komponen pemotong jaminan pendapatan tertera akurat")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_08_verifikasi_label_periode_jam_operasional(self, driver_app):
         """
@@ -182,8 +177,7 @@ class TestDrvActivity:
         given("Driver berada pada Tab Guarantee Income")
         when("Driver membaca klausul jam operasional")
         then("Label periode operasional (Periode: start - end) tampil valid")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_09_verifikasi_timer_sisa_waktu_jaminan_hari_ini(self, driver_app):
         """
@@ -198,8 +192,7 @@ class TestDrvActivity:
         given("Driver online di area Guarantee Income")
         when("Driver memantau widget timer durasi")
         then("Widget 'Sisa waktu jaminan hari ini' aktif berjalan")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_10_verifikasi_timer_sisa_waktu_kembali_ke_area(self, driver_app):
         """
@@ -214,8 +207,7 @@ class TestDrvActivity:
         given("Driver berada di luar area setelah menyelesaikan perjalanan")
         when("Driver melihat indikator batas waktu kembali")
         then("Timer 'Sisa waktu kembali ke area' tampil informatif")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_11_verifikasi_notice_buffer_kembali_20_persen(self, driver_app):
         """
@@ -230,8 +222,7 @@ class TestDrvActivity:
         given("Driver meninjau ketentuan toleransi perjalanan luar zona")
         when("Driver membaca catatan kaki batas waktu")
         then("Penjelasan perhitungan durasi terakhir + persentase buffer tertera")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_12_verifikasi_snackbar_memasuki_wilayah_gi(self, driver_app):
         """
@@ -245,8 +236,7 @@ class TestDrvActivity:
         given("Driver bergerak memasuki batas perimeter zona GI")
         when("Sistem mendeteksi koordinat GPS valid")
         then("Snackbar 'Anda telah memasuki wilayah Gurantee Income' muncul")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_13_verifikasi_snackbar_keluar_wilayah_gi(self, driver_app):
         """
@@ -260,8 +250,7 @@ class TestDrvActivity:
         given("Driver melintasi batas luar wilayah GI")
         when("Sistem mendeteksi perpindahan zona")
         then("Snackbar peringatan 'Anda telah keluar wilayah Gurantee Income' tampil")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_14_akses_riwayat_guarantee_income_hari_ini(self, driver_app):
         """
@@ -276,8 +265,7 @@ class TestDrvActivity:
         given("Driver berada pada Tab Guarantee Income")
         when("Driver meninjau seksi 'Guarantee Income Hari Ini'")
         then("Daftar histori pendapatan harian ditampilkan")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_15_verifikasi_badge_status_sudah_dibayarkan(self, driver_app):
         """
@@ -292,8 +280,7 @@ class TestDrvActivity:
         given("Terdapat transaksi subsidi GI yang telah dicairkan")
         when("Driver memeriksa badge status transaksi")
         then("Status 'Sudah Dibayarkan' terverifikasi")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_16_verifikasi_badge_status_menunggu_konfirmasi(self, driver_app):
         """
@@ -308,8 +295,7 @@ class TestDrvActivity:
         given("Shift harian baru saja berakhir")
         when("Driver memantau status rekonsiliasi subsidi")
         then("Status 'Menunggu Konfirmasi' ditampilkan sampai verifikasi tuntas")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_17_ketuk_tombol_lihat_detail_riwayat_gi(self, driver_app):
         """
@@ -325,8 +311,7 @@ class TestDrvActivity:
         when("Driver mengetuk tombol 'Lihat Detail'")
         act_pg.click_lihat_detail_gi()
         then("Modal rincian kalkulasi subsidi ditampilkan")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_18_beralih_ke_tab_riwayat_pendapatan_revenue_summary(self, driver_app):
         """
@@ -341,7 +326,7 @@ class TestDrvActivity:
         when("Driver mengetuk tab 'Revenue Summary' / Riwayat Pendapatan")
         act_pg.switch_to_revenue_tab()
         then("Halaman menampilkan ringkasan pendapatan driver")
-        assert act_pg.is_revenue_summary_displayed() or True
+        assert act_pg.is_revenue_summary_displayed()
 
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_19_verifikasi_kartu_ringkasan_pendapatan_driver(self, driver_app):
@@ -357,8 +342,7 @@ class TestDrvActivity:
         given("Driver berada pada layar Revenue Summary")
         when("Driver meninjau kartu rincian penghasilan")
         then("Nilai kotor dan penghasilan bersih tercantum jelas")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_20_verifikasi_klausul_potongan_platform_fee_10_persen(self, driver_app):
         """
@@ -373,8 +357,7 @@ class TestDrvActivity:
         given("Driver meninjau potongan administrasi")
         when("Driver membaca rincian platform fee")
         then("Catatan '10% dari total biaya jarak tempuh' tercantum pada rincian")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_21_verifikasi_rincian_biaya_promo_disubsidi(self, driver_app):
         """
@@ -389,8 +372,7 @@ class TestDrvActivity:
         given("Driver memeriksa transaksi bertiket promosi")
         when("Driver melihat komponen 'Biaya promo'")
         then("Sistem mengonfirmasi subsidi promo ditanggung platform")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_22_verifikasi_pembukuan_perubahan_saldo_before_after(self, driver_app):
         """
@@ -405,8 +387,7 @@ class TestDrvActivity:
         given("Driver membuka detail mutasi transaksi")
         when("Driver meninjau ledger audit saldo")
         then("Data Saldo Sebelum, Perubahan Saldo, dan Saldo Sesudah terverifikasi")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_23_beralih_ke_tab_riwayat_referral_income(self, driver_app):
         """
@@ -421,7 +402,7 @@ class TestDrvActivity:
         when("Driver mengetuk tab 'Referral Income'")
         act_pg.switch_to_referral_tab()
         then("Layar beralih menampilkan Riwayat Referral Income")
-        assert act_pg.is_referral_income_displayed() or True
+        assert act_pg.is_referral_income_displayed()
 
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_24_verifikasi_ringkasan_komisi_per_register(self, driver_app):
@@ -437,8 +418,7 @@ class TestDrvActivity:
         given("Driver berada pada Tab Referral Income")
         when("Driver membaca rincian skema komisi")
         then("Keterangan komisi 'Per Register' tertera jelas")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_25_ketuk_tombol_bagikan_kode_referral_mitra(self, driver_app):
         """
@@ -453,8 +433,7 @@ class TestDrvActivity:
         given("Driver melihat kode referral pribadinya")
         when("Driver mengetuk tombol 'Bagikan'")
         then("Sistem membuka native share dialog Android")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_26_beralih_ke_tab_pesanan_riwayat_order(self, driver_app):
         """
@@ -469,7 +448,7 @@ class TestDrvActivity:
         when("Driver mengetuk tab 'Pesanan'")
         act_pg.switch_to_pesanan_tab()
         then("Layar beralih menampilkan daftar riwayat pesanan driver")
-        assert act_pg.is_pesanan_tab_displayed() or True
+        assert act_pg.is_pesanan_tab_displayed()
 
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_27_buka_detail_pesanan_dan_invoice_driver(self, driver_app):
@@ -486,7 +465,7 @@ class TestDrvActivity:
         when("Driver mengetuk salah satu kartu pesanan")
         act_pg.click_order_item_to_view_invoice()
         then("Sistem membuka Layar Detail Pesanan (Invoice Driver)")
-        assert act_pg.is_driver_order_invoice_displayed() or True
+        assert act_pg.is_driver_order_invoice_displayed()
 
     @pytest.mark.positive_true
     def test_TC_DRV_ACT_PT_28_tutup_detail_invoice_kembali_ke_daftar_pesanan(self, driver_app):
@@ -504,7 +483,7 @@ class TestDrvActivity:
         when("Driver mengetuk tombol 'Kembali'")
         act_pg.close_order_detail_invoice()
         then("Antarmuka kembali ke daftar riwayat pesanan")
-        assert act_pg.is_pesanan_tab_displayed() or True
+        assert act_pg.is_pesanan_tab_displayed()
 
     # ==========================================================================
     # PILAR 2: BUSINESS LOGIC (BL) - ATURAN BISNIS & FORMULA GI
@@ -521,8 +500,7 @@ class TestDrvActivity:
         given("Mitra memiliki target GI Rp 150.000 (5 jam) dan order income Rp 90.000")
         when("Sistem menjalankan formula subsidi rekonsiliasi harian")
         then("Net Payment of Guarantee yang dicairkan bernilai tepat Rp 60.000")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.business_logic
     def test_TC_DRV_ACT_BL_02_net_payment_terkunci_nol_rupiah_saat_target_tercapai(self, driver_app):
         """
@@ -534,8 +512,7 @@ class TestDrvActivity:
         given("Mitra memperoleh order income Rp 200.000 melebihi target GI Rp 150.000")
         when("Sistem mengevaluasi selisih subsidi jaminan")
         then("Total Guarantee Payment bernilai Rp 0 dan pendapatan order tetap utuh")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.business_logic
     def test_TC_DRV_ACT_BL_03_penolakan_klaim_gi_jika_jam_online_kurang(self, driver_app):
         """
@@ -547,8 +524,7 @@ class TestDrvActivity:
         given("Driver hanya online selama 2 jam dari batas minimum shift 4 jam")
         when("Sistem melakukan evaluasi kualifikasi subsidi jaminan harian")
         then("Subsidi GI gugur karena tidak memenuhi syarat durasi operasional")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.business_logic
     def test_TC_DRV_ACT_BL_04_penolakan_klaim_gi_saat_di_luar_working_area(self, driver_app):
         """
@@ -560,8 +536,7 @@ class TestDrvActivity:
         given("Driver berada di luar batas geofence operasional resmi")
         when("Driver mencoba mengakses klaim manfaat GI")
         then("Sistem menolak dan menampilkan peringatan batas wilayah kerja")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.business_logic
     def test_TC_DRV_ACT_BL_05_hangusnya_gi_saat_batas_waktu_kembali_area_habis(self, driver_app):
         """
@@ -573,8 +548,7 @@ class TestDrvActivity:
         given("Timer sisa waktu kembali ke area telah mencapai batas 00:00")
         when("Driver belum kembali ke batas dalam zona GI")
         then("Hak jaminan pendapatan periode tersebut dinyatakan hangus")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.business_logic
     def test_TC_DRV_ACT_BL_06_validasi_pembagian_komisi_bersih_invoice_driver(self, driver_app):
         """
@@ -587,8 +561,7 @@ class TestDrvActivity:
         given("Pesanan rute 3.5 KM (Argo Rp 10.200) dengan Waiting Fee Rp 2.500 dan Kupon Rp 5.000")
         when("Sistem mengalkulasi Invoice Pendapatan Driver")
         then("Platform Fee 10% (Rp 1.020) terpotong dan subsidi kupon Rp 5.000 utuh diterima driver")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     # ==========================================================================
     # PILAR 3: NEGATIVE TRUE (NT) - EMPTY STATES & FILTER BOUNDARIES
     # ==========================================================================
@@ -607,8 +580,7 @@ class TestDrvActivity:
         given("Akun driver belum mencatatkan sesi kerja hari ini")
         when("Driver membuka tab Guarantee Income")
         then("Tampil ilustrasi dan teks 'Anda belum memiliki pendapatan Guarantee Income'")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_true
     def test_TC_DRV_ACT_NT_02_empty_state_belum_ada_riwayat_pendapatan(self, driver_app):
         """
@@ -623,8 +595,7 @@ class TestDrvActivity:
         given("Akun driver baru belum pernah menyelesaikan transaksi perjalanan")
         when("Driver membuka tab Revenue Summary")
         then("Tampil empty state 'Belum Ada Riwayat'")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_true
     def test_TC_DRV_ACT_NT_03_empty_state_belum_ada_riwayat_referral(self, driver_app):
         """
@@ -639,8 +610,7 @@ class TestDrvActivity:
         given("Driver belum mengajak rekan bergabung sebagai mitra")
         when("Driver membuka tab Referral Income")
         then("Tampil empty state 'Belum Ada Riwayat Referral' disertai ajakan berbagi")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_true
     def test_TC_DRV_ACT_NT_04_filter_riwayat_rentang_tanggal_masa_depan(self, driver_app):
         """
@@ -655,8 +625,7 @@ class TestDrvActivity:
         given("Driver membuka filter kalender tanggal riwayat pendapatan")
         when("Driver mencoba memilih tanggal di masa depan (tomorrow onwards)")
         then("Datepicker menonaktifkan seleksi tanggal masa depan")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_true
     def test_TC_DRV_ACT_NT_05_akses_detail_transaksi_belum_tersedia(self, driver_app):
         """
@@ -668,8 +637,7 @@ class TestDrvActivity:
         given("Terdapat rekonsiliasi yang masih dalam tahap batch processing")
         when("Driver mengetuk transaksi tersebut")
         then("Sistem menampilkan pesan 'Detail transaksi belum tersedia' secara aman")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_true
     def test_TC_DRV_ACT_NT_06_empty_state_riwayat_pesanan_belum_ada(self, driver_app):
         """
@@ -684,8 +652,7 @@ class TestDrvActivity:
         given("Driver baru belum pernah menyelesaikan pesanan")
         when("Driver membuka Tab Pesanan di Halaman Aktivitas")
         then("Tampil empty state 'Belum Ada Pesanan'")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     # ==========================================================================
     # PILAR 4: NEGATIVE FALSE (NF) - SECURITY, SPAMMING & ROBUSTNESS
     # ==========================================================================
@@ -701,8 +668,7 @@ class TestDrvActivity:
         given("Driver berada pada fitur pencarian nomor transaksi")
         when("Driver memasukkan query SQLi: ' OR '1'='1' --")
         then("Sistem mensanitasi input dan menampilkan 0 hasil tanpa crash")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_false
     def test_TC_DRV_ACT_NF_02_security_xss_pada_payload_referral_sharing(self, driver_app):
         """
@@ -714,8 +680,7 @@ class TestDrvActivity:
         given("Driver memodifikasi teks referral dengan tag <script>alert(1)</script>")
         when("Teks dikirimkan melalui sistem sharing")
         then("Karakter khusus disanitasi tanpa eksekusi skrip berbahaya")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_false
     def test_TC_DRV_ACT_NF_03_rapid_tab_switching_spamming_gi_revenue_referral(self, driver_app):
         """
@@ -732,8 +697,7 @@ class TestDrvActivity:
         act_pg.switch_to_revenue_tab()
         act_pg.switch_to_referral_tab()
         then("Aplikasi tetap responsif dan merender tab terakhir tanpa force close")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_false
     def test_TC_DRV_ACT_NF_04_penanganan_lonjakan_sinyal_gps_jitter(self, driver_app):
         """
@@ -745,8 +709,7 @@ class TestDrvActivity:
         given("Sinyal GPS mengalami lompatan akurasi sesaat di batas geofence")
         when("Aplikasi mengevaluasi status batas wilayah")
         then("Damping delay aktif sehingga notifikasi status tetap konsisten")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_false
     def test_TC_DRV_ACT_NF_05_resiliensi_koneksi_terputus_saat_muat_revenue(self, driver_app):
         """
@@ -760,4 +723,4 @@ class TestDrvActivity:
         given("Koneksi data staging terputus sementara")
         when("Driver membuka tab Revenue Summary")
         then("Aplikasi menampilkan placeholder offline dan tombol coba lagi")
-        assert True
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.

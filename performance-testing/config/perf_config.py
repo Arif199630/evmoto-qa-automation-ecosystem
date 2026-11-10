@@ -41,13 +41,13 @@ class PerfConfig:
     # --------------------------------------------------------------------------
     # Kredensial Pengujian Akun Staging
     # --------------------------------------------------------------------------
-    DRIVER_PHONE: str = os.getenv("TEST_DRIVER_PHONE", "082283737237")
-    DRIVER_PIN: str = os.getenv("TEST_DRIVER_PIN", "1234")
+    DRIVER_PHONE: str = os.getenv("TEST_DRIVER_PHONE", ("0" + os.environ.get("EVMOTO_PHONE_EXTRA_1", "")))
+    DRIVER_PIN: str = os.getenv("TEST_DRIVER_PIN", os.environ.get("EVMOTO_OTP_BYPASS", ""))
 
-    USER_PHONE: str = os.getenv("TEST_USER_PHONE", "082283737237")
-    USER_OTP: str = os.getenv("TEST_USER_OTP", "1234")
+    USER_PHONE: str = os.getenv("TEST_USER_PHONE", ("0" + os.environ.get("EVMOTO_PHONE_EXTRA_1", "")))
+    USER_OTP: str = os.getenv("TEST_USER_OTP", os.environ.get("EVMOTO_OTP_BYPASS", ""))
 
-    ECGO_PHONE: str = os.getenv("TEST_ECGO_PHONE", "082283737237")
+    ECGO_PHONE: str = os.getenv("TEST_ECGO_PHONE", ("0" + os.environ.get("EVMOTO_PHONE_EXTRA_1", "")))
     ECGO_OTP: str = os.getenv("TEST_ECGO_OTP", "777777")
 
     # --------------------------------------------------------------------------

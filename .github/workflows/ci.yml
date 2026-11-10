@@ -1,62 +1,167 @@
-name: EvMoto & ECGO QA Automation Ecosystem CI/CD
+# Regression EvMoto di GitHub Actions: Admin (Chrome headless), API (staging + mock), Mobile User & Driver
+# di emulator Android asli (APK dev), lalu satu laporan PDF gabungan.
+# Hanya environment dev/staging; staging_guard membatalkan run yang mengarah ke production.
+# Semua kredensial dari GitHub Secrets (lihat README "Secrets yang dibutuhkan"); tidak ada nilai rahasia di file ini.
+name: evmoto-regression
 
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
+    inputs:
+      suites:
+        description: "Suite yang dijalankan (all / admin / api / mobile)"
+        default: all
+  push:
+    branches: [main]
+    paths-ignore: ["docs/**", "**/*.md"]
+  schedule:
+    - cron: "0 1 * * 1-5"   # 08:00 WIB, Senin-Jumat
+
+concurrency:
+  group: regression-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ENVIRONMENT: dev
+  HEADLESS: "true"
+  LARK_WEBHOOK_URL: ""
+  PYTHONUTF8: "1"
 
 jobs:
-  test-ecosystem:
-    name: API Automation & Headless Integration CI
+  quality-gate:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-
-      - name: Install Dependencies
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Quality gate (method hilang, assertion palsu, domain production, file ganda)
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python qa-tools/quality_gate.py admin
+          python qa-tools/quality_gate.py mobile
 
-      - name: Syntax & Lint Verification (Monorepo Modules)
-        run: |
-          python -m compileall mobile-apps/ web-dashboard/ integration-ecosystem/ api-testing/
-
-      - name: Execute REST API Automation Suite (Pytest + JSONSchema)
-        env:
-          EVMOTO_API_BASE_URL: ${{ secrets.EVMOTO_API_BASE_URL || 'https://api-dev.evmoto.internal' }}
-          ECGO_API_BASE_URL: ${{ secrets.ECGO_API_BASE_URL || 'https://ecgo-api.internal:3002' }}
-          EVMOTO_ADMIN_PORTAL_URL: ${{ secrets.EVMOTO_ADMIN_PORTAL_URL || 'https://admin-staging.evmoto.internal' }}
-          CONNECT_BRIDGE_URL: ${{ secrets.CONNECT_BRIDGE_URL || 'https://connect.evmoto.internal' }}
-          MOCK_API_FALLBACK: 'true'
-        run: |
-          cd api-testing
-          pytest -v suites/
-
-      - name: Execute Headless Integration Test Suite (ECGO Connect x EvMoto)
-        env:
-          EVMOTO_API_BASE_URL: ${{ secrets.EVMOTO_API_BASE_URL || 'https://api-dev.evmoto.internal' }}
-          ECGO_API_BASE_URL: ${{ secrets.ECGO_API_BASE_URL || 'https://ecgo-api.internal:3002' }}
-          EVMOTO_ADMIN_PORTAL_URL: ${{ secrets.EVMOTO_ADMIN_PORTAL_URL || 'https://admin-staging.evmoto.internal' }}
-          CONNECT_BRIDGE_URL: ${{ secrets.CONNECT_BRIDGE_URL || 'https://connect.evmoto.internal' }}
-          MOCK_API_FALLBACK: 'true'
-        run: |
-          cd integration-ecosystem
-          pytest -v test_ecgo_connect_integrated_suite.py
-
-      - name: Upload Test Reports Artifacts
+  admin:
+    needs: quality-gate
+    if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJSON('["all","admin"]'), inputs.suites) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt
+      - name: Tulis .env dari Secrets
+        run: printf '%s\n' "$ENV_WEB" > web-dashboard/.env
+        env: { ENV_WEB: "${{ secrets.ENV_WEB_DASHBOARD }}" }
+      - name: Regression Admin Dashboard (Chrome headless)
+        run: python qa-tools/run_all.py --suite admin
+      - uses: actions/upload-artifact@v4
         if: always()
-        uses: actions/upload-artifact@v4
+        with: { name: hasil-admin, path: qa-tools/runs/, retention-days: 14 }
+
+  api:
+    needs: quality-gate
+    if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJSON('["all","api"]'), inputs.suites) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt
+      - name: Tulis .env dari Secrets
+        run: printf '%s\n' "$ENV_MOBILE" > mobile-apps/.env
+        env: { ENV_MOBILE: "${{ secrets.ENV_MOBILE_APPS }}" }
+      - name: Regression API (staging; endpoint yang belum ada di staging dijawab mock dan ditandai)
+        run: python qa-tools/run_all.py --suite api --mock-services
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: hasil-api, path: qa-tools/runs/, retention-days: 14 }
+
+  mobile:
+    needs: quality-gate
+    if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJSON('["all","mobile"]'), inputs.suites) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5]
+    env:
+      SHARD_INDEX: ${{ matrix.shard }}
+      SHARD_TOTAL: 6
+      INSTALL_APK: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Aktifkan KVM (emulator cepat tanpa jendela)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: Pasang dependensi Python dan Appium
+        run: |
+          pip install -r requirements.txt
+          npm install -g appium@2
+          appium driver install uiautomator2
+      - name: Tulis .env dari Secrets
+        run: printf '%s\n' "$ENV_MOBILE" > mobile-apps/.env
+        env: { ENV_MOBILE: "${{ secrets.ENV_MOBILE_APPS }}" }
+      - name: Ambil APK dev (terenkripsi di Release) lalu buka enkripsinya
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APK_PASSPHRASE: ${{ secrets.APK_PASSPHRASE }}
+        run: |
+          mkdir -p apk
+          gh release download apk-dev -R "${{ github.repository }}" -p 'evmoto-apk-dev.tar.gz.enc' -D apk
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass env:APK_PASSPHRASE \
+            -in apk/evmoto-apk-dev.tar.gz.enc | tar -xz -C apk
+          ls apk
+      - name: Regression Mobile User & Driver di emulator Android (APK asli)
+        uses: reactivecircus/android-emulator-runner@v2
         with:
-          name: evmoto-qa-test-reports
-          path: docs/reports/
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          ram-size: 4096M
+          disk-size: 6000M
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot
+          disable-animations: true
+          script: |
+            adb install -r -g apk/evmoto-user.apk
+            adb install -r -g apk/evmoto-driver.apk
+            nohup appium --address 127.0.0.1 --port 4723 --log-level warn > appium.log 2>&1 &
+            sleep 15
+            python qa-tools/run_all.py --suite mobile cross
+      - name: Kumpulkan bukti kegagalan (screenshot + struktur layar)
+        if: always()
+        run: |
+          mkdir -p bukti
+          cp -r mobile-apps/reports/screenshots bukti/ 2>/dev/null || true
+          cp appium.log bukti/ 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hasil-mobile-${{ matrix.shard }}
+          path: |
+            qa-tools/runs/
+            bukti/
           retention-days: 14
+
+  laporan:
+    needs: [admin, api, mobile]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt
+      - uses: actions/download-artifact@v4
+        with: { path: artifacts }
+      - name: Gabungkan hasil semua job lalu buat PDF
+        run: |
+          python qa-tools/merge_runs.py artifacts gabungan
+          python qa-tools/report.py gabungan
+      - uses: actions/upload-artifact@v4
+        with: { name: laporan-regression-pdf, path: gabungan/, retention-days: 30 }

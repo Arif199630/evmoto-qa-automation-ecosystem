@@ -2,8 +2,11 @@
 ================================================================================
 EVMOTO BACKEND API ENDPOINTS CONFIGURATION (JAVA & GOLANG)
 ================================================================================
-Menyimpan konfigurasi URL dan alamat IP server backend EvMoto:
-Dimuat secara dinamis via Environment Variable (.env) untuk keamanan kredensial.
+Menyimpan data URL dan alamat IP server backend EvMoto untuk otomasi mobile:
+- Development Java  : https://dev-api.evmotoid.com
+- Production Java   : https://api.evmotoid.com
+- Development Golang: http://139.162.60.46 => https://evmotodev.justkidding.app
+- Production Golang : https://new-api.evmotoid.com
 ================================================================================
 """
 import os
@@ -25,14 +28,14 @@ class BackendEndpoints:
     """Konstanta Endpoint Backend API Resmi EvMoto."""
 
     # Java Backend Endpoints
-    JAVA_DEV = os.getenv("JAVA_DEV_API_URL", "https://dev-api.evmoto.internal")
-    JAVA_PROD = os.getenv("JAVA_PROD_API_URL", "https://api.evmoto.internal")
+    JAVA_DEV = "https://dev-api.evmotoid.com"
+    JAVA_PROD = "https://api.evmotoid.com"
 
     # Golang Backend Endpoints
-    GOLANG_DEV_IP = os.getenv("GOLANG_DEV_API_IP", "http://10.0.0.10")
-    GOLANG_DEV_DOMAIN = os.getenv("EVMOTO_API_BASE_URL", "https://api-dev.evmoto.internal")
-    GOLANG_DEV = GOLANG_DEV_DOMAIN
-    GOLANG_PROD = os.getenv("GOLANG_PROD_API_URL", "https://new-api.evmoto.internal")
+    GOLANG_DEV_IP = "http://139.162.60.46"
+    GOLANG_DEV_DOMAIN = "https://evmotodev.justkidding.app"
+    GOLANG_DEV = GOLANG_DEV_DOMAIN  # Default Golang dev domain
+    GOLANG_PROD = "https://new-api.evmotoid.com"
 
     # Mapping Komprehensif
     ALL_ENDPOINTS: Dict[str, Dict[str, str]] = {

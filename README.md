@@ -1,155 +1,62 @@
-# 🚀 EVMOTO & ECGO End-to-End QA Automation Ecosystem
+# EvMoto QA Automation Ecosystem
 
-[![CI/CD Pipeline](https://github.com/Arif199630/evmoto-qa-automation-ecosystem/actions/workflows/ci.yml/badge.svg)](https://github.com/Arif199630/evmoto-qa-automation-ecosystem/actions)
-[![Python Version](https://img.shields.io/badge/Python-3.12-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
-[![Test Automation](https://img.shields.io/badge/Total%20Test%20Cases-1%2C180%2B%20TC-success.svg?logo=pytest&logoColor=white)](docs/reports/)
-[![Architecture](https://img.shields.io/badge/Framework-POM%20%7C%20BDD%20%7C%20API%20Contract%20%7C%204--Pillar%20QA-orange.svg)]()
-[![Platform](https://img.shields.io/badge/Target-Web%20Dashboard%20%7C%20Mobile%20Android%20%7C%20REST%20API-lightgrey.svg)]()
+[![evmoto-regression](https://github.com/Arif199630/evmoto-qa-automation-ecosystem/actions/workflows/ci.yml/badge.svg)](https://github.com/Arif199630/evmoto-qa-automation-ecosystem/actions/workflows/ci.yml)
 
-> **QA Engineering Portfolio** oleh **Bhagus Arif Prayogo** ([@Arif199630](https://github.com/Arif199630))  
-> Proyek pengujian otomasi komprehensif skala *enterprise* untuk platform transportasi listrik pintar (**eVMOTO**) dan ekosistem *battery swap* (**ECGO**), mencakup **REST API Testing**, **Web Admin Console**, **Driver Mobile App**, **Passenger Mobile App**, dan **SuperApps Interconnection**.
+Regression otomatis untuk ekosistem EvMoto: web Admin Dashboard, REST API backend, aplikasi User dan Driver, serta alur yang menghubungkan ketiganya. Hanya berjalan di environment **dev/staging**.
 
----
+Semua angka di laporan berasal dari hasil test yang benar-benar dijalankan (JUnit XML). Tidak ada angka lulus yang ditulis tetap.
 
-## 🌟 Executive Summary & Key Achievements
+## Struktur
 
-* 📊 **1.240+ Test Cases Terotomasi & Terdokumentasi Lengkap (1.258 TC Total):**
-  * ⚡ **API Automation Suite:** **49 Test Scenarios** (Autentikasi OTP/Bypass, Driver Telemetry & Order, Passenger Lifecycle & Fare, Security & Fraud Defense, Anti-Voucher Farming Guard, Boundary Tests, ECGO Swap, Dompet Digital, serta Fitur Baru 2, 3, dan 5).
-  * 🌐 **Web Admin Console:** **608 Test Cases** (25 modul administrasi, penetapan tarif, manajemen armada & driver, verifikasi order).
-  * 🛵 **Driver Mobile App (v1.9.27):** **339 Test Cases** (Autentikasi, alur order, pendapatan jaminan GI, dompet eWallet, sewa motor & cicilan ECGO, akumulasi free swap 07:00-19:00 WIB, subsidi jam sibuk rush hour).
-  * 👤 **Passenger Mobile App (v1.2.33):** **257 Test Cases** (Booking, live dispatch, multi-payment, riwayat perjalanan, profil, paket kupon registrasi onboarding).
-* 📈 **Performance & Load Testing Suite (Locust 2.x):**
-  * Pengujian beban konkurensi (10, 100, hingga 1.000 Concurrent Virtual Users) dengan validasi SLA P95 < 500ms, Error Rate 0.0%, serta pelaporan otomatis bilingual (Indonesia & English Executive / Developer Reports).
-* 🔄 **Interkoneksi 3-Sisi (ECGO Connect & Free Swap Kupon):**
-  * Handshake penautan akun *One-Way Binding* antara **ECGO SuperApps** $\leftrightarrow$ **EvMoto Driver App** $\leftrightarrow$ **Dashboard Admin**.
-  * Otomasi evaluasi sesi online 5 menit untuk penerbitan kupon diskon 100% swap baterai secara realtime.
-* ⚡ **CI/CD Pipeline Terpadu (GitHub Actions):**
-  * Terintegrasi dengan **GitHub Actions** untuk validasi sintaks, contract testing, kompilasi kode, dan eksekusi pengujian integrasi *headless* tanpa membebani GUI emulator.
-* 🛡️ **Keamanan & Manajemen Lingkungan (.env Architecture):**
-  * Seluruh endpoint internal, kredensial pengujian, dan token autentikasi diproteksi melalui arsitektur Environment Variable terisolasi (`.env.example` template) demi standar kepatuhan keamanan *open-source*.
+| Folder | Isi |
+|---|---|
+| `web-dashboard/` | Test web Admin Dashboard (Selenium, Chrome headless) |
+| `mobile-apps/` | Test aplikasi User dan Driver (Appium), test lintas aplikasi, dan `api-testing/` (REST API) |
+| `qa-tools/` | Satu perintah regression, quality gate, mock layanan, penggabung hasil, pembuat PDF |
+| `performance-testing/` | Load test Locust |
+| `docs/` | Test case manual dan laporan |
+| `.github/workflows/ci.yml` | Regression di GitHub Actions |
 
----
+## Menjalankan di GitHub Actions
 
-## 🏛️ Arsitektur Repository (Monorepo Clean Architecture)
+Tab **Actions** → **evmoto-regression** → **Run workflow**. Workflow juga jalan otomatis setiap push ke `main` dan setiap Senin-Jumat 08:00 WIB.
 
-Struktur direktori dirancang dengan prinsip modularitas tinggi agar mudah dipahami oleh tim rekrutmen (*HRD / Lead QA*):
+| Job | Yang diuji | Cara |
+|---|---|---|
+| `quality-gate` | Kode automation | Menolak method yang tidak ada, assertion palsu, domain production, file test ganda |
+| `admin` | Web admin staging | Chrome headless |
+| `api` | Backend staging | HTTP; endpoint yang belum ada di staging dijawab mock dan ditandai `mock` di laporan |
+| `mobile` (6 shard) | APK User dan Driver dev | Emulator Android x86_64 + Appium, tanpa HP fisik |
+| `laporan` | - | Menggabungkan semua hasil menjadi satu PDF (artifact `laporan-regression-pdf`) |
 
-```text
-├── .github/
-│   └── workflows/
-│       └── ci.yml                     # Pipeline GitHub Actions (API & Headless Integration CI)
-├── api-testing/                       # [MODUL API AUTOMATION SUITE]
-│   ├── client/                        # Reusable HTTP API Client & Session Manager
-│   ├── config/                        # Dynamic Environment Loader & Endpoints
-│   ├── schemas/                       # JSON Schema & Contract Validation (jsonschema)
-│   ├── suites/                        # Pytest Test Suites (Auth, Driver, User, ECGO, Wallet, Security, Boundary)
-│   ├── conftest.py                    # Session Fixtures & Mock Fallback Handler
-│   └── README.md                      # Dokumentasi Teknis API Testing
-├── mobile-apps/                       # Kerangka Otomasi Mobile (Appium + Pytest)
-│   ├── config/                        # Endpoints API, Capabilities, Multi-Environment
-│   ├── core/                          # BasePage POM, DriverFactory, Appium Custom Wrappers
-│   ├── Frontend/Feature/
-│   │   ├── Pages/                     # Page Object Model (User & Driver Screens)
-│   │   ├── Step_Definition/           # Test Suites BDD (test_drv_*.py & test_*.py)
-│   │   └── Data/                      # Dataset Pengujian 4 Pilar QA (drv_data.py)
-│   └── pytest.ini                     # Konfigurasi Test Runner & Marker
-├── web-dashboard/                     # Otomasi Web Admin Console (Selenium / Headless HTTP)
-│   ├── config.py                      # Konfigurasi Environment Dashboard (Dev & Prod)
-│   └── record_dashboard_price_bug.py  # Automation Script Verifikasi Form Tarif
-├── integration-ecosystem/             # Pengujian Interkoneksi Terpadu 3-Sisi
-│   └── test_ecgo_connect_integrated_suite.py # Multi-Role Actor Test Suite (100% Headless)
-├── performance-testing/               # [MODUL PERFORMANCE & LOAD TESTING]
-│   ├── config/                        # Dynamic Config, Timeout & SLA Threshold Manager
-│   ├── locustfiles/                   # Skenario Locust (Passenger, Driver, ECGO, Unified Mix)
-│   ├── shapes/                        # Load Profiles (Standard Load, Step-up Stress, Surge Spike)
-│   ├── reports/                       # Laporan Interaktif HTML & File Statistik CSV
-│   ├── run_performance.py             # CLI Runner Otomatis & SLA Validator
-│   └── README.md                      # Dokumentasi Teknis Performance Testing
-├── apps/                              # Spesifikasi & Metadata Build APK
-│   └── README.md                      # Metadata Versi APK, Package, Checksum & Release Links
-├── docs/                              # Dokumentasi Resmi & Laporan QA
-│   └── reports/                       # Matriks Excel (.xlsx) & Laporan Manual (.md)
-├── .env.example                       # Template Konfigurasi Environment (Sanitized / Rekayasa)
-├── .gitignore                         # Mengabaikan cache, log, credentials, dan binary 100MB+
-├── requirements.txt                   # Dependensi Python
-└── README.md                          # Dokumentasi Utama Portofolio
-```
+Saat test mobile gagal, CI menyimpan screenshot dan struktur layar (XML) di artifact `hasil-mobile-*`. Dari situ bisa dilihat apakah layar aplikasi memang salah (bug aplikasi) atau locator test yang salah (bug automation).
 
----
+### Secrets yang dibutuhkan
 
-## 📱 Ruang Lingkup Aplikasi & Endpoint Teruji
+Settings → Secrets and variables → Actions. Nilainya tidak pernah ditulis di repo.
 
-| Komponen Sistem | Target Aplikasi / Endpoint | Lingkungan | Platform & Tools |
-| :--- | :--- | :---: | :--- |
-| **Performance Testing** | `https://api-dev.evmoto.internal` *(Masked)* | Staging / Dev | **Locust 2.x**, Load, Stress, Spike Profiles, SLA Validator |
-| **REST API Services** | `https://api-dev.evmoto.internal` *(Masked)* | Staging / Dev | Pytest, Requests, JSONSchema, Contract Testing |
-| **Web Admin Console** | `https://admin-staging.evmoto.internal` *(Masked)* | Staging / Dev | Selenium, Headless Chrome, Requests |
-| **Driver Mobile App** | `evmoto-driver-1.9.27-env-dev_golang-20261020-v7a.apk` | Golang Dev | Appium, UiAutomator2, Pytest BDD |
-| **Passenger App** | `evmoto-user-1.2.33-env-dev_golang-20261020-v8a.apk` | Golang Dev | Appium, UiAutomator2, Pytest BDD |
-| **ECGO SuperApps** | `ECGO SuperApps.apk` (`https://ecgo-api.internal:3002`) | Dev API | Headless Protocol, Web Bridge Handshake |
+| Secret | Isi |
+|---|---|
+| `ENV_WEB_DASHBOARD` | Isi `.env` untuk `web-dashboard/` (format sama dengan `web-dashboard/.env.example`) |
+| `ENV_MOBILE_APPS` | Isi `.env` untuk `mobile-apps/` (format sama dengan `mobile-apps/.env.example`) |
+| `APK_PASSPHRASE` | Kunci untuk membuka APK dev terenkripsi di Release `apk-dev` |
 
+APK dev disimpan di Release `apk-dev` dalam bentuk terenkripsi (`evmoto-apk-dev.tar.gz.enc`, AES-256). Tanpa `APK_PASSPHRASE` file itu tidak bisa dibuka.
 
-> *Catatan Keamanan:* Semua domain internal, IP server staging, nomor telepon uji coba, dan kredensial dalam dokumentasi publik direkayasa atau dimuat via environment variable demi menjaga kerahasiaan data internal.
+## Menjalankan di komputer sendiri
 
----
-
-## 🚦 Menjalankan Pengujian Lokal (Quick Start)
-
-### 1. Kloning Repositori & Persiapan Environment
 ```bash
-git clone https://github.com/Arif199630/evmoto-qa-automation-ecosystem.git
-cd evmoto-qa-automation-ecosystem
-
-# Buat virtual environment
-python -m venv venv
-# Windows:
-venv\Scripts\activate
-# Linux/macOS:
-source venv/bin/activate
-
-# Install dependensi
 pip install -r requirements.txt
-
-# Siapkan file environment lokal dari template
-cp .env.example .env
+cp web-dashboard/.env.example web-dashboard/.env      # isi akun staging
+cp mobile-apps/.env.example mobile-apps/.env
+python qa-tools/run_all.py --suite admin api --mock-services
 ```
 
-### 2. Menjalankan Suite API Automation
-```bash
-cd api-testing
-pytest -v suites/
-```
+Mobile butuh emulator Android dan Appium (`mobile-apps/scripts/start_headless_emulator.ps1`). Tanpa emulator, `--simulator` hanya memeriksa kode test, bukan aplikasi. Panduan lengkap: `qa-tools/README.md`, `web-dashboard/PANDUAN_QA_JUNIOR.md`, `mobile-apps/PANDUAN_QA_JUNIOR.md`.
 
-### 3. Menjalankan Suite Integrasi 3-Sisi (Headless - Cepat & Ringan)
-Suite ini mengeksekusi peran Superadmin, Driver SuperApps, dan Driver EvMoto secara simultan tanpa memerlukan emulator:
-```bash
-cd integration-ecosystem
-pytest -v test_ecgo_connect_integrated_suite.py
-```
+## Aturan data sensitif
 
-### 4. Menjalankan Suite Otomasi Mobile (Appium)
-```bash
-cd mobile-apps
-# Jalankan pengujian modul driver tertentu:
-pytest -v Frontend/Feature/Step_Definition/test_drv_home.py
-# Atau jalankan seluruh suite sewa & cicilan motor:
-pytest -v Frontend/Feature/Step_Definition/test_drv_rental_installment.py
-```
-
----
-
-## 📊 Matriks & Laporan Pengujian Resmi
-
-Dokumentasi lengkap test cases dapat diakses pada folder [docs/reports/](docs/reports/):
-* 📗 **[Test_Cases_EvMoto_Mobile.xlsx](docs/reports/Test_Cases_EvMoto_Mobile.xlsx):** Matriks 536 Test Cases Mobile Apps (Bahasa Indonesia).
-* 📘 **[Test_Cases_EvMoto_Mobile_EN.xlsx](docs/reports/Test_Cases_EvMoto_Mobile_EN.xlsx):** Matriks 536 Test Cases Mobile Apps (Bahasa Inggris).
-* 📙 **[Test_Cases_Manual_ECGO_Connect_Interconnection.xlsx](docs/reports/Test_Cases_Manual_ECGO_Connect_Interconnection.xlsx):** Matriks Pengujian Manual Interkoneksi 3-Sisi.
-* 📝 **[Test_Cases_Manual_ECGO_Connect_Interconnection.md](docs/reports/Test_Cases_Manual_ECGO_Connect_Interconnection.md):** Panduan Langkah Pengujian Step-by-Step QA.
-
----
-
-## 👨‍💻 Profil Author & QA Engineer
-
-* **Nama:** Bhagus Arif Prayogo
-* **GitHub:** [@Arif199630](https://github.com/Arif199630)
-* **Keahlian:** Mobile & Web Test Automation, API Testing & Contract Validation, Performance Testing, CI/CD Pipeline Design, QA Strategy & 4 Pillars Methodology.
+- Nomor HP, OTP, PIN, username, dan password akun uji hanya ada di `.env` (tidak di-commit) atau GitHub Secrets.
+- Di kode, nilainya dibaca lewat `os.environ.get("NAMA_ENV")`; di dokumen ditulis sebagai `<NAMA_ENV>`.
+- `staging_guard.py` membatalkan run bila URL mengarah ke production.
+- Sebelum commit, pastikan tidak ada nomor HP, password, token, atau path pribadi di file yang berubah.

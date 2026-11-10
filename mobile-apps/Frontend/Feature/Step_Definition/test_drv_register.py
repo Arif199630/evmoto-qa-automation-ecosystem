@@ -4,7 +4,7 @@ EVMOTO DRIVER MOBILE AUTOMATION - TEST SUITE: REGISTRASI DRIVER BARU
 ================================================================================
 Aplikasi        : EvMoto Driver Dev (com.evmoto.driver.app)
 Target File     : test_drv_register.py
-Environment     : Dev Golang (https://api-dev.evmoto.internal)
+Environment     : Dev Golang (https://evmotodev.justkidding.app)
 Metodologi      : Page Object Model (POM) & 4 Pilar QA Lengkap
 Wording         : 100% Presisi strings resmi APK driver_lang_id.json
 ================================================================================

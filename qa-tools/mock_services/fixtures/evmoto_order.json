@@ -1,0 +1,15 @@
+{
+  "layanan": "evmoto_order",
+  "keterangan": "MOCK endpoint order penumpang (staging: 'no gateway route matched'). Butuh token penumpang dari login staging sungguhan.",
+  "data": {
+    "tarif": {"baseFare": 10000, "pricePerKm": 2500},
+    "order_awal": [
+      {"_catatan": "Dipakai TC-API-USR-04 yang membatalkan orderId tetap ini.", "orderId": "ORD-EVM-8821", "status": "SEARCHING_DRIVER", "totalFare": 21250}
+    ]
+  },
+  "routes": [
+    {"method": "POST", "path": "/order/api/user/estimateFare", "handler": "order_estimate_fare"},
+    {"method": "POST", "path": "/order/api/user/createOrder", "handler": "order_create"},
+    {"method": "POST", "path": "/order/api/user/cancelOrder", "handler": "order_cancel"}
+  ]
+}

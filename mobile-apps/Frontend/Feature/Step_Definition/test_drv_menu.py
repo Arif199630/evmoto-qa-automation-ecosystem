@@ -4,8 +4,8 @@ EVMOTO DRIVER MOBILE AUTOMATION - TEST SUITE: MENU & PENGATURAN AKUN (MENU)
 ================================================================================
 Aplikasi        : EvMoto Driver Dev (com.evmoto.driver.app)
 Target File     : test_drv_menu.py
-Environment     : Dev Golang (https://api-dev.evmoto.internal)
-Akun Driver     : 81299990001 | PIN Bypass 1234
+Environment     : Dev Golang (https://evmotodev.justkidding.app)
+Akun Driver     : <TEST_USER_PHONE> | PIN Bypass <EVMOTO_OTP_BYPASS>
 Metodologi      : Page Object Model (POM) & 4 Pilar QA Lengkap
 Wording         : 100% Presisi strings resmi APK driver_lang_id.json
 ================================================================================
@@ -393,8 +393,7 @@ class TestDrvMenu:
         when("Driver membuka menu Cara Penggunaan Aplikasi")
         menu_pg.open_cara_penggunaan()
         then("Panduan Langkah 'Unduh dan Daftar' ditampilkan jelas")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_MENU_PT_14_akses_detail_langkah_buka_halaman_utama(self, driver_app):
         """
@@ -407,8 +406,7 @@ class TestDrvMenu:
 
         when("Driver meninjau langkah kedua panduan")
         then("Penjelasan 'Buka Halaman Utama' tertera informatif")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_MENU_PT_15_akses_detail_langkah_cara_mengaktifkan_aplikasi(self, driver_app):
         """
@@ -421,14 +419,13 @@ class TestDrvMenu:
 
         when("Driver meninjau langkah ketiga panduan")
         then("Instruksi 'Cara mengaktifkan aplikasi' terverifikasi")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_MENU_PT_16_verifikasi_halaman_tentang_kami_dan_versi_apk(self, driver_app):
         """
         [POSITIVE TRUE - PT-16]
         Deskripsi : Membuka halaman 'Tentang Kami' dan memeriksa nomor versi build aplikasi.
-        Ekspektasi: Tampil informasi legalitas EVMoto dan versi build resmi (v1.9.27).
+        Ekspektasi: Tampil informasi legalitas EVMoto dan versi build resmi (v1.9.29).
         """
         menu_pg = DrvMenuPage(driver_app)
         self._ensure_driver_on_menu(driver_app)
@@ -436,8 +433,7 @@ class TestDrvMenu:
         when("Driver mengetuk menu 'Tentang Kami'")
         menu_pg.open_tentang_kami()
         then("Halaman Tentang Kami dan nomor versi aplikasi ditampilkan")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_MENU_PT_17_buka_formulir_kirim_masukan_feedback(self, driver_app):
         """
@@ -451,8 +447,7 @@ class TestDrvMenu:
         when("Driver mengetuk menu formulir Masukan")
         menu_pg.open_feedback_form()
         then("Field teks masukan dan tombol submit tertera")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_MENU_PT_18_submit_masukan_driver_sukses(self, driver_app):
         """
@@ -467,8 +462,7 @@ class TestDrvMenu:
         when("Driver mengetik pesan 'Aplikasi berjalan lancar' dan mengetuk Kirim")
         menu_pg.submit_feedback("Aplikasi berjalan lancar")
         then("Sistem menampilkan notifikasi bahwa masukan berhasil diterima")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_MENU_PT_19_tips_driver_koneksi_stabil_dan_background_app(self, driver_app):
         """
@@ -481,8 +475,7 @@ class TestDrvMenu:
 
         when("Driver membaca seksi Tips untuk Driver")
         then("Himbauan koneksi stabil dan background service aktif ditampilkan")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.business_logic
     def test_TC_DRV_MENU_BL_07_validasi_submit_feedback_pesan_kosong(self, driver_app):
         """
@@ -496,8 +489,7 @@ class TestDrvMenu:
         given("Kolom input saran/masukan dalam keadaan kosong")
         when("Driver mengetuk tombol 'Kirim'")
         then("Sistem menahan submit dan mewajibkan penulisan pesan")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.business_logic
     def test_TC_DRV_MENU_BL_08_verifikasi_countdown_resend_otp_hapus_akun(self, driver_app):
         """
@@ -512,8 +504,7 @@ class TestDrvMenu:
         given("Driver berada pada langkah verifikasi OTP hapus akun")
         when("Kode OTP pertama kali diminta")
         then("Timer hitung mundur kirim ulang kode aktif berjalan")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_true
     def test_TC_DRV_MENU_NT_07_input_otp_salah_pada_verifikasi_hapus_akun(self, driver_app):
         """
@@ -527,8 +518,7 @@ class TestDrvMenu:
         given("Driver menginput kode OTP yang tidak cocok")
         when("Driver mengonfirmasi penghapusan")
         then("Sistem memunculkan peringatan 'Kode OTP tidak valid'")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_true
     def test_TC_DRV_MENU_NT_08_penanganan_video_tutorial_gagal_dimuat(self, driver_app):
         """
@@ -542,8 +532,7 @@ class TestDrvMenu:
         given("Koneksi CDN video mengalami kendala latensi")
         when("Driver membuka tutorial interaktif")
         then("Aplikasi menampilkan placeholder 'Video gagal dimuat' secara aman")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_false
     def test_TC_DRV_MENU_NF_07_security_sqli_pada_formulir_kirim_masukan(self, driver_app):
         """
@@ -558,8 +547,7 @@ class TestDrvMenu:
         when("Driver memasukkan teks payload SQLi: ' OR 1=1; DROP TABLE feedback; --")
         menu_pg.submit_feedback("' OR 1=1; DROP TABLE feedback; --")
         then("Sistem mensanitasi payload tanpa mengekspos error basis data")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_false
     def test_TC_DRV_MENU_NF_08_security_xss_pada_formulir_kirim_masukan(self, driver_app):
         """
@@ -574,8 +562,7 @@ class TestDrvMenu:
         when("Driver menginputkan payload XSS")
         menu_pg.submit_feedback("<script>alert('xss')</script>")
         then("Teks tersimpan aman sebagai string biasa tanpa dieksekusi")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_false
     def test_TC_DRV_MENU_NF_09_rapid_click_spamming_tombol_bersihkan_cache(self, driver_app):
         """
@@ -591,6 +578,5 @@ class TestDrvMenu:
         for _ in range(5):
             menu_pg.click_bersihkan_cache()
         then("Aplikasi tetap stabil dan menampilkan notifikasi sukses membersihkan cache")
-        assert True
-
+        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
         logger.info("[SUCCESS] Verifikasi OTP penghapusan akun terverifikasi.")

@@ -1,119 +1,133 @@
 {
   "dev_user": {
-    "phone": "81299990001",
-    "otp": "1234",
+    "phone": "${TEST_USER_PHONE}",
+    "otp": "<EVMOTO_OTP_BYPASS>",
     "name": "Dev User EvMoto",
     "role": "Dev Account (Active)",
     "description": "Nomor dev utama aktif untuk tes langsung dan demo"
   },
   "gopay_user": {
-    "phone": "81299990002",
-    "otp": "1234",
+    "phone": "${EVMOTO_PHONE_EXTRA_3}",
+    "otp": "<EVMOTO_OTP_BYPASS>",
     "name": "User Gopay Payment",
     "role": "Gopay Payment User",
     "description": "User terdaftar dengan integrasi fitur pembayaran Gopay"
   },
-  "registered_user_81299990003": {
-    "phone": "81299990003",
-    "otp": "1234",
-    "name": "User Registered 81299990003",
-    "role": "Registered User",
-    "description": "Akun terdaftar EvMoto (81299990003)"
+  "ovo_user": {
+    "phone": "${TEST_USER_PHONE}",
+    "otp": "<EVMOTO_OTP_BYPASS>",
+    "name": "User OVO Payment",
+    "role": "OVO Payment User",
+    "description": "User terdaftar dengan integrasi fitur pembayaran OVO Dev"
   },
-  "registered_user_81299990004": {
-    "phone": "81299990004",
-    "otp": "1234",
-    "name": "User Registered 81299990004",
-    "role": "Registered User",
-    "description": "Akun terdaftar EvMoto (81299990004)"
+  "ovo_driver": {
+    "phone": "${TEST_DRIVER_PHONE}",
+    "otp": "<EVMOTO_OTP_BYPASS>",
+    "name": "Driver Mitra OVO",
+    "role": "Driver Partner OVO",
+    "description": "Mitra pengemudi untuk penerimaan order cashless OVO Dev"
   },
-  "registered_user_81299990005": {
-    "phone": "81299990005",
-    "otp": "1234",
-    "name": "User Registered 81299990005",
+  "registered_user_${EVMOTO_PHONE_EXTRA_2}": {
+    "phone": "${EVMOTO_PHONE_EXTRA_2}",
+    "otp": "<EVMOTO_OTP_BYPASS>",
+    "name": "User Registered ${EVMOTO_PHONE_EXTRA_2}",
     "role": "Registered User",
-    "description": "Akun terdaftar EvMoto (81299990005)"
+    "description": "Akun terdaftar EvMoto (${EVMOTO_PHONE_EXTRA_2})"
   },
-  "registered_user_81299990006": {
-    "phone": "81299990006",
-    "otp": "1234",
-    "name": "User Registered 81299990006",
+  "registered_user_${EVMOTO_PHONE_EXTRA_4}": {
+    "phone": "${EVMOTO_PHONE_EXTRA_4}",
+    "otp": "<EVMOTO_OTP_BYPASS>",
+    "name": "User Registered ${EVMOTO_PHONE_EXTRA_4}",
     "role": "Registered User",
-    "description": "Akun terdaftar EvMoto (81299990006)"
+    "description": "Akun terdaftar EvMoto (${EVMOTO_PHONE_EXTRA_4})"
   },
-  "registered_user_81299990007": {
-    "phone": "81299990007",
-    "otp": "1234",
-    "name": "User Registered 81299990007",
+  "registered_user_${EVMOTO_PHONE_EXTRA_5}": {
+    "phone": "${EVMOTO_PHONE_EXTRA_5}",
+    "otp": "<EVMOTO_OTP_BYPASS>",
+    "name": "User Registered ${EVMOTO_PHONE_EXTRA_5}",
     "role": "Registered User",
-    "description": "Akun terdaftar EvMoto (81299990007)"
+    "description": "Akun terdaftar EvMoto (${EVMOTO_PHONE_EXTRA_5})"
   },
-  "registered_user_81299990008": {
-    "phone": "81299990008",
-    "otp": "1234",
-    "name": "User Registered 81299990008",
+  "registered_user_${TEST_DRIVER_PHONE}": {
+    "phone": "${TEST_DRIVER_PHONE}",
+    "otp": "<EVMOTO_OTP_BYPASS>",
+    "name": "User Registered ${TEST_DRIVER_PHONE}",
     "role": "Registered User",
-    "description": "Akun terdaftar EvMoto (81299990008)"
+    "description": "Akun terdaftar EvMoto (${TEST_DRIVER_PHONE})"
   },
-  "registered_user_81299990009": {
-    "phone": "81299990009",
-    "otp": "1234",
-    "name": "User Registered 81299990009",
+  "registered_user_${EVMOTO_PHONE_EXTRA_8}": {
+    "phone": "${EVMOTO_PHONE_EXTRA_8}",
+    "otp": "<EVMOTO_OTP_BYPASS>",
+    "name": "User Registered ${EVMOTO_PHONE_EXTRA_8}",
     "role": "Registered User",
-    "description": "Akun terdaftar EvMoto (81299990009)"
+    "description": "Akun terdaftar EvMoto (${EVMOTO_PHONE_EXTRA_8})"
+  },
+  "registered_user_${EVMOTO_PHONE_EXTRA_6}": {
+    "phone": "${EVMOTO_PHONE_EXTRA_6}",
+    "otp": "<EVMOTO_OTP_BYPASS>",
+    "name": "User Registered ${EVMOTO_PHONE_EXTRA_6}",
+    "role": "Registered User",
+    "description": "Akun terdaftar EvMoto (${EVMOTO_PHONE_EXTRA_6})"
+  },
+  "registered_user_${EVMOTO_PHONE_EXTRA_7}": {
+    "phone": "${EVMOTO_PHONE_EXTRA_7}",
+    "otp": "<EVMOTO_OTP_BYPASS>",
+    "name": "User Registered ${EVMOTO_PHONE_EXTRA_7}",
+    "role": "Registered User",
+    "description": "Akun terdaftar EvMoto (${EVMOTO_PHONE_EXTRA_7})"
   },
   "active_passenger": {
     "phone": "81234567890",
-    "otp": "1234",
+    "otp": "<EVMOTO_OTP_BYPASS>",
     "name": "Budi Pratama",
     "role": "Active Passenger",
     "description": "Akun penumpang aktif terdaftar"
   },
   "corporate_passenger": {
     "phone": "81398765432",
-    "otp": "1234",
+    "otp": "<EVMOTO_OTP_BYPASS>",
     "name": "Siti Rahma",
     "role": "Corporate Passenger",
     "description": "Akun penumpang korporat / bisnis"
   },
   "unregistered_user": {
     "phone": "81299990000",
-    "otp": "1234",
+    "otp": "<EVMOTO_OTP_BYPASS>",
     "name": "User Baru",
     "role": "Unregistered User",
     "description": "Nomor valid namun belum terdaftar di sistem"
   },
   "driver_partner": {
     "phone": "82211223344",
-    "otp": "1234",
+    "otp": "<EVMOTO_OTP_BYPASS>",
     "name": "Joko Driver",
     "role": "Driver Partner",
     "description": "Akun mitra pengemudi EvMoto"
   },
   "invalid_prefix_user": {
-    "phone": "082100000000",
-    "otp": "1234",
+    "phone": "0${TEST_USER_PHONE}",
+    "otp": "<EVMOTO_OTP_BYPASS>",
     "name": "Invalid Prefix",
     "role": "Negative Test (Prefix 0)",
     "description": "Nomor diawali angka 0 (wajib diawali angka 8)"
   },
   "short_phone_user": {
     "phone": "8214",
-    "otp": "1234",
+    "otp": "<EVMOTO_OTP_BYPASS>",
     "name": "Short Phone",
     "role": "Negative Test (Short Phone)",
     "description": "Nomor terlalu pendek kurang dari 8 digit"
   },
   "sqli_payload_user": {
     "phone": "' OR '1'='1",
-    "otp": "1234",
+    "otp": "<EVMOTO_OTP_BYPASS>",
     "name": "SQLi Injected",
     "role": "Security Test (SQL Injection)",
     "description": "Payload SQL injection pada nomor handphone"
   },
   "xss_payload_user": {
     "phone": "<script>alert(1)</script>",
-    "otp": "1234",
+    "otp": "<EVMOTO_OTP_BYPASS>",
     "name": "XSS Injected",
     "role": "Security Test (XSS)",
     "description": "Payload cross-site scripting"

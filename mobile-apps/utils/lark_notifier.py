@@ -87,7 +87,7 @@ def build_register_stuck_bug_card() -> dict:
                     },
                     {
                         "is_short": True,
-                        "text": {"tag": "lark_md", "content": "**Target Environment:**\nGolang Server (`api-dev.evmoto.internal`)"}
+                        "text": {"tag": "lark_md", "content": "**Target Environment:**\nGolang Server (`new-api.evmotoid.com`)"}
                     },
                     {
                         "is_short": True,
@@ -112,7 +112,7 @@ def build_register_stuck_bug_card() -> dict:
                         "### 🔍 Ringkasan Masalah (Root Cause):\n"
                         "Calon user menginput semua data dengan benar (Nomor HP, Nama, OTP 4-digit). Saat tombol **'Create Account' / 'Buat Akun'** ditekan, aplikasi **membeku (stuck)** di layar formulir tanpa feedback.\n\n"
                         "**Hasil Analisis Jaringan & Backend Golang:**\n"
-                        "- **Request Mobile:** `POST https://api-dev.evmoto.internal/account/base/user`\n"
+                        "- **Request Mobile:** `POST https://new-api.evmotoid.com/account/base/user`\n"
                         "- **Respons Server:** `HTTP 405 Method Not Allowed`\n"
                         "- **Header Server:** `Allow: PUT` *(Router Golang hanya menerima PUT, method POST belum terdaftar)*\n"
                         "- **Aplikasi Mobile:** Mengalami *Silent Failure* — indikator loading ditutup tapi tidak memunculkan snackbar error."
@@ -129,7 +129,7 @@ def build_register_stuck_bug_card() -> dict:
                         "1. Buka aplikasi **eVMoto User** pada environment Golang.\n"
                         "2. Di halaman Login, klik **'Register as a New User'**.\n"
                         "3. Input No HP baru (`821xxxxxxx`) & Nama Lengkap.\n"
-                        "4. Klik **'Request OTP'**, lalu masukkan kode OTP `1234`.\n"
+                        "4. Klik **'Request OTP'**, lalu masukkan kode OTP `<EVMOTO_OTP_BYPASS>`.\n"
                         "5. Klik tombol biru **'Create Account' / 'Buat Akun'**.\n"
                         "6. **Hasil Aktual:** Loading tertutup seketika, layar tetap diam di form registrasi. Notifikasi Chucker memunculkan `405 Method Not Allowed`."
                     )
@@ -242,7 +242,7 @@ def send_server_alert_to_lark(status_code: int, status_message: str, webhook_url
         "header": {
             "title": {
                 "tag": "plain_text",
-                "content": f"⚠️ [SERVER ALERT HTTP {status_code}] Backend api-dev.evmoto.internal"
+                "content": f"⚠️ [SERVER ALERT HTTP {status_code}] Backend dev-api.evmotoid.com"
             },
             "template": template
         },

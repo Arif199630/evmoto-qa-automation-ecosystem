@@ -15,6 +15,7 @@ Metodologi    : 4 Pilar QA (Positive True, Positive False, Negative True, Negati
 Mode          : Headless / UI & REST API Layer (Zero Crash, 100% Deterministic)
 ================================================================================
 """
+import os
 import pytest
 import time
 from typing import Dict, Any, List
@@ -25,8 +26,8 @@ from utils.logger import get_logger
 
 logger = get_logger("TestDrvBatchDispatch")
 
-DRIVER_PHONE = "82283737237"
-DRIVER_PIN = "1234"
+DRIVER_PHONE = os.environ.get("EVMOTO_PHONE_EXTRA_1", "")
+DRIVER_PIN = os.environ.get("EVMOTO_OTP_BYPASS", "")
 
 
 @pytest.fixture(scope="function")

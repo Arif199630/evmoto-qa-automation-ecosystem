@@ -30,3 +30,12 @@ mobile-apps/reports/screenshots/temp/
 /reports/
 /mobile-apps/reports/
 
+
+# Hasil run dan artefak lokal (bisa berisi data uji)
+qa-tools/runs/
+web-dashboard/reports/
+**/screenshots/
+*.enc
+apk/
+gabungan/
+artifacts/

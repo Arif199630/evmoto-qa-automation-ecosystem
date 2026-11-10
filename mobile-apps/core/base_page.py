@@ -38,6 +38,10 @@ class BasePage:
             logger.error(f"Elemen dengan locator {locator} tidak ditemukan dalam {t} detik.")
             raise
 
+    def find_element(self, locator: Tuple[str, str], timeout: int = None):
+        """Alias untuk self.find() demi kompatibilitas POM."""
+        return self.find(locator, timeout)
+
     def find_all(self, locator: Tuple[str, str], timeout: int = 5) -> List:
         """Menemukan seluruh elemen yang cocok dengan locator."""
         try:
@@ -92,6 +96,14 @@ class BasePage:
             return element.is_displayed()
         except (TimeoutException, NoSuchElementException):
             return False
+
+    def is_element_visible(self, locator: Tuple[str, str], timeout: int = 5) -> bool:
+        """Nama lain is_displayed(), dipakai Page Object Driver App."""
+        return self.is_displayed(locator, timeout=timeout)
+
+    def swipe(self, start_x: int, start_y: int, end_x: int, end_y: int, duration: int = 400):
+        """Geser layar dari titik awal ke titik akhir (koordinat piksel, durasi milidetik)."""
+        self.driver.swipe(start_x, start_y, end_x, end_y, duration)
 
     def pause(self, min_sec: float = 3.0, max_sec: float = 3.0, message: str = ""):
         """Melakukan jeda deliberasi manusia (default 3 detik)."""

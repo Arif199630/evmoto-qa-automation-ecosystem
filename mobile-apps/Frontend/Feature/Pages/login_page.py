@@ -6,6 +6,7 @@ Target: Layar Masuk / Login Pengguna EVMoto (Flutter App)
 Mendukung Bahasa Inggris (Default) dan Bahasa Indonesia.
 ================================================================================
 """
+import os
 import time
 from appium.webdriver.common.appiumby import AppiumBy
 from core.base_page import BasePage
@@ -19,6 +20,7 @@ class LoginPage(BasePage):
     # Locators Elemen ID / XPath Layar Login
     TITLE_LOGIN = (AppiumBy.XPATH, "//*[contains(@content-desc, 'green ride') or contains(@content-desc, 'Mulai perjalanan') or contains(@content-desc, 'Log In') or contains(@content-desc, 'Masuk')]")
     FIELD_PHONE = (AppiumBy.XPATH, "//android.widget.EditText[contains(@hint, '812') or contains(@hint, 'Nomor') or @class='android.widget.EditText']")
+    INPUT_PHONE = FIELD_PHONE
     BTN_SUBMIT_LOGIN = (AppiumBy.XPATH, "//*[contains(@content-desc, 'Log In') or contains(@content-desc, 'Masuk') or contains(@text, 'Log In')]")
     LINK_REGISTER_NEW_USER = (AppiumBy.XPATH, "//*[contains(@content-desc, 'Register as a New User') or contains(@content-desc, 'Daftar sebagai Pengguna baru')]")
 
@@ -84,7 +86,7 @@ class LoginPage(BasePage):
         return self.is_displayed(self.TITLE_LOGIN, timeout=timeout) or self.is_displayed(self.FIELD_PHONE, timeout=timeout)
 
     def input_phone_number(self, phone: str):
-        """Memasukkan nomor handphone (misal: 81299990001)."""
+        """Memasukkan nomor handphone (misal: <TEST_USER_PHONE>)."""
         field = self.find(self.FIELD_PHONE)
         field.click()
         time.sleep(0.5)
@@ -101,8 +103,8 @@ class LoginPage(BasePage):
         """Memeriksa apakah layar Verifikasi OTP muncul."""
         return self.is_displayed(self.TITLE_OTP, timeout=timeout)
 
-    def input_otp_dev(self, otp_code: str = "1234", fast_transition: bool = True):
-        """Memasukkan kode OTP (default dev/prod: 1234) secara andal di emulator maupun physical device."""
+    def input_otp_dev(self, otp_code: str = os.environ.get("EVMOTO_OTP_BYPASS", ""), fast_transition: bool = True):
+        """Memasukkan kode OTP (default dev/prod: <EVMOTO_OTP_BYPASS>) secara andal di emulator maupun physical device."""
         self.find(self.TITLE_OTP, timeout=15)
         field = self.find(self.FIELD_OTP, timeout=10)
         field.click()
@@ -212,6 +214,13 @@ class LoginPage(BasePage):
         except Exception:
             pass
 
+    def login(self, phone: str, otp: str):
+        """Alur login lengkap: nomor telepon, OTP dev, lalu izin lokasi bila muncul."""
+        self.input_phone_number(phone)
+        self.click_submit_login()
+        self.input_otp_dev(otp, fast_transition=True)
+        self.handle_location_prompt_if_present()
+
     def navigate_to_register(self):
         """Menekan 'Register as a New User' untuk menuju form registrasi."""
         try:
@@ -252,6 +261,21 @@ class LoginPage(BasePage):
     def click_back_from_otp(self):
         """Kembali dari layar OTP ke layar login."""
         self.click(self.BTN_BACK_OTP, label="Tombol 'Back' Layar OTP")
+
+    def press_back_key(self):
+        """Menekan tombol back Android untuk kembali ke halaman sebelumnya."""
+        try:
+            self.driver.press_keycode(4)
+        except Exception:
+            pass
+
+    def get_phone_number_value(self) -> str:
+        """Mengambil nilai teks saat ini dari kolom input nomor telepon."""
+        try:
+            field = self.find(self.FIELD_PHONE)
+            return field.get_attribute("text") or field.text or ""
+        except Exception:
+            return ""
 
     def is_error_displayed(self, text_snippet: str = "", timeout: int = 5) -> bool:
         """Memeriksa apakah pesan error atau validasi muncul di layar."""

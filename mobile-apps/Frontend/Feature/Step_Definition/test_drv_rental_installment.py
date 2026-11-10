@@ -4,8 +4,8 @@ EVMOTO DRIVER MOBILE AUTOMATION - TEST SUITE: SEWA & HUBUNGKAN AKUN (RENTAL/CICI
 ================================================================================
 Aplikasi        : EvMoto Driver Dev (com.evmoto.driver.app)
 Target File     : test_drv_rental_installment.py
-Environment     : Dev Golang (https://api-dev.evmoto.internal)
-Akun Driver     : 81299990001 | PIN Bypass 1234
+Environment     : Dev Golang (https://evmotodev.justkidding.app)
+Akun Driver     : <TEST_USER_PHONE> | PIN Bypass <EVMOTO_OTP_BYPASS>
 Metodologi      : Page Object Model (POM) & 4 Pilar QA Lengkap
 Konsep Bisnis   : 1. No Soft-Delete (Orphan Motor Re-assignment)
                   2. One-Way Toggle 'Hubungkan Akun' di Super Apps (Disabled/Locked)
@@ -50,7 +50,7 @@ class TestDrvRentalInstallment:
         rental_pg = DrvRentalPage(driver_app)
 
         if not home_pg.is_home_screen_displayed():
-            login_pg.login_with_pin(DRIVER_ACTIVE_PHONE, DRIVER_ACTIVE_PIN)
+            login_pg.login_as_driver(DRIVER_ACTIVE_PHONE, DRIVER_ACTIVE_PIN)
             time.sleep(2.0)
 
         rental_pg.navigate_to_vehicle_screen()
@@ -95,7 +95,7 @@ class TestDrvRentalInstallment:
         rental_pg.activate_hubungkan_akun_toggle()
 
         then("Sistem mengonfirmasi status 'Berhasil Di Hubungkan' pada modul Super Apps")
-        assert rental_pg.is_account_linked() or True
+        assert rental_pg.is_account_linked()
         logger.info("[SUCCESS] Penautan armada sewa ECGO perdana berhasil.")
 
     @pytest.mark.positive_true
@@ -134,7 +134,7 @@ class TestDrvRentalInstallment:
         rental_pg.activate_hubungkan_akun_toggle()
 
         then("Status akun terhubung dengan kontrak cicilan ECGO tanpa mengubah nomor plat aktif")
-        assert rental_pg.is_account_linked() or True
+        assert rental_pg.is_account_linked()
         logger.info("[SUCCESS] Link akun cicilan pada motor eksisting berhasil.")
 
     @pytest.mark.positive_true
@@ -226,7 +226,7 @@ class TestDrvRentalInstallment:
         given("Akun driver aktif dihubungkan pada perangkat utama")
         when(f"Akun dibuka pada sesi perangkat sekunder (Simulasi {data['device_count']} perangkat)")
         then("Status toggle di perangkat sekunder ter-sinkronisasi realtime dalam posisi ON dan terkunci")
-        assert rental_pg.is_toggle_locked_one_way() or True
+        assert rental_pg.is_toggle_locked_one_way()
         logger.info("[SUCCESS] Sinkronisasi lintas perangkat (cross-device sync) status linking terkonfirmasi.")
 
     # ==========================================================================
@@ -263,7 +263,7 @@ class TestDrvRentalInstallment:
         rental_pg.change_vehicle_flow(data["duplicate_plate"])
 
         then("Sistem anti-fraud menolak penautan duplikat dan menampilkan peringatan konflik armada")
-        assert rental_pg.verify_duplicate_motor_fraud_alert() or True
+        assert rental_pg.verify_duplicate_motor_fraud_alert()
         logger.info("[SUCCESS] Anti-fraud pencegahan registrasi motor ganda berhasil diverifikasi.")
 
     @pytest.mark.negative_false
@@ -333,7 +333,7 @@ class TestDrvRentalInstallment:
         given("Driver belum mengaktifkan penautan akun cicilan (Status Unlinked)")
         when("Driver mengakses menu aktivitas, dompet reguler, dan panduan pengemudi")
         then("Aplikasi tetap berfungsi penuh dengan menampilkan kartu edukasi manfaat penautan armada")
-        assert not rental_pg.is_account_linked() or True
+        assert not rental_pg.is_account_linked()
         logger.info("[SUCCESS] UX masa transisi sebelum akun di-link terkonfirmasi mulus.")
 
     @pytest.mark.negative_true

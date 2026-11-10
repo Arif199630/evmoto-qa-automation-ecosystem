@@ -1,0 +1,65 @@
+﻿{
+  "super_admin": {
+    "username": "${PROD_USER}",
+    "password": "${PROD_PASS}",
+    "role": "Super Administrator",
+    "department": "Platform Operations",
+    "description": "Akun administrator utama untuk automasi pengujian eVMOTO Dashboard"
+  },
+  "branch_manager": {
+    "username": "branch_mgr_jkt",
+    "password": "Password123!",
+    "role": "Branch Manager",
+    "department": "Regional Jakarta",
+    "description": "Akun pengelola kantor cabang"
+  },
+  "driver_auditor": {
+    "username": "auditor_driver_01",
+    "password": "Password123!",
+    "role": "Driver Auditor",
+    "department": "Fleet & Partner Verification",
+    "description": "Akun verifikator dan auditor mitra pengemudi"
+  },
+  "finance_officer": {
+    "username": "finance_evmoto",
+    "password": "Password123!",
+    "role": "Finance Officer",
+    "department": "Finance & Settlement",
+    "description": "Akun operasional penarikan dana dan rekonsiliasi"
+  },
+  "invalid_user": {
+    "username": "user_fiktif_palsu_999",
+    "password": "password_salah_xyz_999",
+    "role": "Invalid / Non-Existent User",
+    "department": "N/A",
+    "description": "User fiktif untuk pengujian validasi penolakan sistem"
+  },
+  "wrong_password_user": {
+    "username": "${PROD_USER}",
+    "password": "password_salah_xyz_999",
+    "role": "Valid User with Incorrect Password",
+    "department": "Security Testing",
+    "description": "User valid dengan kombinasi password salah"
+  },
+  "sqli_classic_user": {
+    "username": "' OR '1'='1' --",
+    "password": "any_password_123",
+    "role": "SQL Injection Classic Payload",
+    "department": "Cyber Security Assessment",
+    "description": "Payload SQLi untuk menguji sanitasi input login"
+  },
+  "sqli_bypass_user": {
+    "username": "' OR 1=1; --",
+    "password": "secret_bypass",
+    "role": "SQL Injection Bypass Payload",
+    "department": "Cyber Security Assessment",
+    "description": "Payload SQLi bypass authentication"
+  },
+  "xss_payload_user": {
+    "username": "<script>window.xss_exploited=true;</script>",
+    "password": "xss_pass",
+    "role": "Cross-Site Scripting (XSS) Payload",
+    "department": "Cyber Security Assessment",
+    "description": "Payload XSS untuk menguji sanitasi browser execution"
+  }
+}

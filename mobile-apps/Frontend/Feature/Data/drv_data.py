@@ -3,10 +3,11 @@
 EVMOTO DRIVER MOBILE AUTOMATION - COMPREHENSIVE TEST DATASET (4 PILAR QA)
 ================================================================================
 Aplikasi   : EvMoto Driver Dev (com.evmoto.driver.app)
-Environment: Dev Golang (https://api-dev.evmoto.internal)
-Kredensial : Nomor HP 81299990001 | PIN Bypass 1234
+Environment: Dev Golang (https://evmotodev.justkidding.app)
+Kredensial : Nomor HP <TEST_USER_PHONE> | PIN Bypass <EVMOTO_OTP_BYPASS>
 ================================================================================
 """
+import os
 from config.config import Config
 
 DRIVER_ACTIVE_PHONE = Config.DRIVER_ACTIVE_PHONE
@@ -195,21 +196,21 @@ DRV_REG_DATA_NEGATIVE_FALSE = {
 DRV_LOG_DATA_POSITIVE_TRUE = {
     "TC_DRV_LOG_PT_01": {
         "tag": "POSITIVE_TRUE",
-        "description": "Login berhasil menggunakan nomor dev resmi 81299990001 dan OTP bypass 1234",
+        "description": "Login berhasil menggunakan nomor dev resmi <TEST_USER_PHONE> dan OTP bypass <EVMOTO_OTP_BYPASS>",
         "phone": DRIVER_ACTIVE_PHONE,
         "otp": DRIVER_ACTIVE_PIN,
         "expected_result": "SUCCESS_ENTER_HOME"
     },
     "TC_DRV_LOG_PT_02": {
         "tag": "POSITIVE_TRUE",
-        "description": "Login berhasil variasi format awalan 0 (082100000000) dan OTP bypass 1234",
+        "description": "Login berhasil variasi format awalan 0 (0<TEST_USER_PHONE>) dan OTP bypass <EVMOTO_OTP_BYPASS>",
         "phone": f"0{DRIVER_ACTIVE_PHONE}",
         "otp": DRIVER_ACTIVE_PIN,
         "expected_result": "SUCCESS_ENTER_HOME"
     },
     "TC_DRV_LOG_PT_03": {
         "tag": "POSITIVE_TRUE",
-        "description": "Login berhasil variasi format internasional (+6281299990001) dan OTP 1234",
+        "description": "Login berhasil variasi format internasional (+62<TEST_USER_PHONE>) dan OTP <EVMOTO_OTP_BYPASS>",
         "phone": f"+62{DRIVER_ACTIVE_PHONE}",
         "otp": DRIVER_ACTIVE_PIN,
         "expected_result": "SUCCESS_ENTER_HOME"
@@ -278,7 +279,7 @@ DRV_LOG_DATA_POSITIVE_FALSE = {
 DRV_LOG_DATA_NEGATIVE_TRUE = {
     "TC_DRV_LOG_NT_01": {
         "tag": "NEGATIVE_TRUE",
-        "description": "Login gagal menggunakan kode OTP salah (9999, bukan 1234)",
+        "description": "Login gagal menggunakan kode OTP salah (9999, bukan OTP bypass)",
         "phone": DRIVER_ACTIVE_PHONE,
         "otp_wrong": "9999",
         "expected_error": "Kode verifikasi salah"
@@ -326,7 +327,7 @@ DRV_LOG_DATA_NEGATIVE_FALSE = {
     "TC_DRV_LOG_NF_02": {
         "tag": "NEGATIVE_FALSE",
         "description": "Uji keamanan SQL Injection tautologi (UNION SELECT)",
-        "phone": "81299990001' UNION SELECT NULL--",
+        "phone": "<TEST_USER_PHONE>' UNION SELECT NULL--",
         "expected_behavior": "REJECT_INVALID_PHONE_FORMAT"
     },
     "TC_DRV_LOG_NF_03": {
@@ -338,7 +339,7 @@ DRV_LOG_DATA_NEGATIVE_FALSE = {
     "TC_DRV_LOG_NF_04": {
         "tag": "NEGATIVE_FALSE",
         "description": "Boundary Value Analysis digit nomor telepon ekstrem (25 digit)",
-        "phone": "8129999000112345678901234",
+        "phone": (os.environ.get("TEST_USER_PHONE", "") + "12345678901234"),
         "expected_behavior": "TRUNCATED_TO_MAX_LENGTH"
     },
     "TC_DRV_LOG_NF_05": {
