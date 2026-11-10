@@ -14,6 +14,7 @@ Penjelasan 4 Pilar Pengujian untuk Manajemen:
 =============================================================================
 """
 
+import re
 import os
 import sys
 import unittest
@@ -59,16 +60,21 @@ class TestUserManagement(unittest.TestCase):
         print(f"  -> PASSED [True]: Halaman User Management aktif dengan {self.page.get_rows_count()} pelanggan.")
 
     def test_02_pilar1_positif_true_user_mgmt_filter_pencarian_phone_valid(self):
-        """[PILAR 1 - POSITIF (TRUE)] Mencari pengguna berdasarkan nomor telepon valid ("62" + os.environ.get("EVMOTO_PHONE_EXTRA_9", ""))."""
+        """[PILAR 1 - POSITIF (TRUE)] Mencari pengguna berdasarkan nomor telepon yang ada di tabel environment aktif."""
         print("\n[User Mgmt - Test 02] [PILAR 1: POSITIF (TRUE)] Pencarian nomor telepon valid...")
         self.login_sebagai_admin()
         self.page.navigate()
 
-        self.page.search_by_phone(("62" + os.environ.get("EVMOTO_PHONE_EXTRA_9", "")))
-        self.page.wait_for_url_contains("phone=62<EVMOTO_PHONE_EXTRA_9>")
+        phone = self.page.get_first_row_value("PHONE") or self.page.get_first_row_value("TELEPON")
+        if not phone:
+            self.skipTest("Belum ada pengguna dengan nomor telepon di environment ini; tambahkan data uji.")
+        phone = re.sub(r"\D", "", phone)
 
-        self.assertTrue("phone=62<EVMOTO_PHONE_EXTRA_9>" in self.page.get_current_url(), "URL harus memuat parameter phone (True).")
-        self.assertTrue(self.page.get_rows_count() > 0, "Harus ditemukan baris data pengguna (True).")
+        self.page.search_by_phone(phone)
+        self.page.wait_for_url_contains("phone=")
+
+        self.assertTrue(f"phone={phone}" in self.page.get_current_url(), "URL harus memuat parameter phone (True).")
+        self.assertTrue(self.page.get_rows_count() > 0, f"Pencarian nomor {phone[:4]}*** harus menemukan data pengguna (True).")
         print("  -> PASSED [True]: Pencarian nomor telepon berhasil mengembalikan data akun.")
 
     def test_03_pilar1_positif_true_user_mgmt_filter_pencarian_nickname_valid(self):

@@ -10,6 +10,9 @@ on:
       suites:
         description: "Suite yang dijalankan (all / admin / api / mobile)"
         default: all
+      lanjutkan_dari:
+        description: "Nomor run yang di-pause untuk dilanjutkan (file test yang sudah selesai di sana tidak diulang). Kosongkan untuk run baru."
+        default: ""
   push:
     branches: [main]
     paths-ignore: ["docs/**", "**/*.md"]
@@ -51,11 +54,16 @@ jobs:
       - name: Tulis .env dari Secrets
         run: printf '%s\n' "$ENV_WEB" > web-dashboard/.env
         env: { ENV_WEB: "${{ secrets.ENV_WEB_DASHBOARD }}" }
+      - name: Ambil hasil percobaan sebelumnya (lanjutkan run yang di-pause)
+        if: ${{ github.run_attempt > 1 || inputs.lanjutkan_dari != '' }}
+        env: { GH_TOKEN: "${{ github.token }}", DARI: "${{ inputs.lanjutkan_dari || github.run_id }}" }
+        run: gh run download "$DARI" -R "${{ github.repository }}" -p "hasil-admin*" -D sebelumnya || true
       - name: Regression Admin Dashboard (Chrome headless)
+        env: { RESUME_DIR: sebelumnya }
         run: python qa-tools/run_all.py --suite admin
       - uses: actions/upload-artifact@v4
         if: always()
-        with: { name: hasil-admin, path: qa-tools/runs/, retention-days: 14 }
+        with: { name: "hasil-admin-a${{ github.run_attempt }}", path: qa-tools/runs/, retention-days: 14 }
 
   api:
     needs: quality-gate
@@ -74,7 +82,7 @@ jobs:
         run: python qa-tools/run_all.py --suite api --mock-services
       - uses: actions/upload-artifact@v4
         if: always()
-        with: { name: hasil-api, path: qa-tools/runs/, retention-days: 14 }
+        with: { name: "hasil-api-a${{ github.run_attempt }}", path: qa-tools/runs/, retention-days: 14 }
 
   mobile:
     needs: quality-gate
@@ -89,6 +97,7 @@ jobs:
       SHARD_INDEX: ${{ matrix.shard }}
       SHARD_TOTAL: 6
       INSTALL_APK: "0"
+      RESUME_DIR: sebelumnya
     steps:
       - uses: actions/checkout@v4
       - name: Aktifkan KVM (emulator cepat tanpa jendela)
@@ -118,6 +127,10 @@ jobs:
           openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass env:APK_PASSPHRASE \
             -in apk/evmoto-apk-dev.tar.gz.enc | tar -xz -C apk
           ls apk
+      - name: Ambil hasil percobaan sebelumnya (lanjutkan run yang di-pause)
+        if: ${{ github.run_attempt > 1 || inputs.lanjutkan_dari != '' }}
+        env: { GH_TOKEN: "${{ github.token }}", DARI: "${{ inputs.lanjutkan_dari || github.run_id }}" }
+        run: gh run download "$DARI" -R "${{ github.repository }}" -p "hasil-mobile-${{ matrix.shard }}*" -D sebelumnya || true
       - name: Regression Mobile User & Driver di emulator Android (APK asli)
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -145,7 +158,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: hasil-mobile-${{ matrix.shard }}
+          name: hasil-mobile-${{ matrix.shard }}-a${{ github.run_attempt }}
           path: |
             qa-tools/runs/
             bukti/

@@ -4,6 +4,7 @@ A crash in one file cannot take the others down. Every file gets its own JUnit X
 Usage: run_per_file.py <project_dir> <tests_dir> <out_dir> <buckets> [extra pytest args...]
 """
 import os
+import shutil
 import subprocess
 import sys
 import threading
@@ -31,6 +32,17 @@ expected = sum(len(re.findall(r"^\s*(?:async\s+)?def test_", f.read_text(encodin
 (out_dir / "EXPECTED").write_text(str(expected), encoding="utf-8")
 
 
+RESUME_DIR = os.getenv("RESUME_DIR")
+
+
+def find_previous(stem):
+    """XML file test yang sama dari run sebelumnya (RESUME_DIR), di folder suite yang sama."""
+    if not RESUME_DIR:
+        return None
+    hits = [p for p in Path(RESUME_DIR).rglob(f"{stem}.xml") if p.parent.name == out_dir.name]
+    return max(hits, key=lambda p: p.stat().st_mtime) if hits else None
+
+
 def run_bucket(index, group):
     log = out_dir / f"bucket_{index}.log"
     with log.open("a", encoding="utf-8") as fh:
@@ -38,6 +50,11 @@ def run_bucket(index, group):
             xml = out_dir / f"{f.stem}.xml"
             if xml.exists():
                 continue  # already finished in an earlier run
+            previous = find_previous(f.stem)
+            if previous:
+                shutil.copy2(previous, xml)  # lanjutkan: file ini sudah selesai di run yang di-pause
+                fh.write(f"### {f.name}\n### dilanjutkan dari hasil sebelumnya\n### exit 0 {f.name}\n")
+                continue
             cmd = [sys.executable, "-m", "pytest", str(f.relative_to(project)), "-q", "-o", "addopts=",
                    "-p", "no:cacheprovider", "-rfE", f"--junitxml={xml}", *extra]
             fh.write(f"### {f.name}\n")

@@ -6,7 +6,7 @@ Automation Project EvMoto
 import time
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
 from config import Config
 
 
@@ -136,10 +136,14 @@ class BasePage:
 
     def is_displayed(self, locator, timeout=3):
         """Memeriksa apakah elemen terlihat di halaman."""
-        try:
-            return self.find_visible(locator, timeout=timeout).is_displayed()
-        except (TimeoutException, NoSuchElementException):
-            return False
+        for _ in range(3):  # halaman bisa memuat ulang elemen di tengah pengecekan (stale element)
+            try:
+                return self.find_visible(locator, timeout=timeout).is_displayed()
+            except StaleElementReferenceException:
+                continue
+            except (TimeoutException, NoSuchElementException):
+                return False
+        return False
 
     def is_enabled(self, locator, timeout=3):
         """Memeriksa apakah elemen dalam status enabled (aktif)."""
