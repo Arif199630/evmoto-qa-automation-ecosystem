@@ -42,6 +42,11 @@ def get_capabilities(no_reset: bool = False, full_reset: bool = False, is_driver
         if target_apk and os.path.exists(target_apk):
             options.app = target_apk
 
+    # Bahasa perangkat: locator ditulis untuk tampilan Bahasa Indonesia.
+    # Emulator CI menyala dalam bahasa Inggris, jadi Appium mengganti locale ke id-ID sebelum aplikasi dibuka.
+    options.language = os.getenv("APP_LANGUAGE", "id")
+    options.locale = os.getenv("APP_LOCALE", "ID")
+
     # Otomatis izinkan permission lokasi, notifikasi, dll
     options.auto_grant_permissions = True
 

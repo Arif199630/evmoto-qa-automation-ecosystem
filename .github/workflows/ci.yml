@@ -129,6 +129,8 @@ jobs:
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot
           disable-animations: true
           script: |
+            adb shell "setprop persist.sys.locale id-ID; setprop ctl.restart zygote" && sleep 25 && adb wait-for-device
+            adb shell 'while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done'
             adb install -r -g apk/evmoto-user.apk
             adb install -r -g apk/evmoto-driver.apk
             nohup appium --address 127.0.0.1 --port 4723 --log-level warn > appium.log 2>&1 &
