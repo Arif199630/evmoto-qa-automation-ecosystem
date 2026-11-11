@@ -36,29 +36,100 @@ def collect(path):
     return [line.strip() for line in proc.stdout.splitlines() if "::" in line and not line.startswith(("<", "="))]
 
 
-# Unit kerja: (nama_xml, label, argumen pytest, jumlah test)
+def device_of_tests(path):
+    """Perangkat yang dibuka tiap test: 'driver' (fixture driver_app), 'user' (fixture driver), atau 'none'."""
+    import ast
+    tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"))
+
+    def args(fn):
+        return {a.arg for a in fn.args.args}
+
+    def autouse_args(body):
+        found = set()
+        for node in body:
+            if isinstance(node, ast.FunctionDef) and any("autouse" in ast.unparse(d) for d in node.decorator_list):
+                found |= args(node)
+        return found
+
+    def kind(names):
+        return "driver" if "driver_app" in names else "user" if "driver" in names else "none"
+
+    result, module_auto = {}, autouse_args(tree.body)
+    for node in tree.body:
+        scopes = [(node, set())] if isinstance(node, ast.FunctionDef) else \
+                 [(fn, autouse_args(node.body)) for fn in node.body if isinstance(fn, ast.FunctionDef)] if isinstance(node, ast.ClassDef) else []
+        for fn, class_auto in scopes:
+            if fn.name.startswith("test"):
+                result[fn.name] = kind(args(fn) | class_auto | module_auto)
+    return result
+
+
+account_sharding = os.getenv("ACCOUNT_SHARDING") == "1"
+
+# Unit kerja: (nama_xml, label, argumen pytest, jumlah test, perangkat)
 units = []
 for f in files:
-    nodes = collect(f) if chunk_size > 0 else []
-    if chunk_size > 0 and len(nodes) > chunk_size:
+    nodes = collect(f) if (chunk_size > 0 or account_sharding) else []
+    if account_sharding and nodes:
+        # Pisahkan test per perangkat dulu (satu akun = satu perangkat), lalu potong per CHUNK_SIZE
+        devices = device_of_tests(f)
+        by_device = {}
+        for node in nodes:
+            name = node.split("::")[-1].split("[")[0]
+            by_device.setdefault(devices.get(name, "none"), []).append(node)
+        for dev, dev_nodes in sorted(by_device.items()):
+            size = chunk_size or len(dev_nodes)
+            for k in range(0, len(dev_nodes), size):
+                part = dev_nodes[k:k + size]
+                units.append((f"{f.stem}__{dev}{k // size + 1}", f"{f.name} {dev} {k // size + 1}", part, len(part), dev))
+    elif chunk_size > 0 and len(nodes) > chunk_size:
         for k in range(0, len(nodes), chunk_size):
             part = nodes[k:k + chunk_size]
-            units.append((f"{f.stem}__p{k // chunk_size + 1}", f"{f.name} bagian {k // chunk_size + 1}", part, len(part)))
+            units.append((f"{f.stem}__p{k // chunk_size + 1}", f"{f.name} bagian {k // chunk_size + 1}", part, len(part), "?"))
     else:
         count = len(nodes) or len(re.findall(r"^\s*(?:async\s+)?def test_", f.read_text(encoding="utf-8", errors="replace"), re.M))
-        units.append((f.stem, f.name, [str(f.relative_to(project))], count))
+        units.append((f.stem, f.name, [str(f.relative_to(project))], count, "?"))
 
 # CI: bagi unit ke beberapa job; unit terbesar dulu ke job yang bebannya paling ringan (seimbang)
 shard_total = int(os.getenv("SHARD_TOTAL", "1"))
-if shard_total > 1:
-    loads = [[0, []] for _ in range(shard_total)]
-    for unit in sorted(units, key=lambda u: (-u[3], u[0])):
+
+
+def balance(items, slots):
+    loads = [[0, []] for _ in range(slots)]
+    for unit in sorted(items, key=lambda u: (-u[3], u[0])):
         target = min(loads, key=lambda load: load[0])
         target[0] += unit[3]
         target[1].append(unit)
-    units = loads[int(os.getenv("SHARD_INDEX", "0"))][1]
+    return [load[1] for load in loads]
+
+
+if shard_total > 1 and os.getenv("ACCOUNT_SHARDING") == "1" and shard_total >= 3:
+    # Satu akun hanya boleh login di satu perangkat: test aplikasi Driver (1 akun) di job 0,
+    # test User yang butuh riwayat akun utama di job 1, sisanya ke job 2.. dengan akun QA Auto masing-masing.
+    main_user = re.compile(os.getenv("USER_MAIN_FILES", r"^test_activity\.py$"))
+
+    def group(unit):
+        if unit[4] == "driver":
+            return "driver"
+        if unit[4] == "user" and main_user.search(unit[0].split("__")[0] + ".py"):
+            return "user_main"
+        return "pool"  # test User lain (akun QA Auto per job) dan test tanpa perangkat
+
+    plan = [[u for u in units if group(u) == "driver"], [u for u in units if group(u) == "user_main"]]
+    plan += balance([u for u in units if group(u) == "pool"], shard_total - 2)
+    if os.getenv("DRY_RUN") == "all":
+        for i, job in enumerate(plan):
+            print(f"job {i:2}: {sum(u[3] for u in job):3} test | perangkat {sorted({u[4] for u in job})} | {len(job)} unit")
+        print("total:", sum(u[3] for job in plan for u in job))
+        sys.exit(0)
+    units = plan[int(os.getenv("SHARD_INDEX", "0"))]
+elif shard_total > 1:
+    units = balance(units, shard_total)[int(os.getenv("SHARD_INDEX", "0"))]
 
 units.sort(key=lambda u: -u[3])
+if os.getenv("DRY_RUN") == "1":  # hanya tampilkan rencana pembagian, tidak menjalankan test
+    print(f"{sum(u[3] for u in units)} test dalam {len(units)} unit: " + ", ".join(u[0] for u in units))
+    sys.exit(0)
 groups = [units[i::buckets] for i in range(buckets)]
 (out_dir / "EXPECTED").write_text(str(sum(u[3] for u in units)), encoding="utf-8")
 
@@ -76,7 +147,7 @@ def find_previous(stem):
 def run_bucket(index, group):
     log = out_dir / f"bucket_{index}.log"
     with log.open("a", encoding="utf-8") as fh:
-        for stem, label, targets, _count in group:
+        for stem, label, targets, _count, _device in group:
             xml = out_dir / f"{stem}.xml"
             if xml.exists():
                 continue  # sudah selesai di run sebelumnya

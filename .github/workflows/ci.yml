@@ -105,6 +105,10 @@ jobs:
       CHUNK_SIZE: "8"
       HEADLESS_FAST: "1"
       QA_TEARDOWN_PAUSE: "1"
+      # 1 akun = 1 perangkat: test Driver di job 0, Aktivitas User (akun utama) di job 1,
+      # job 2-15 memakai akun QA Auto masing-masing (awalan nomor dari Secret ENV_MOBILE_APPS).
+      ACCOUNT_SHARDING: "1"
+      TEST_USER_POOL_INDEX: ${{ matrix.shard }}
       INSTALL_APK: "0"
       RESUME_DIR: sebelumnya
       FILE_INCLUDE: ${{ inputs.file_filter }}

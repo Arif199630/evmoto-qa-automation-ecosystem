@@ -19,6 +19,16 @@ VIDEOS_DIR = REPORTS_DIR / "videos"
 # Load Environment Variables from .env file
 load_dotenv(PROJECT_ROOT / ".env")
 
+# Akun User per emulator (CI paralel): aplikasi hanya mengizinkan 1 perangkat login per akun, jadi emulator
+# yang memakai akun sama saling memutus sesi ("Anda sedang Login di perangkat lain").
+# TEST_USER_POOL_PREFIX + nomor emulator (2 digit) = nomor akun QA Auto yang didaftarkan di staging.
+_pool_prefix = os.getenv("TEST_USER_POOL_PREFIX", "")
+_pool_index = int(os.getenv("TEST_USER_POOL_INDEX", "-1") or -1)
+if _pool_prefix and _pool_index >= 2:
+    _pool_phone = f"{_pool_prefix}{_pool_index:02d}"
+    for _key in ("TEST_USER_PHONE", "DEV_PHONE", "ACTIVE_PHONE", "EVMOTO_DEV_PHONE"):
+        os.environ[_key] = _pool_phone
+
 # Ensure directories exist
 SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
 VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
