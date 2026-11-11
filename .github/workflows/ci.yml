@@ -103,6 +103,9 @@ jobs:
       INSTALL_APK: "0"
       RESUME_DIR: sebelumnya
       FILE_INCLUDE: ${{ inputs.file_filter }}
+      # Subsidi jam sibuk & Dispatch batch diuji di STAGING (izin user 11 Nov 2026; fitur belum dipakai resmi).
+      # Test menyimpan snapshot konfigurasi lalu memulihkannya; staging_guard menolak host production.
+      ALLOW_ADMIN_CONFIG_WRITE: "1"
     steps:
       - uses: actions/checkout@v4
       - name: Aktifkan KVM (emulator cepat tanpa jendela)
