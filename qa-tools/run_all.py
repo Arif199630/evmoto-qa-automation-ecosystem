@@ -111,6 +111,9 @@ def main():
                 buckets = 1  # satu emulator = satu sesi Appium; paralel membuat sesi saling bertabrakan
             buckets = int(os.getenv(f"{suite.upper()}_BUCKETS", buckets))
             suite_env = {**env, **filters}
+            if env.get("FILE_INCLUDE"):
+                # filter dari pengguna tetap berlaku walau suite punya filter sendiri (mis. cross)
+                suite_env["FILE_INCLUDE_USER"] = env["FILE_INCLUDE"]
             run([sys.executable, "-I", str(HERE / "run_per_file.py"), str(project), tests_dir, str(out / suite), str(buckets)],
                 env=suite_env)
     finally:

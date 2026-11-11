@@ -17,8 +17,9 @@ import re
 
 include = re.compile(os.getenv("FILE_INCLUDE", ".*"))
 exclude = re.compile(os.getenv("FILE_EXCLUDE", "^$"))
+user_include = re.compile(os.getenv("FILE_INCLUDE_USER") or ".*")
 files = sorted(
-    (f for f in (project / tests_dir).glob("test_*.py") if include.search(f.name) and not exclude.search(f.name)),
+    (f for f in (project / tests_dir).glob("test_*.py") if include.search(f.name) and user_include.search(f.name) and not exclude.search(f.name)),
     key=lambda p: -p.stat().st_size,
 )
 # CI: bagi file ke beberapa job paralel (SHARD_INDEX dari 0 sampai SHARD_TOTAL-1)

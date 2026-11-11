@@ -109,10 +109,11 @@ class AdminRushHourHelper:
             "daily_budget": "",
         }
 
-        # Checkbox Enabled
-        chk_match = re.search(r'<input[^>]+name=["\']enabled["\'][^>]*>', html)
-        if chk_match and "checked" in chk_match.group(0):
-            settings["enabled"] = True
+        # Checkbox enabled: abaikan input hidden (value=false) yang mendahului checkbox.
+        # Sebelumnya input hidden terbaca lebih dulu sehingga snapshot selalu enabled=False
+        # dan teardown mematikan subsidi jam sibuk di staging.
+        boxes = [t for t in re.findall(r'<input[^>]+name=["\']enabled["\'][^>]*>', html) if 'type="checkbox"' in t]
+        settings["enabled"] = bool(boxes) and bool(re.search(r"\bchecked\b", boxes[0]))
 
         # Windows
         w_starts = re.findall(r'name=["\']windowStart["\'][^>]+value=["\']([^"\']*)["\']', html)

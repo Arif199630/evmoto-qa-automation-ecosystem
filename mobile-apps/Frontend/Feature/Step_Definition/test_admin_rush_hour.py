@@ -10,6 +10,7 @@ Layer        : UI Component Verification & REST/Form API (Headless Staging)
 Prinsip      : Automated Snapshot & Teardown Restoration (Zero Pollution)
 ================================================================================
 """
+import os
 import pytest
 import time
 from Frontend.Feature.Helper.admin_rush_hour_helper import AdminRushHourHelper
@@ -21,6 +22,9 @@ logger = get_logger("TestAdminRushHour")
 @pytest.fixture(scope="module")
 def admin_rush_helper():
     """Fixture inisialisasi helper admin, otentikasi login, snapshot konfigurasi awal, dan restoration teardown."""
+    if os.getenv("ALLOW_ADMIN_CONFIG_WRITE") != "1":
+        pytest.skip("Test ini MENGUBAH pengaturan Subsidi jam sibuk staging yang dipakai bersama. "
+                    "Jalankan hanya dengan izin: ALLOW_ADMIN_CONFIG_WRITE=1")
     helper = AdminRushHourHelper()
     success = helper.login()
     assert success, "Admin Dashboard harus berhasil login dengan kredensial staging"

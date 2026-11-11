@@ -121,10 +121,10 @@ class AdminDispatchBatchHelper:
             "raw_html_length": len(html),
         }
 
-        # Checkbox Enabled
-        chk_match = re.search(r'<input[^>]+name=["\']enabled["\'][^>]*>', html)
-        if chk_match and "checked" in chk_match.group(0):
-            settings["enabled"] = True
+        # Checkbox enabled & giSplit: abaikan input hidden (value=false) yang mendahului checkbox
+        for field, key in (("enabled", "enabled"), ("giSplit", "gi_split")):
+            boxes = [t for t in re.findall(rf'<input[^>]+name=["\']{field}["\'][^>]*>', html) if 'type="checkbox"' in t]
+            settings[key] = bool(boxes) and bool(re.search(r"\bchecked\b", boxes[0]))
 
         # Input numeric fields
         for field in ["size", "delay", "duration", "concurrent", "rescans"]:
@@ -192,6 +192,7 @@ class AdminDispatchBatchHelper:
         rescans: Any = 2,
         ordinary_bands: Optional[List[Tuple[Any, Any]]] = None,
         advance_bands: Optional[List[Tuple[Any, Any]]] = None,
+        gi_split: bool = False,
     ) -> requests.Response:
         """Mengirimkan form konfigurasi POST /dispatchBatch."""
         url = f"{self.base_url}/dispatchBatch"
@@ -199,6 +200,8 @@ class AdminDispatchBatchHelper:
 
         if enabled:
             payload.append(("enabled", "1"))
+        if gi_split:
+            payload.append(("giSplit", "1"))  # tanpa ini setiap submit mematikan pemisahan driver GI
         payload.append(("size", str(size)))
         payload.append(("delay", str(delay)))
         payload.append(("duration", str(duration)))
@@ -261,5 +264,6 @@ class AdminDispatchBatchHelper:
             rescans=original_settings.get("rescans", 2),
             ordinary_bands=original_settings.get("ordinary_bands") or [("0", "1"), ("1", "2"), ("2", "3"), ("3", "4"), ("4", "5")],
             advance_bands=original_settings.get("advance_bands") or [("0", "1"), ("1", "2"), ("2", "5"), ("5", "15")],
+            gi_split=original_settings.get("gi_split", False),
         )
 
