@@ -56,8 +56,9 @@ def ketuk(driver, label):
 
 
 def ketik_otp(driver):
-    fields = driver.find_elements("xpath", "//android.widget.EditText")
-    fields[-1].click()
+    # Kolom tepat di bawah label 'Kode OTP' (kolom terakhir adalah 'Kode Referral (Opsional)')
+    field = driver.find_element("xpath", "//*[@content-desc='Kode OTP' or @text='Kode OTP']/following::android.widget.EditText[1]")
+    field.click()
     time.sleep(0.3)
     for ch in OTP:
         driver.press_keycode(int(ch) + 7)  # tombol angka satu per satu (kolom PIN Flutter)
@@ -84,7 +85,7 @@ def kasus(nama, phone, full_name, langkah_otp=True):
         bukti(driver, folder, 3, "sesudah_isi_nama")
         ketuk(driver, "Minta Kode OTP")
         bukti(driver, folder, 4, "sesudah_minta_otp")
-        if langkah_otp and len(driver.find_elements("xpath", "//android.widget.EditText")) >= 3:
+        if langkah_otp and driver.find_elements("xpath", "//*[@content-desc='Kode OTP' or @text='Kode OTP']"):
             ketik_otp(driver)
             bukti(driver, folder, 5, "sesudah_isi_otp")
             ketuk(driver, "Buat Akun")
@@ -105,6 +106,7 @@ if __name__ == "__main__":
     baru = f"8003{int(time.time()) % 10000000:07d}"  # rentang 0800: bukan nomor HP
     kasus("1_nomor_sudah_terdaftar_lengkap", f"{POOL}03", "QA Auto Duplikat")
     kasus("2_nama_hanya_angka", baru, "1234567890")
-    kasus("3_nomor_awalan_0", "0" + baru[:-1] + "9", "QA Awalan Nol")
+    if os.getenv("REPRO_KASUS3", "0") == "1":  # kasus 3 sudah terbukti bukan bug (11 Nov 2026)
+        kasus("3_nomor_awalan_0", "0" + baru[:-1] + "9", "QA Awalan Nol")
     (OUT / "ringkasan.txt").write_text("\n".join(summary), encoding="utf-8")
     print("\n".join(summary))
