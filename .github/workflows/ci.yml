@@ -24,7 +24,7 @@ on:
 
 # Run sebagian (file_filter) tidak membatalkan run penuh yang sedang berjalan; push baru membatalkan push lama.
 concurrency:
-  group: regression-${{ github.ref }}-${{ inputs.file_filter || 'penuh' }}
+  group: regression-${{ github.ref }}-${{ inputs.suites || 'push' }}-${{ inputs.file_filter || 'penuh' }}
   cancel-in-progress: ${{ github.event_name == 'push' }}
 
 env:
