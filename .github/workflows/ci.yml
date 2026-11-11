@@ -10,6 +10,9 @@ on:
       suites:
         description: "Suite yang dijalankan (all / admin / api / mobile)"
         default: all
+      file_filter:
+        description: "Regex nama file test yang dijalankan (mis. ^test_(login|drv_login)\.py). Kosongkan untuk semua."
+        default: ""
       lanjutkan_dari:
         description: "Nomor run yang di-pause untuk dilanjutkan (file test yang sudah selesai di sana tidak diulang). Kosongkan untuk run baru."
         default: ""
@@ -99,6 +102,7 @@ jobs:
       SHARD_TOTAL: 6
       INSTALL_APK: "0"
       RESUME_DIR: sebelumnya
+      FILE_INCLUDE: ${{ inputs.file_filter }}
     steps:
       - uses: actions/checkout@v4
       - name: Aktifkan KVM (emulator cepat tanpa jendela)
