@@ -144,7 +144,7 @@ jobs:
           arch: x86_64
           ram-size: 4096M
           disk-size: 6000M
-          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -dns-server 8.8.8.8,1.1.1.1
           disable-animations: true
           script: |
             adb root || true
