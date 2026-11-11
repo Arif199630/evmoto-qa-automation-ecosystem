@@ -83,36 +83,33 @@ class TestDrvLogin:
     def test_TC_DRV_LOG_PT_02_login_variasi_format_awalan_nol(self, driver_app):
         """
         [POSITIVE TRUE - PT-02]
-        Deskripsi : Login menggunakan format nomor dengan awalan 0 (0<TEST_USER_PHONE>).
-        Ekspektasi: Sistem menormalisasi awalan 0 dan memproses login dengan lancar.
+        Deskripsi : Login menggunakan format nomor dengan awalan 0 (0<TEST_DRIVER_PHONE>).
+        Ekspektasi: Sesuai spesifikasi (nomor HP wajib diawali 8; kode +62 sudah tetap di field),
+                    aplikasi menampilkan 'Harus diawali dengan angka 8' dan tidak membuka layar OTP.
+                    Dikoreksi 11 Nov 2026: sebelumnya test mengharapkan normalisasi awalan 0.
         """
         data = DRV_LOG_DATA_POSITIVE_TRUE["TC_DRV_LOG_PT_02"]
         login_pg = DrvLoginPage(driver_app)
-        home_pg = DrvHomePage(driver_app)
 
         given("Mitra berada di layar login")
         login_pg.handle_system_permissions()
-        assert login_pg.is_login_screen_displayed()
+        assert login_pg.is_login_screen_displayed(), "Layar login Driver harus tampil"
 
         when(f"Mitra menginput nomor berawalan nol: {data['phone']}")
         login_pg.enter_phone_number(data["phone"])
+
+        then("Aplikasi menolak awalan 0 dengan pesan validasi")
+        assert login_pg.is_validation_first_8_displayed(), "Pesan 'Harus diawali dengan angka 8' harus tampil"
         login_pg.click_join_sekarang()
-
-        and_step(f"Mitra memasukkan kode OTP bypass: {data['otp']}")
-        if login_pg.is_otp_screen_displayed():
-            login_pg.enter_otp(data["otp"])
-            login_pg.handle_system_permissions()
-
-        then("Mitra berhasil masuk ke Beranda")
-        assert home_pg.is_home_screen_displayed() or login_pg.is_login_screen_displayed()
-        logger.info("[SUCCESS] Normalisasi awalan nol nomor telepon berhasil.")
+        assert not login_pg.is_otp_screen_displayed(), "Layar OTP tidak boleh terbuka untuk nomor berawalan 0"
 
     @pytest.mark.positive_true
     def test_TC_DRV_LOG_PT_03_login_variasi_format_internasional_62(self, driver_app):
         """
         [POSITIVE TRUE - PT-03]
         Deskripsi : Login menggunakan format nomor internasional (+62<TEST_USER_PHONE>).
-        Ekspektasi: Sistem mengenali kode negara +62 dan membuka layar OTP.
+        Ekspektasi: Sesuai spesifikasi (nomor wajib diawali 8), aplikasi menampilkan
+                    'Harus diawali dengan angka 8'. Dikoreksi 11 Nov 2026.
         """
         data = DRV_LOG_DATA_POSITIVE_TRUE["TC_DRV_LOG_PT_03"]
         login_pg = DrvLoginPage(driver_app)
@@ -123,11 +120,11 @@ class TestDrvLogin:
 
         when(f"Mitra menginput nomor dengan format +62: {data['phone']}")
         login_pg.enter_phone_number(data["phone"])
-        login_pg.click_join_sekarang()
 
-        then("Sistem merespons dan menampilkan verifikasi OTP")
-        assert login_pg.is_otp_screen_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
-        logger.info("[SUCCESS] Penanganan format internasional +62 berhasil.")
+        then("Aplikasi menolak awalan 62 dengan pesan validasi (kode +62 sudah tetap di field)")
+        assert login_pg.is_validation_first_8_displayed(), "Pesan 'Harus diawali dengan angka 8' harus tampil"
+        login_pg.click_join_sekarang()
+        assert not login_pg.is_otp_screen_displayed(), "Layar OTP tidak boleh terbuka untuk nomor berawalan 62"
 
     @pytest.mark.positive_true
     def test_TC_DRV_LOG_PT_04_navigasi_bantuan_cs_whatsapp(self, driver_app):
@@ -185,6 +182,12 @@ class TestDrvLogin:
         login_pg.handle_system_permissions()
 
         then("Izin lokasi berhasil ditangani secara mulus")
+        assert not login_pg.is_system_permission_dialog_displayed(), \
+            "Dialog izin Android masih terbuka setelah izin ditangani"
+        izin_diberikan = login_pg.get_app_permissions("granted")
+        assert ("android.permission.ACCESS_FINE_LOCATION" in izin_diberikan
+                or "android.permission.ACCESS_COARSE_LOCATION" in izin_diberikan), \
+            f"Aplikasi driver belum memegang izin lokasi. Izin yang diberikan: {izin_diberikan}"
         logger.info("[SUCCESS] Penanganan izin lokasi perangkat berhasil.")
 
     @pytest.mark.positive_true
@@ -197,9 +200,17 @@ class TestDrvLogin:
         login_pg = DrvLoginPage(driver_app)
 
         given("Aplikasi meminta izin pengiriman notifikasi")
+        if "android.permission.POST_NOTIFICATIONS" not in login_pg.get_app_permissions("requested"):
+            pytest.skip("Aplikasi/OS tidak meminta izin runtime POST_NOTIFICATIONS (Android di bawah 13), "
+                        "tidak ada dialog izin notifikasi untuk diuji.")
         login_pg.handle_system_permissions()
 
         then("Izin notifikasi berhasil ditangani")
+        assert not login_pg.is_system_permission_dialog_displayed(), \
+            "Dialog izin Android masih terbuka setelah izin ditangani"
+        izin_diberikan = login_pg.get_app_permissions("granted")
+        assert "android.permission.POST_NOTIFICATIONS" in izin_diberikan, \
+            f"Izin notifikasi (POST_NOTIFICATIONS) belum diberikan ke aplikasi driver. Izin yang diberikan: {izin_diberikan}"
         logger.info("[SUCCESS] Penanganan izin notifikasi berhasil.")
 
     # ==========================================================================

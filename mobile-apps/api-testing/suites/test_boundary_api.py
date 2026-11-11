@@ -25,7 +25,7 @@ class TestBoundaryAndDataIntegrityApi:
         """TC-API-BND-01: Boundary Test - Input nomor handphone terlalu pendek (7 digit: '8123456')."""
         resp = evmoto_client.post(
             ApiConfig.EP_DRIVER_LOGIN_OTP,
-            json_data={"phone": "8" + "123456", "code": os.environ.get("EVMOTO_OTP_BYPASS", "")}
+            json_data={"phone": "8000000", "code": os.environ.get("EVMOTO_OTP_BYPASS", "")}
         )
         assert resp.status_code in (200, 400, 422)
         if resp.status_code == 200:

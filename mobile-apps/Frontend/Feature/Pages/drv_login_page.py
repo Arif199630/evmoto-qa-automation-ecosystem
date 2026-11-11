@@ -82,6 +82,21 @@ class DrvLoginPage(BasePage):
         "//*[contains(@content-desc, 'Kirim ulang') or contains(@text, 'Kirim ulang') or "
         "contains(@content-desc, 'Kirimkan Kode OTP')]"
     )
+    # Tombol persis 'Lanjutkan' di layar OTP (driver_strings_id.json: button_next)
+    BTN_LANJUTKAN_OTP = (
+        AppiumBy.XPATH,
+        "//android.widget.Button[@content-desc='Lanjutkan' or @text='Lanjutkan']"
+    )
+    # Tombol persis 'Kirim ulang kode' (aktif setelah hitung mundur selesai)
+    BTN_RESEND_EXACT = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Kirim ulang kode' or @text='Kirim ulang kode']"
+    )
+    # Pesan validasi resmi (driver_strings_id.json: form_validation_first_8)
+    TEXT_VALIDATION_FIRST_8 = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Harus diawali dengan angka 8' or @text='Harus diawali dengan angka 8']"
+    )
     TEXT_RESEND_COUNTDOWN = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Kirim ulang kode dalam') or contains(@text, 'Kirim ulang kode dalam')]"
@@ -143,8 +158,21 @@ class DrvLoginPage(BasePage):
         self.type_text(self.FIELD_PHONE, phone, label="Field Nomor Telepon Driver")
 
     def click_join_sekarang(self):
-        """Mengetuk tombol 'Join Sekarang'."""
-        self.click(self.BTN_JOIN_SEKARANG, label="Tombol Join Sekarang")
+        """Mengetuk tombol 'Join Sekarang'.
+
+        Tidak menunggu tombol aktif: test negatif sengaja mengetuk tombol yang disabled
+        (nomor kosong/tidak valid) lalu memeriksa bahwa aplikasi tidak lanjut ke OTP.
+        """
+        logger.info("Klik: Tombol Join Sekarang")
+        self.find(self.BTN_JOIN_SEKARANG).click()
+
+    def is_join_button_enabled(self) -> bool:
+        """True bila tombol 'Join Sekarang' aktif."""
+        return self.find(self.BTN_JOIN_SEKARANG).get_attribute("enabled") == "true"
+
+    def is_validation_first_8_displayed(self, timeout: int = 5) -> bool:
+        """True bila pesan 'Harus diawali dengan angka 8' tampil."""
+        return self.is_displayed(self.TEXT_VALIDATION_FIRST_8, timeout=timeout)
 
     def is_otp_screen_displayed(self) -> bool:
         """Memeriksa apakah layar verifikasi kode OTP tampil."""
@@ -154,10 +182,20 @@ class DrvLoginPage(BasePage):
         """Memasukkan 4 digit kode OTP verifikasi bypass dev."""
         logger.info(f"Input kode OTP verifikasi driver: {otp}")
         self.type_text(self.FIELD_OTP, otp, label="Field Input 4 Kode OTP")
+        # Kode tidak terkirim otomatis: layar OTP punya tombol 'Lanjutkan'
+        if self.is_displayed(self.BTN_LANJUTKAN_OTP, timeout=3):
+            self.find(self.BTN_LANJUTKAN_OTP).click()
 
-    def click_resend_otp(self):
-        """Mengetuk tombol kirim ulang kode OTP."""
-        self.click(self.BTN_RESEND_OTP, label="Tombol Kirim Ulang OTP")
+    def click_resend_otp(self, max_wait_seconds: int = 75):
+        """Menunggu hitung mundur selesai (tombol 'Kirim ulang kode' aktif), lalu mengetuknya."""
+        deadline = time.time() + max_wait_seconds
+        while time.time() < deadline:
+            btns = self.driver.find_elements(*self.BTN_RESEND_EXACT)
+            if btns and btns[0].get_attribute("enabled") == "true" and not self.is_displayed(self.TEXT_RESEND_COUNTDOWN, timeout=1):
+                btns[0].click()
+                return
+            time.sleep(3)
+        raise TimeoutError(f"Tombol 'Kirim ulang kode' tidak aktif setelah {max_wait_seconds} detik")
 
     def click_contact_cs(self):
         """Mengetuk tautan bantuan Hubungi CS WhatsApp."""
@@ -214,3 +252,25 @@ class DrvLoginPage(BasePage):
 
         time.sleep(Config.HUMAN_PACING_MIN)
         self.handle_system_permissions()
+
+    # ==========================================================================
+    # 5. VERIFIKASI HASIL PENANGANAN IZIN SISTEM
+    # ==========================================================================
+    # Dialog izin bawaan Android (Permission Controller), bukan teks aplikasi.
+    POPUP_SYSTEM_PERMISSION = (
+        AppiumBy.XPATH,
+        "//*[contains(@resource-id, 'com.android.permissioncontroller:id/') or "
+        "contains(@resource-id, 'com.android.packageinstaller:id/permission')]"
+    )
+
+    def is_system_permission_dialog_displayed(self, timeout: int = 2) -> bool:
+        """Memeriksa apakah dialog izin Android (lokasi/notifikasi) masih terbuka."""
+        return self.is_displayed(self.POPUP_SYSTEM_PERMISSION, timeout=timeout)
+
+    def get_app_permissions(self, jenis: str = "granted") -> list:
+        """Daftar izin runtime aplikasi driver ('granted', 'denied', atau 'requested') lewat 'mobile: getPermissions'."""
+        hasil = self.driver.execute_script("mobile: getPermissions", {
+            "type": jenis,
+            "appPackage": Config.DRIVER_PACKAGE,
+        })
+        return list(hasil or [])

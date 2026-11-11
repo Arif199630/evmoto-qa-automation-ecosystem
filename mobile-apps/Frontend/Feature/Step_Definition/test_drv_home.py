@@ -587,10 +587,20 @@ class TestDrvHome:
         self._ensure_driver_logged_in(driver_app)
 
         given("Driver berada di Halaman Beranda dengan saldo terlihat")
+        label_awal = home_pg.get_saldo_labels()
+        assert label_awal, "Pra-kondisi gagal: tidak ada label nominal saldo (Rp) di Beranda"
         when("Driver mengetuk ikon mata (hide/show balance)")
         home_pg.toggle_hide_balance()
         then("Nominal saldo berhasil disamarkan demi privasi")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        label_tersembunyi = home_pg.get_saldo_labels()
+        assert label_tersembunyi != label_awal, \
+            f"Tampilan saldo tidak berubah setelah ikon mata diketuk: {label_tersembunyi}"
+        assert home_pg.has_masked_label(label_tersembunyi), \
+            f"Saldo tidak disamarkan dengan karakter sensor (••••): {label_tersembunyi}"
+        and_step("Ikon mata diketuk lagi, nominal saldo kembali tampil")
+        home_pg.toggle_hide_balance()
+        assert home_pg.get_saldo_labels() == label_awal, "Nominal saldo tidak kembali seperti semula setelah ikon mata diketuk lagi"
+
     @pytest.mark.positive_true
     def test_TC_DRV_HOME_PT_17_dialog_soft_update_versi_terbaru(self, driver_app):
         """
@@ -602,9 +612,15 @@ class TestDrvHome:
         self._ensure_driver_logged_in(driver_app)
 
         given("Tersedia build aplikasi terbaru di server")
+        if not home_pg.is_soft_update_dialog_displayed():
+            pytest.skip("Server tidak sedang menawarkan versi baru (dialog soft update tidak muncul); "
+                        "pra-kondisi diatur dari konfigurasi versi di server.")
         when("Sistem menampilkan dialog update rekomendasi")
         then("Komponen 'Versi Terbaru Telah Tersedia' dan tombol aksi tertera")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert home_pg.is_perbarui_sekarang_displayed(), "Tombol 'Perbarui sekarang' tidak ada di dialog soft update"
+        assert home_pg.is_perbarui_nanti_displayed(), \
+            "Dialog soft update tidak bisa dilewati: tombol 'Perbarui nanti' tidak ada (seharusnya non-blocking)"
+
     @pytest.mark.positive_true
     def test_TC_DRV_HOME_PT_18_dialog_force_update_aplikasi(self, driver_app):
         """
@@ -616,9 +632,13 @@ class TestDrvHome:
         self._ensure_driver_logged_in(driver_app)
 
         given("Aplikasi berada di versi di bawah batas minimum deprecated")
+        if not home_pg.is_force_update_dialog_displayed():
+            pytest.skip("Versi APK uji masih di atas batas minimum server (dialog 'Update Sekarang' tidak muncul).")
         when("Sistem memunculkan dialog 'Update Sekarang'")
         then("Dialog wajib update mengunci antarmuka tanpa tombol dismiss")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert not home_pg.is_perbarui_nanti_displayed(), \
+            "Dialog force update masih punya tombol 'Perbarui nanti', seharusnya tidak bisa dilewati"
+
     @pytest.mark.positive_true
     def test_TC_DRV_HOME_PT_19_dialog_pemberitahuan_jam_operasional(self, driver_app):
         """
@@ -631,8 +651,12 @@ class TestDrvHome:
 
         given("Driver membuka aplikasi saat operasional malam ditutup")
         when("Sistem mengevaluasi jadwal server")
+        if not home_pg.is_operating_hours_dialog_displayed():
+            pytest.skip("Test berjalan di dalam jam operasional, modal 'Pemberitahuan Jam Operasional' tidak muncul.")
         then("Modal 'Pemberitahuan Jam Operasional' tampil dengan pesan informatif")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert home_pg.is_operating_hours_description_displayed(), \
+            "Modal jam operasional tampil tanpa penjelasan 'Saat ini layanan mengikuti jam operasional yang berlaku...'"
+
     @pytest.mark.positive_true
     def test_TC_DRV_HOME_PT_20_ketuk_tombol_pengaturan_jaringan(self, driver_app):
         """
@@ -644,10 +668,23 @@ class TestDrvHome:
         self._ensure_driver_logged_in(driver_app)
 
         given("Terjadi gangguan latensi sinyal data seluler")
-        when("Driver mengetuk tombol 'Pengaturan Jaringan'")
-        home_pg.click_network_settings()
-        then("Sistem merespons aksi pengaturan jaringan")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        try:
+            home_pg.set_device_network(False)
+        except Exception as exc:
+            pytest.skip(f"Perangkat uji tidak mendukung mematikan jaringan lewat Appium: {exc}")
+        try:
+            assert home_pg.is_network_settings_button_displayed(), \
+                "Tombol 'Pengaturan Jaringan' tidak muncul saat koneksi internet dimatikan"
+            when("Driver mengetuk tombol 'Pengaturan Jaringan'")
+            home_pg.click_network_settings()
+            then("Sistem membuka pengaturan jaringan perangkat")
+            assert not home_pg.is_driver_app_in_foreground(), \
+                "Setelah mengetuk 'Pengaturan Jaringan', layar pengaturan Android tidak terbuka " \
+                f"(package di depan: {home_pg.get_current_package()})"
+        finally:
+            home_pg.set_device_network(True)
+            home_pg.return_to_driver_app()
+
     @pytest.mark.positive_true
     def test_TC_DRV_HOME_PT_21_swipe_gesture_pull_to_refresh_beranda(self, driver_app):
         """
@@ -660,9 +697,12 @@ class TestDrvHome:
 
         given("Driver berada pada bagian teratas layar Beranda")
         when("Driver menarik layar ke bawah (pull-to-refresh)")
-        home_pg.click_refresh_beranda()
-        then("Sistem me-refresh seluruh kartu ringkasan")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        home_pg.pull_to_refresh()
+        then("Sistem me-refresh seluruh kartu ringkasan tanpa error")
+        assert not home_pg.is_critical_error_displayed(), "Muncul 'Maaf terjadi kesalahan' setelah pull-to-refresh Beranda"
+        assert home_pg.get_saldo_labels(), "Nominal saldo (Rp) tidak tampil lagi setelah pull-to-refresh"
+        assert home_pg.is_total_earnings_displayed(), "Kartu 'Total Pendapatan' tidak tampil setelah pull-to-refresh"
+
     @pytest.mark.positive_true
     def test_TC_DRV_HOME_PT_22_verifikasi_banner_order_dihalaman_depan_aktif(self, driver_app):
         """
@@ -674,9 +714,16 @@ class TestDrvHome:
         self._ensure_driver_logged_in(driver_app)
 
         given("Izin overlay window telah diaktifkan mitra")
+        try:
+            home_pg.grant_overlay_permission()
+        except Exception as exc:
+            pytest.skip(f"Izin overlay (SYSTEM_ALERT_WINDOW) tidak bisa diberikan lewat Appium di perangkat ini: {exc}")
+        home_pg.background_and_resume()
         when("Driver memantau layar Beranda")
         then("Status 'Order Dihalaman Depan Aktif' tampil valid")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert home_pg.is_overlay_order_badge_displayed(), \
+            "Badge 'Order Dihalaman Depan Aktif' tidak tampil padahal izin overlay sudah diberikan"
+
     @pytest.mark.business_logic
     def test_TC_DRV_HOME_BL_11_pencegahan_online_saat_di_luar_jam_operasional(self, driver_app):
         """
@@ -688,9 +735,16 @@ class TestDrvHome:
         self._ensure_driver_logged_in(driver_app)
 
         given("Jam layanan saat ini berada di luar rentang operasional")
+        if not home_pg.is_operating_hours_dialog_displayed():
+            pytest.skip("Test berjalan di dalam jam operasional (modal 'Pemberitahuan Jam Operasional' tidak muncul).")
+        home_pg.press_back()
         when("Driver mencoba menggeser toggle ke status 'Online'")
+        home_pg.toggle_online_offline_status()
         then("Sistem menolak perubahan status dan mempertahankan mode 'Offline'")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert home_pg.is_operating_hours_dialog_displayed(), \
+            "Mencoba Online di luar jam operasional tidak memunculkan 'Pemberitahuan Jam Operasional'"
+        assert home_pg.is_offline_status_active(), "Status driver tidak tetap 'Offline' di luar jam operasional"
+
     @pytest.mark.business_logic
     def test_TC_DRV_HOME_BL_12_auto_offline_saat_driver_menonaktifkan_gps(self, driver_app):
         """
@@ -698,13 +752,9 @@ class TestDrvHome:
         Deskripsi : Status driver otomatis beralih Offline saat modul GPS ponsel dimatikan.
         Ekspektasi: Snackbar 'Status Anda akan offline' muncul demi keselamatan dispatch.
         """
-        home_pg = DrvHomePage(driver_app)
-        self._ensure_driver_logged_in(driver_app)
+        pytest.skip("Belum ada cara andal mematikan GPS emulator dari test (toggle lokasi Appium bergantung pada "
+                    "UI Settings Android); selain itu skenario butuh akun uji berstatus Online yang bisa menerima order.")
 
-        given("Driver sedang dalam status Online")
-        when("Modul GPS perangkat dinonaktifkan")
-        then("Sistem secara reaktif mengubah status driver menjadi Offline")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_true
     def test_TC_DRV_HOME_NT_06_tap_refresh_saat_koneksi_offline(self, driver_app):
         """
@@ -716,10 +766,21 @@ class TestDrvHome:
         self._ensure_driver_logged_in(driver_app)
 
         given("Perangkat dalam mode pesawat atau koneksi terputus")
-        when("Driver mengetuk tombol 'Muat Ulang'")
-        home_pg.click_refresh_beranda()
-        then("Aplikasi menampilkan pesan jaringan tanpa force close")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        try:
+            home_pg.set_device_network(False)
+        except Exception as exc:
+            pytest.skip(f"Perangkat uji tidak mendukung mematikan jaringan lewat Appium: {exc}")
+        try:
+            when("Driver mengetuk tombol 'Muat Ulang'")
+            home_pg.click_refresh_beranda()
+            then("Aplikasi menampilkan pesan jaringan tanpa force close")
+            assert home_pg.is_network_error_displayed(), \
+                "Tidak ada pesan gangguan jaringan ('Tidak Ada Koneksi Internet' / 'Jaringan terputus...' / " \
+                "'Tidak dapat terhubung ke server') saat Muat Ulang tanpa koneksi"
+            assert home_pg.is_driver_app_in_foreground(), "Aplikasi driver tertutup (force close) saat Muat Ulang tanpa koneksi"
+        finally:
+            home_pg.set_device_network(True)
+
     @pytest.mark.negative_false
     def test_TC_DRV_HOME_NF_06_rapid_toggle_eye_mask_saldo(self, driver_app):
         """
@@ -731,11 +792,18 @@ class TestDrvHome:
         self._ensure_driver_logged_in(driver_app)
 
         given("Driver berada pada layar Beranda")
+        label_awal = home_pg.get_saldo_labels()
+        assert label_awal, "Pra-kondisi gagal: tidak ada label nominal saldo (Rp) di Beranda"
         when("Driver mengetuk toggle mata saldo 5 kali berturut-turut")
         for _ in range(5):
             home_pg.toggle_hide_balance()
-        then("Antarmuka saldo tetap konsisten pada state terakhir")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        then("Antarmuka saldo konsisten pada state terakhir (5 ketukan = tersembunyi)")
+        assert home_pg.has_masked_label(home_pg.get_saldo_labels()), \
+            "Setelah 5 ketukan (jumlah ganjil) saldo seharusnya tersamarkan, tetapi tidak ada karakter sensor"
+        and_step("Satu ketukan lagi mengembalikan nominal seperti semula")
+        home_pg.toggle_hide_balance()
+        assert home_pg.get_saldo_labels() == label_awal, "Nominal saldo tidak kembali seperti semula setelah ketukan ke-6"
+
     @pytest.mark.negative_false
     def test_TC_DRV_HOME_NF_07_resiliensi_aplikasi_saat_notifikasi_sistem_muncul(self, driver_app):
         """
@@ -747,6 +815,12 @@ class TestDrvHome:
         self._ensure_driver_logged_in(driver_app)
 
         given("Driver berada di Halaman Beranda aktif")
-        when("Sistem Android memicu notifikasi push atau dialog baterai")
+        status_online_awal = home_pg.is_online_status_active()
+        when("Panel notifikasi Android dibuka di atas aplikasi lalu ditutup")
+        home_pg.open_notification_shade()
+        home_pg.press_back()
         then("Aplikasi EvMoto Driver tetap berjalan stabil di latar depan")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert home_pg.is_driver_app_in_foreground(), "Aplikasi driver tidak kembali ke depan setelah panel notifikasi ditutup"
+        assert home_pg.is_saldo_card_displayed(), "Kartu 'Saldo Kamu' Beranda tidak tampil lagi setelah interupsi notifikasi"
+        assert home_pg.is_online_status_active() == status_online_awal, \
+            "Status kerja Online/Offline berubah akibat interupsi panel notifikasi"

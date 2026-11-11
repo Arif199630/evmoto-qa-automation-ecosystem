@@ -9,6 +9,7 @@ Target  : Layar Menu Mitra Driver, Hubungkan eWallet ECGO, Penarikan Dana &
 Wording : Bersumber 100% dari strings resmi APK driver_lang_id.json
 ================================================================================
 """
+import re
 import time
 from appium.webdriver.common.appiumby import AppiumBy
 from core.base_page import BasePage
@@ -300,13 +301,17 @@ class DrvMenuPage(BasePage):
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Masukan') or contains(@text, 'Masukan') or contains(@content-desc, 'Feedback')]"
     )
+    # Hint resmi kolom masukan (hint_feedback) diawali 'Kemajuan kami tidak terlepas...', bukan 'Masukan'.
+    # Form masukan hanya punya satu kolom input, jadi EditText pertama sudah cukup spesifik.
     FIELD_FEEDBACK_TEXT = (
         AppiumBy.XPATH,
-        "//android.widget.EditText[contains(@hint, 'Masukan') or contains(@hint, 'masukan') or contains(@hint, 'Saran')]"
+        "(//android.widget.EditText)[1]"
     )
+    # Hanya elemen Button dengan label persis. contains('Kirim') juga cocok dengan judul/menu 'Kirim Masukan'.
     BTN_SUBMIT_FEEDBACK = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Kirim') or contains(@text, 'Kirim')]"
+        "//android.widget.Button[@content-desc='Kirim' or @text='Kirim' or "
+        "@content-desc='Kirim Masukan' or @text='Kirim Masukan']"
     )
     SNACKBAR_FEEDBACK_SUCCESS = (
         AppiumBy.XPATH,
@@ -371,3 +376,118 @@ class DrvMenuPage(BasePage):
         """Memeriksa apakah versi aplikasi tertera."""
         return self.is_displayed(self.TEXT_APP_VERSION, timeout=3)
 
+    # ==========================================================================
+    # 7. LOCATOR TAMBAHAN UNTUK VERIFIKASI HASIL (TEKS DARI driver_strings_id.json)
+    # ==========================================================================
+    # account_faq_tips_description
+    TEXT_TIPS_DESCRIPTION = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Pastikan koneksi internet stabil') or contains(@text, 'Pastikan koneksi internet stabil')]"
+    )
+    # critical_error_title (terlihat di dump layar emulator: View content-desc='Maaf terjadi kesalahan')
+    TEXT_CRITICAL_ERROR = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Maaf terjadi kesalahan' or @text='Maaf terjadi kesalahan' or "
+        "@content-desc='Kesalahan server' or @text='Kesalahan server']"
+    )
+    # Bocoran pesan error basis data ke layar (tidak boleh muncul)
+    TEXT_DATABASE_ERROR = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'SQL') or contains(@text, 'SQL') or "
+        "contains(@content-desc, 'syntax error') or contains(@text, 'syntax error')]"
+    )
+    # account_delete_otp_title
+    TITLE_DELETE_ACCOUNT_OTP = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Masukkan Kode OTP' or @text='Masukkan Kode OTP']"
+    )
+    # ewallet_resend_code_in: 'Kirim ulang kode dalam ' + sisa detik
+    TEXT_RESEND_OTP_COUNTDOWN = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Kirim ulang kode dalam') or contains(@text, 'Kirim ulang kode dalam')]"
+    )
+    # account_delete_success_title (tidak boleh muncul saat OTP salah)
+    TEXT_DELETE_ACCOUNT_SUCCESS = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Akun Anda telah berhasil dihapus') or contains(@text, 'Akun Anda telah berhasil dihapus')]"
+    )
+
+    def scroll_down(self, ratio: float = 0.4):
+        """Menggeser layar ke bawah (jari dari 70% ke 30% tinggi layar) memakai swipe dari BasePage."""
+        size = self.driver.get_window_size()
+        x = int(size["width"] / 2)
+        start_y = int(size["height"] * 0.7)
+        end_y = int(size["height"] * (0.7 - ratio))
+        self.swipe(x, start_y, x, end_y, 500)
+        time.sleep(0.5)
+
+    def is_displayed_after_scroll(self, locator, max_swipes: int = 3, timeout: int = 3) -> bool:
+        """Mencari elemen; bila belum terlihat, geser layar ke bawah lalu cek ulang (maksimal max_swipes kali)."""
+        if self.is_displayed(locator, timeout=timeout):
+            return True
+        for _ in range(max_swipes):
+            self.scroll_down()
+            if self.is_displayed(locator, timeout=2):
+                return True
+        return False
+
+    def is_faq_step_download_displayed(self) -> bool:
+        """Memeriksa langkah panduan 'Unduh dan Daftar' (boleh menggeser layar)."""
+        return self.is_displayed_after_scroll(self.FAQ_STEP_DOWNLOAD)
+
+    def is_faq_step_open_home_displayed(self) -> bool:
+        """Memeriksa langkah panduan 'Buka Halaman Utama' (boleh menggeser layar)."""
+        return self.is_displayed_after_scroll(self.FAQ_STEP_OPEN_HOME)
+
+    def is_faq_step_activate_displayed(self) -> bool:
+        """Memeriksa langkah panduan 'Cara mengaktifkan aplikasi' (boleh menggeser layar)."""
+        return self.is_displayed_after_scroll(self.FAQ_STEP_ACTIVATE)
+
+    def is_tips_description_displayed(self) -> bool:
+        """Memeriksa teks 'Pastikan koneksi internet stabil, Applikasi selalu aktif di latar belakang.'"""
+        return self.is_displayed_after_scroll(self.TEXT_TIPS_DESCRIPTION)
+
+    def is_app_version_number_displayed(self) -> bool:
+        """Memeriksa ada label berisi nomor versi berformat angka.angka.angka (mis. 1.9.29) di layar."""
+        source = self.driver.page_source
+        return re.search(r'(?:content-desc|text)="[^"]*\bv?\d+\.\d+\.\d+', source) is not None
+
+    def is_feedback_form_displayed(self) -> bool:
+        """Memeriksa form masukan terbuka: kolom input dan tombol Kirim sama-sama tampil."""
+        return self.is_displayed(self.FIELD_FEEDBACK_TEXT, timeout=5) and self.is_displayed(self.BTN_SUBMIT_FEEDBACK, timeout=3)
+
+    def click_submit_feedback(self):
+        """Mengetuk tombol Kirim pada form masukan (tanpa mengisi teks)."""
+        self.click(self.BTN_SUBMIT_FEEDBACK, label="Tombol Kirim Masukan")
+
+    def is_critical_error_displayed(self) -> bool:
+        """Memeriksa layar/pesan 'Maaf terjadi kesalahan' atau 'Kesalahan server'."""
+        return self.is_displayed(self.TEXT_CRITICAL_ERROR, timeout=2)
+
+    def is_database_error_exposed(self) -> bool:
+        """Memeriksa apakah pesan error basis data (SQL / syntax error) bocor ke layar."""
+        return self.is_displayed(self.TEXT_DATABASE_ERROR, timeout=2)
+
+    def confirm_hapus_akun(self):
+        """Mengetuk tombol 'Hapus Sekarang' pada dialog pengajuan hapus akun."""
+        self.click(self.BTN_CONFIRM_HAPUS_AKUN, label="Tombol Hapus Sekarang")
+
+    def is_delete_account_otp_screen_displayed(self) -> bool:
+        """Memeriksa layar OTP hapus akun ('Masukkan Kode OTP' dan tombol 'Konfirmasi OTP')."""
+        return self.is_displayed(self.TITLE_DELETE_ACCOUNT_OTP, timeout=6) and self.is_displayed(self.BTN_CONFIRM_DELETE_OTP, timeout=3)
+
+    def is_resend_otp_countdown_displayed(self) -> bool:
+        """Memeriksa hitung mundur 'Kirim ulang kode dalam ...'."""
+        return self.is_displayed(self.TEXT_RESEND_OTP_COUNTDOWN, timeout=3)
+
+    def enter_delete_account_otp(self, kode: str):
+        """Mengisi kode OTP pada layar verifikasi hapus akun."""
+        self.type_text(self.FIELD_DELETE_ACCOUNT_OTP, kode, label="Field OTP Hapus Akun")
+
+    def click_confirm_delete_otp(self):
+        """Mengetuk tombol 'Konfirmasi OTP' hapus akun."""
+        self.click(self.BTN_CONFIRM_DELETE_OTP, label="Tombol Konfirmasi OTP Hapus Akun")
+
+    def is_delete_account_success_displayed(self) -> bool:
+        """Memeriksa pesan 'Akun Anda telah berhasil dihapus.'"""
+        return self.is_displayed(self.TEXT_DELETE_ACCOUNT_SUCCESS, timeout=3)

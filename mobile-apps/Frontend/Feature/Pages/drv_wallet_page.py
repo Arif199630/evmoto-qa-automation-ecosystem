@@ -35,10 +35,11 @@ class DrvWalletPage(BasePage):
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Saldo ECGO') or contains(@text, 'Saldo ECGO')]"
     )
+    # Label persis. contains('Terhubung') juga cocok dengan 'Tidak Terhubung dengan ECGO' / 'Belum Terhubung'.
     TEXT_STATUS_TERHUBUNG = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Terhubung dengan ECGO') or contains(@text, 'Terhubung dengan ECGO') or "
-        "contains(@content-desc, 'Terhubung') or contains(@text, 'Terhubung')]"
+        "//*[@content-desc='Terhubung dengan ECGO' or @text='Terhubung dengan ECGO' or "
+        "@content-desc='Terhubung' or @text='Terhubung']"
     )
     TEXT_STATUS_BELUM_TERHUBUNG = (
         AppiumBy.XPATH,
@@ -392,3 +393,142 @@ class DrvWalletPage(BasePage):
         """Mengetuk tombol salin nomor transaksi."""
         self.click(self.BTN_SALIN_TXN, label="Tombol Salin No Transaksi")
 
+    # ==========================================================================
+    # 9. LOCATOR TAMBAHAN UNTUK VERIFIKASI HASIL (TEKS DARI driver_strings_id.json)
+    # ==========================================================================
+    # Label item riwayat isi ulang: ewallet_history_topup + rute isi ulang
+    ITEM_RIWAYAT_ISI_ULANG = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Top-up Saldo') or contains(@text, 'Top-up Saldo') or "
+        "contains(@content-desc, 'Bank → Saldo EVMoto') or contains(@text, 'Bank → Saldo EVMoto') or "
+        "contains(@content-desc, 'QRIS → Saldo EVMoto') or contains(@text, 'QRIS → Saldo EVMoto') or "
+        "contains(@content-desc, 'Saldo ECGO → Saldo EVMoto') or contains(@text, 'Saldo ECGO → Saldo EVMoto')]"
+    )
+    # ewallet_history_recharge_empty_description
+    TEXT_EMPTY_RECHARGE_DESCRIPTION = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Anda belum pernah melakukan isi ulang saldo') or "
+        "contains(@text, 'Anda belum pernah melakukan isi ulang saldo')]"
+    )
+    # ewallet_total_unpaid_title: 'Total Tunggakan {{amount}}'
+    TEXT_TOTAL_TUNGGAKAN = (
+        AppiumBy.XPATH,
+        "//*[starts-with(@content-desc, 'Total Tunggakan') or starts-with(@text, 'Total Tunggakan')]"
+    )
+    # ewallet_total_unpaid_description (penjelasan agar terhindar dari denda)
+    TEXT_TUNGGAKAN_DESCRIPTION = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'mohon segera melunasi tunggakan') or contains(@text, 'mohon segera melunasi tunggakan')]"
+    )
+    # ewallet_no_outstanding
+    TEXT_TIDAK_ADA_TUNGGAKAN = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Tidak ada tunggakan' or @text='Tidak ada tunggakan']"
+    )
+    # ewallet_no_bills_to_pay
+    TEXT_TIDAK_ADA_TAGIHAN = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Tidak ada tagihan yang dapat dibayar') or contains(@text, 'Tidak ada tagihan yang dapat dibayar')]"
+    )
+    # ewallet_bill_* : jenis tagihan armada
+    ITEM_JENIS_TAGIHAN = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Tagihan Swap Baterai') or contains(@text, 'Tagihan Swap Baterai') or "
+        "contains(@content-desc, 'Tagihan Motor Bulanan') or contains(@text, 'Tagihan Motor Bulanan') or "
+        "contains(@content-desc, 'Tagihan Motor Harian') or contains(@text, 'Tagihan Motor Harian') or "
+        "contains(@content-desc, 'Tagihan Garansi Baterai Harian') or contains(@text, 'Tagihan Garansi Baterai Harian')]"
+    )
+    # ewallet_link_required_for_pay_bill
+    TEXT_LINK_REQUIRED_FOR_PAY = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Hubungkan eWallet terlebih dahulu') or contains(@text, 'Hubungkan eWallet terlebih dahulu')]"
+    )
+    # ewallet_cancel_description (isi dialog putuskan eWallet)
+    TEXT_PUTUSKAN_DESCRIPTION = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Jika diputuskan, eWallet EVMoto') or contains(@text, 'Jika diputuskan, eWallet EVMoto')]"
+    )
+    # Tombol batal di dialog putuskan: string resmi 'Batalkan' (cancel) atau 'Batal'
+    BTN_CANCEL_PUTUSKAN = (
+        AppiumBy.XPATH,
+        "//android.widget.Button[@content-desc='Batalkan' or @text='Batalkan' or @content-desc='Batal' or @text='Batal']"
+    )
+    # ewallet_txn_copied
+    SNACKBAR_TXN_COPIED_EXACT = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'No. transaksi berhasil disalin') or contains(@text, 'No. transaksi berhasil disalin')]"
+    )
+
+    def scroll_down(self, ratio: float = 0.4):
+        """Menggeser layar ke bawah (jari dari 70% ke 30% tinggi layar) memakai swipe dari BasePage."""
+        size = self.driver.get_window_size()
+        x = int(size["width"] / 2)
+        start_y = int(size["height"] * 0.7)
+        end_y = int(size["height"] * (0.7 - ratio))
+        self.swipe(x, start_y, x, end_y, 500)
+        time.sleep(0.5)
+
+    def is_ecgo_not_connected(self) -> bool:
+        """Memeriksa status 'Tidak Terhubung dengan ECGO' / 'Belum Terhubung'."""
+        return self.is_displayed(self.TEXT_STATUS_BELUM_TERHUBUNG, timeout=3)
+
+    def has_recharge_history_items(self) -> bool:
+        """Memeriksa ada item riwayat isi ulang (Top-up Saldo / rute Bank, QRIS, Saldo ECGO)."""
+        return self.is_displayed(self.ITEM_RIWAYAT_ISI_ULANG, timeout=4)
+
+    def is_recharge_empty_state_displayed(self) -> bool:
+        """Memeriksa empty state 'Tidak Memiliki Riwayat Isi Ulang Saldo'."""
+        return self.is_displayed(self.EMPTY_STATE_RECHARGE, timeout=4)
+
+    def is_recharge_empty_description_displayed(self) -> bool:
+        """Memeriksa teks 'Anda belum pernah melakukan isi ulang saldo.'"""
+        return self.is_displayed(self.TEXT_EMPTY_RECHARGE_DESCRIPTION, timeout=3)
+
+    def is_txn_copied_snackbar_displayed(self) -> bool:
+        """Memeriksa snackbar 'No. transaksi berhasil disalin.'"""
+        return self.is_displayed(self.SNACKBAR_TXN_COPIED_EXACT, timeout=3)
+
+    def get_clipboard_text(self) -> str:
+        """Membaca isi clipboard perangkat Android lewat Appium."""
+        return self.driver.get_clipboard_text() or ""
+
+    def is_total_tunggakan_displayed(self) -> bool:
+        """Memeriksa kartu 'Total Tunggakan Rp...'."""
+        return self.is_displayed(self.TEXT_TOTAL_TUNGGAKAN, timeout=4)
+
+    def is_tunggakan_description_displayed(self) -> bool:
+        """Memeriksa penjelasan tunggakan agar terhindar dari denda."""
+        return self.is_displayed(self.TEXT_TUNGGAKAN_DESCRIPTION, timeout=3)
+
+    def is_no_outstanding_displayed(self) -> bool:
+        """Memeriksa teks 'Tidak ada tunggakan'."""
+        return self.is_displayed(self.TEXT_TIDAK_ADA_TUNGGAKAN, timeout=3)
+
+    def is_no_bills_displayed(self) -> bool:
+        """Memeriksa teks 'Tidak ada tagihan yang dapat dibayar.'"""
+        return self.is_displayed(self.TEXT_TIDAK_ADA_TAGIHAN, timeout=3)
+
+    def has_bill_type_items(self) -> bool:
+        """Memeriksa ada item tagihan armada (Swap Baterai / Motor Bulanan / Motor Harian / Garansi Baterai)."""
+        return self.is_displayed(self.ITEM_JENIS_TAGIHAN, timeout=4)
+
+    def is_link_required_message_displayed(self) -> bool:
+        """Memeriksa pesan 'Hubungkan eWallet terlebih dahulu untuk melakukan pembayaran tagihan.'"""
+        return self.is_displayed(self.TEXT_LINK_REQUIRED_FOR_PAY, timeout=4)
+
+    def is_link_ecgo_modal_displayed(self) -> bool:
+        """Memeriksa modal 'Hubungkan EVMoto dengan ECGO'."""
+        return self.is_displayed(self.TITLE_LINK_ECGO_MODAL, timeout=4)
+
+    def is_putuskan_dialog_displayed(self) -> bool:
+        """Memeriksa dialog putuskan eWallet: teks peringatan dan tombol 'Ya, Putuskan' tampil."""
+        return self.is_displayed(self.TEXT_PUTUSKAN_DESCRIPTION, timeout=4) and self.is_displayed(self.BTN_CONFIRM_PUTUSKAN, timeout=2)
+
+    def cancel_putuskan_ewallet(self):
+        """Mengetuk tombol batal pada dialog putuskan eWallet."""
+        self.click(self.BTN_CANCEL_PUTUSKAN, label="Tombol Batal Putuskan eWallet")
+
+    def press_back(self):
+        """Menekan tombol Back Android (menutup dialog yang terbuka)."""
+        self.driver.back()
+        time.sleep(0.5)

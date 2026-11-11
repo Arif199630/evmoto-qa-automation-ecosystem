@@ -9,12 +9,62 @@ Target  : Layar Aktivitas Saya, Tab Guarantee Income (GI), Perhitungan Akumulasi
 Wording : Bersumber 100% dari strings resmi APK driver_strings_id.json
 ================================================================================
 """
+import re
 import time
+from typing import Optional
 from appium.webdriver.common.appiumby import AppiumBy
 from core.base_page import BasePage
 from utils.logger import get_logger
 
 logger = get_logger("DrvActivityPage")
+
+DRIVER_PACKAGE = "com.evmoto.driver.app"
+_POLA_RUPIAH = re.compile(r"([+\-−]?)\s*Rp\s?(\d[\d.]*(?:,\d+)?)", re.I)
+_POLA_JAM = re.compile(r"\d{1,2}[:.]\d{2}")
+
+
+def parse_rupiah(teks: str) -> Optional[float]:
+    """Nominal Rupiah pertama di teks UI: 'Rp 10.200' -> 10200.0, '-Rp 1.020' -> -1020.0, tanpa 'Rp' -> None."""
+    if not teks:
+        return None
+    m = _POLA_RUPIAH.search(teks)
+    if not m:
+        return None
+    angka = float(m.group(2).rstrip(".").replace(".", "").replace(",", "."))
+    return -angka if m.group(1) in ("-", "−") else angka
+
+
+def label_elemen(el) -> str:
+    """content-desc (Flutter) atau text (native) sebuah elemen."""
+    return (el.get_attribute("content-desc") or el.get_attribute("text") or "").strip()
+
+
+def baca_teks_sekitar(page: BasePage, locator) -> list:
+    """Teks label, saudara berikutnya, dan induknya.
+
+    Flutter kadang merender nilai di node terpisah dari labelnya, jadi nilai dicari di tiga tempat itu.
+    Mengembalikan list kosong bila label tidak ditemukan.
+    """
+    try:
+        el = page.find(locator, timeout=5)
+    except Exception:
+        return []
+    hasil = [label_elemen(el)]
+    for xpath_relatif in ("following-sibling::*[1]", ".."):
+        try:
+            hasil.append(label_elemen(el.find_element(AppiumBy.XPATH, xpath_relatif)))
+        except Exception:
+            pass
+    return [t for t in hasil if t]
+
+
+def baca_nominal_dekat_label(page: BasePage, locator) -> Optional[float]:
+    """Nominal Rupiah milik sebuah label (di label itu sendiri, saudara berikutnya, atau induknya)."""
+    for teks in baca_teks_sekitar(page, locator):
+        nominal = parse_rupiah(teks)
+        if nominal is not None:
+            return nominal
+    return None
 
 
 class DrvActivityPage(BasePage):
@@ -40,9 +90,12 @@ class DrvActivityPage(BasePage):
         "//*[contains(@content-desc, 'Revenue Summary') or contains(@text, 'Revenue Summary') or "
         "contains(@content-desc, 'Riwayat Pendapatan') or contains(@text, 'Riwayat Pendapatan')]"
     )
+    # Label tab resmi APK: my_activity_tab_referral = 'Referral Program' (dicocokkan persis);
+    # 'Referral Income' dipertahankan dari locator lama.
     TAB_REFERRAL = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Referral Income') or contains(@text, 'Referral Income')]"
+        "//*[@content-desc='Referral Program' or @text='Referral Program' or "
+        "contains(@content-desc, 'Referral Income') or contains(@text, 'Referral Income')]"
     )
 
     # 1.1 TAB PESANAN & INVOICE / DETAIL PESANAN DRIVER
@@ -372,3 +425,245 @@ class DrvActivityPage(BasePage):
         """Kembali dari layar Detail Pesanan / Invoice Driver ke Tab Pesanan."""
         self.click(self.BTN_KEMBALI_DETAIL_PESANAN, label="Tombol Kembali dari Detail Pesanan")
         time.sleep(1)
+
+    # ==========================================================================
+    # 5. LOCATOR VERIFIKASI HASIL (teks dari driver_strings_id.json, nama key di komentar)
+    # ==========================================================================
+    # guarantee_income_history_per_hour = '*Per jam {{amount}}'
+    TEXT_GI_RATE_PER_JAM = (
+        AppiumBy.XPATH,
+        "//*[starts-with(@content-desc, '*Per jam') or starts-with(@text, '*Per jam')]"
+    )
+    # my_activity_guarantee_not_available = 'Belum Tersedia Gurantee Income' (ejaan sesuai APK)
+    EMPTY_STATE_GI_NOT_AVAILABLE = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Belum Tersedia Gurantee Income') or contains(@text, 'Belum Tersedia Gurantee Income')]"
+    )
+    # guarantee_income_history_empty_today / guarantee_income_history_empty_title
+    EMPTY_STATE_GI_TODAY = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Anda belum memiliki pendapatan Guarantee Income pada hari ini') or "
+        "contains(@text, 'Anda belum memiliki pendapatan Guarantee Income pada hari ini') or "
+        "contains(@content-desc, 'Tidak Ada Guarantee Income') or contains(@text, 'Tidak Ada Guarantee Income')]"
+    )
+    # guarantee_income_area_out_title = 'Anda Berada Di Luar Area Jaminan Pendapatan.'
+    TEXT_GI_OUTSIDE_AREA = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Anda Berada Di Luar Area Jaminan Pendapatan') or "
+        "contains(@text, 'Anda Berada Di Luar Area Jaminan Pendapatan')]"
+    )
+    # my_activity_total_guarantee_payment_zero = 'Total Guarantee Payment tetap Rp0'
+    TEXT_GI_TOTAL_PAYMENT_ZERO = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Total Guarantee Payment tetap Rp0') or contains(@text, 'Total Guarantee Payment tetap Rp0')]"
+    )
+    # guarantee_income_history_title / guarantee_income_history_total_net_label (ejaan sesuai APK)
+    HEADER_RIWAYAT_GI = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Riwayat Guarantee Income') or contains(@text, 'Riwayat Guarantee Income')]"
+    )
+    TEXT_GI_TOTAL_NET = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Total Net Gurantee') or contains(@text, 'Total Net Gurantee')]"
+    )
+    # my_activity_coupon_order_amount / my_activity_coupon_order_income
+    TEXT_ORDER_AMOUNT = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Order Amount') or contains(@text, 'Order Amount')]"
+    )
+    TEXT_ORDER_INCOME = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Order Income') or contains(@text, 'Order Income')]"
+    )
+    # ewallet_history_revenue_balance_before / _change / _after
+    TEXT_SALDO_SEBELUM = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Saldo sebelum') or contains(@text, 'Saldo sebelum')]"
+    )
+    TEXT_PERUBAHAN_SALDO = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Perubahan saldo') or contains(@text, 'Perubahan saldo')]"
+    )
+    TEXT_SALDO_SESUDAH = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Saldo sesudah') or contains(@text, 'Saldo sesudah')]"
+    )
+    # ewallet_activity_empty_title / no_activity_yet
+    EMPTY_STATE_AKTIVITAS_APK = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Belum Tersedia Aktivitas') or contains(@text, 'Belum Tersedia Aktivitas') or "
+        "contains(@content-desc, 'Belum Ada Aktivitas') or contains(@text, 'Belum Ada Aktivitas')]"
+    )
+    # my_activity_referral_total / my_activity_view_qr_code / my_activity_share_qr_code
+    TEXT_TOTAL_REFERRAL = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Total Referral') or contains(@text, 'Total Referral')]"
+    )
+    BTN_LIHAT_QR_CODE = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Lihat QR Code') or contains(@text, 'Lihat QR Code')]"
+    )
+    BTN_BAGIKAN_QR_CODE = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Bagikan QR Code') or contains(@text, 'Bagikan QR Code')]"
+    )
+    # Share sheet Android (bukan bagian APK): resource-id chooser/resolver milik sistem
+    ANDROID_SHARE_SHEET = (
+        AppiumBy.XPATH,
+        "//*[contains(@resource-id, 'android:id/chooser') or contains(@resource-id, 'android:id/resolver') or "
+        "contains(@resource-id, 'com.android.intentresolver')]"
+    )
+    # widgets_no_internet_title, snackbar_network_disconnected, requirements_internet_disconnected,
+    # dio_exception_connection_error, home_refresh, critical_error_button
+    INDIKATOR_OFFLINE = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Tidak Ada Koneksi Internet') or contains(@text, 'Tidak Ada Koneksi Internet') or "
+        "contains(@content-desc, 'Jaringan terputus') or contains(@text, 'Jaringan terputus') or "
+        "contains(@content-desc, 'Koneksi tidak terhubung') or contains(@text, 'Koneksi tidak terhubung') or "
+        "contains(@content-desc, 'Tidak dapat terhubung ke server') or contains(@text, 'Tidak dapat terhubung ke server') or "
+        "@content-desc='Muat Ulang' or @text='Muat Ulang' or @content-desc='Coba Lagi' or @text='Coba Lagi']"
+    )
+    # Layar error sistem yang terlihat di dump nyata aplikasi Driver
+    LAYAR_ERROR_SISTEM = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Maaf terjadi kesalahan') or contains(@text, 'Maaf terjadi kesalahan') or "
+        "contains(@content-desc, 'Kesalahan sistem, silakan coba lagi nanti') or "
+        "contains(@text, 'Kesalahan sistem, silakan coba lagi nanti')]"
+    )
+    # Bukti ada riwayat pesanan: status persis order_state_completed / order_state_cancelled, atau nomor order
+    BUKTI_RIWAYAT_PESANAN = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Selesai' or @text='Selesai' or @content-desc='Dibatalkan' or @text='Dibatalkan' or "
+        "contains(@content-desc, 'ORD-') or contains(@text, 'ORD-') or "
+        "contains(@content-desc, 'Order #') or contains(@text, 'Order #')]"
+    )
+
+    # ==========================================================================
+    # 6. METHOD VERIFIKASI HASIL
+    # ==========================================================================
+    def scroll_until_visible(self, locator, max_swipes: int = 4) -> bool:
+        """Geser layar ke atas sampai elemen tampil (maks max_swipes kali). True bila akhirnya tampil."""
+        if self.is_displayed(locator, timeout=3):
+            return True
+        size = self.driver.get_window_size()
+        x = int(size["width"] * 0.5)
+        for _ in range(max_swipes):
+            self.swipe(x, int(size["height"] * 0.75), x, int(size["height"] * 0.35), duration=500)
+            time.sleep(0.8)
+            if self.is_displayed(locator, timeout=2):
+                return True
+        return False
+
+    def read_amount_near(self, locator) -> Optional[float]:
+        """Nominal Rupiah milik label (digeser ke layar dulu). None bila label/nominal tidak terbaca."""
+        if not self.scroll_until_visible(locator):
+            return None
+        return baca_nominal_dekat_label(self, locator)
+
+    def read_texts_near(self, locator) -> list:
+        """Teks label beserta saudara dan induknya (digeser ke layar dulu)."""
+        if not self.scroll_until_visible(locator):
+            return []
+        return baca_teks_sekitar(self, locator)
+
+    def read_time_near(self, locator) -> Optional[str]:
+        """Teks waktu (format HH:MM / MM:SS) milik label timer, None bila tidak terbaca."""
+        for teks in self.read_texts_near(locator):
+            m = _POLA_JAM.search(teks)
+            if m:
+                return m.group(0)
+        return None
+
+    def is_gi_program_not_available(self) -> bool:
+        """True bila tab GI menampilkan 'Belum Tersedia Gurantee Income' (akun tanpa program GI)."""
+        return self.is_displayed(self.EMPTY_STATE_GI_NOT_AVAILABLE, timeout=3)
+
+    def is_gi_outside_area(self) -> bool:
+        """True bila aplikasi menyatakan driver berada di luar area jaminan pendapatan."""
+        return self.is_displayed(self.TEXT_GI_OUTSIDE_AREA, timeout=3)
+
+    def is_gi_today_empty(self) -> bool:
+        """True bila riwayat GI hari ini kosong (teks empty state resmi APK)."""
+        return self.scroll_until_visible(self.EMPTY_STATE_GI_TODAY, max_swipes=3)
+
+    def has_gi_history_status_badge(self) -> bool:
+        """True bila minimal satu riwayat GI menampilkan badge status (Sudah Dibayarkan / Menunggu Konfirmasi)."""
+        return (self.scroll_until_visible(self.BADGE_STATUS_PAID, max_swipes=3) or
+                self.is_displayed(self.BADGE_STATUS_WAITING, timeout=2))
+
+    def is_gi_detail_displayed(self) -> bool:
+        """True bila halaman/modal rincian GI terbuka (judul riwayat GI atau label 'Total Net Gurantee')."""
+        return self.is_displayed(self.HEADER_RIWAYAT_GI, timeout=5) or self.is_displayed(self.TEXT_GI_TOTAL_NET, timeout=3)
+
+    def is_revenue_empty_state_displayed(self) -> bool:
+        """True bila layar pendapatan menampilkan empty state."""
+        return self.is_displayed(self.EMPTY_STATE_REVENUE, timeout=3) or self.is_displayed(self.EMPTY_STATE_AKTIVITAS_APK, timeout=2)
+
+    def has_revenue_ledger(self) -> bool:
+        """True bila minimal satu baris mutasi pendapatan ('Saldo sebelum') tampil."""
+        return self.scroll_until_visible(self.TEXT_SALDO_SEBELUM, max_swipes=2)
+
+    def read_referral_total(self) -> Optional[int]:
+        """Angka 'Total Referral' (jumlah downline). None bila tidak terbaca."""
+        for teks in self.read_texts_near(self.TEXT_TOTAL_REFERRAL):
+            sisa = teks.replace("Total Referral", "")
+            m = re.search(r"\d+", sisa)
+            if m:
+                return int(m.group(0))
+        return None
+
+    def open_share_referral(self):
+        """Mengetuk 'Bagikan QR Code' (membuka 'Lihat QR Code' dulu bila tombol bagikan belum tampil)."""
+        if not self.is_displayed(self.BTN_BAGIKAN_QR_CODE, timeout=3) and self.scroll_until_visible(self.BTN_LIHAT_QR_CODE, max_swipes=2):
+            self.click(self.BTN_LIHAT_QR_CODE, label="Tombol Lihat QR Code")
+            time.sleep(1)
+        self.scroll_until_visible(self.BTN_BAGIKAN_QR_CODE, max_swipes=2)
+        self.click(self.BTN_BAGIKAN_QR_CODE, label="Tombol Bagikan QR Code")
+        time.sleep(2)
+
+    def is_android_share_sheet_displayed(self) -> bool:
+        """True bila dialog berbagi bawaan Android (chooser) sedang tampil."""
+        try:
+            if self.driver.current_package in ("android", "com.android.intentresolver"):
+                return True
+        except Exception:
+            pass
+        return self.is_displayed(self.ANDROID_SHARE_SHEET, timeout=3)
+
+    def close_share_sheet(self):
+        """Menutup dialog berbagi Android dengan tombol Back."""
+        self.driver.press_keycode(4)
+        time.sleep(1)
+
+    def is_app_in_foreground(self) -> bool:
+        """True bila aplikasi Driver masih berjalan di foreground (tidak force close)."""
+        try:
+            return self.driver.query_app_state(DRIVER_PACKAGE) == 4
+        except Exception:
+            return False
+
+    def is_error_screen_displayed(self) -> bool:
+        """True bila layar error sistem ('Maaf terjadi kesalahan') tampil."""
+        return self.is_displayed(self.LAYAR_ERROR_SISTEM, timeout=2)
+
+    def set_network_enabled(self, enabled: bool) -> bool:
+        """Menyalakan/mematikan Wi-Fi dan data seluler via UiAutomator2. False bila perangkat menolak."""
+        try:
+            self.driver.execute_script("mobile: setConnectivity", {"wifi": enabled, "data": enabled})
+            time.sleep(2)
+            return True
+        except Exception as e:
+            logger.warning(f"Kontrol jaringan tidak didukung perangkat: {e}")
+            return False
+
+    def is_offline_indicator_displayed(self) -> bool:
+        """True bila aplikasi menampilkan pesan jaringan terputus atau tombol muat ulang / coba lagi."""
+        return self.is_displayed(self.INDIKATOR_OFFLINE, timeout=8)
+
+    def has_order_history(self) -> bool:
+        """True bila tab Pesanan memuat minimal satu riwayat order (status atau nomor order)."""
+        return self.is_displayed(self.BUKTI_RIWAYAT_PESANAN, timeout=3)
+
+    def is_pesanan_empty_state_displayed(self) -> bool:
+        """True bila tab Pesanan menampilkan empty state 'Belum Ada Pesanan'."""
+        return self.is_displayed(self.EMPTY_STATE_PESANAN, timeout=3)

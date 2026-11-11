@@ -113,7 +113,7 @@ class TestGoPayPaymentAutomationSuite:
         booking_page.select_payment_method("gopay")
         then("Metode pembayaran aktif pada booking card menampilkan 'GoPay'")
         selected = booking_page.get_selected_payment_method()
-        assert selected is not None
+        assert "gopay" in selected.lower(), f"Metode bayar terpilih harus GOPAY, terbaca: '{selected}'"
 
     @pytest.mark.pilar1
     @pytest.mark.positive_true
@@ -199,7 +199,8 @@ class TestGoPayPaymentAutomationSuite:
         time.sleep(0.5)
         booking_page.select_payment_method("gopay")
         then("Metode GoPay aktif dan rincian surcharge 2% dimuat ulang")
-        assert booking_page.get_selected_payment_method() is not None
+        selected = booking_page.get_selected_payment_method()
+        assert "gopay" in selected.lower(), f"Metode bayar terpilih harus GoPay, terbaca: '{selected}'"
 
     @pytest.mark.pilar2
     @pytest.mark.positive_false
@@ -332,7 +333,12 @@ class TestGoPayOrderBehaviourMatrixSuite:
         penalty_amount: float = 5000.0,
         is_advance: bool = False
     ):
-        """Helper validasi GoPay pada seluruh 4 jarak untuk kombinasi biaya tertentu menggunakan Gross-Up."""
+        """Helper validasi GoPay pada seluruh 4 jarak untuk kombinasi biaya tertentu menggunakan Gross-Up.
+
+        Mengembalikan daftar grand total (int) per tier jarak: [1.5 km, 3.5 km, 10 km, 20 km].
+        Catatan: kalkulator tidak memiliki parameter advance booking, jadi is_advance tidak mengubah hasil.
+        """
+        grand_totals = []
         for d in self.DISTANCES:
             excess_wait_min = max(0, waiting_minutes - 15)
             wait_fee = float(excess_wait_min * 500.0)
@@ -357,63 +363,137 @@ class TestGoPayOrderBehaviourMatrixSuite:
                 penalty_amount=penalty_amount,
             )
 
-            assert res["is_ewallet_surcharge"] is True
-            assert res["charge_fee_rate"] == 0.02
-            assert res["start_price"] == 6000.0
-            assert res["total_argo"] == d["total_argo"]
-            assert res["platform_fee"] == d["plat_fee"]
-            assert res["waiting_fee"] == wait_fee
-            assert res["coupon_discount"] == coupon_disc
-            assert res["penalty_fee"] == penalty_val
-            assert res["adjusted_subtotal"] == expected_adj_subtotal
-            assert res["charge_fee_amount"] == expected_surcharge
-            assert res["grand_total"] == expected_grand_total
+            assert res["is_ewallet_surcharge"] is True, f"[{scenario_name}] {d['tier']}: GoPay harus dikenai handling fee e-wallet"
+            assert res["charge_fee_rate"] == 0.02, f"[{scenario_name}] {d['tier']}: rate handling fee GoPay harus 2%, didapat {res['charge_fee_rate']}"
+            assert res["start_price"] == 6000.0, f"[{scenario_name}] {d['tier']}: tarif awal harus Rp6.000, didapat {res['start_price']}"
+            assert res["total_argo"] == d["total_argo"], f"[{scenario_name}] {d['tier']}: total argo salah, harus {d['total_argo']} didapat {res['total_argo']}"
+            assert res["platform_fee"] == d["plat_fee"], f"[{scenario_name}] {d['tier']}: platform fee salah, didapat {res['platform_fee']}"
+            assert res["waiting_fee"] == wait_fee, f"[{scenario_name}] {d['tier']}: waiting fee harus {wait_fee}, didapat {res['waiting_fee']}"
+            assert res["coupon_discount"] == coupon_disc, f"[{scenario_name}] {d['tier']}: potongan kupon harus {coupon_disc}, didapat {res['coupon_discount']}"
+            assert res["penalty_fee"] == penalty_val, f"[{scenario_name}] {d['tier']}: penalty harus {penalty_val}, didapat {res['penalty_fee']}"
+            assert res["adjusted_subtotal"] == expected_adj_subtotal, f"[{scenario_name}] {d['tier']}: subtotal sebelum handling fee harus {expected_adj_subtotal}, didapat {res['adjusted_subtotal']}"
+            assert res["charge_fee_amount"] == expected_surcharge, f"[{scenario_name}] {d['tier']}: handling fee harus {expected_surcharge}, didapat {res['charge_fee_amount']}"
+            assert res["grand_total"] == expected_grand_total, f"[{scenario_name}] {d['tier']}: grand total harus {expected_grand_total}, didapat {res['grand_total']}"
+            grand_totals.append(int(res["grand_total"]))
+        return grand_totals
 
     def test_TC_GOPAY_OB_01_normal_gopay_only(self, fare_calc):
-        self._verify_gopay_combo(fare_calc, "GoPay Only", use_coupon=False, waiting_minutes=0, apply_penalty=False)
+        grand_totals = self._verify_gopay_combo(fare_calc, "GoPay Only", use_coupon=False, waiting_minutes=0, apply_penalty=False)
+        # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 2)) untuk jarak 1.5 / 3.5 / 10 / 20 km
+        assert grand_totals == [6123, 10409, 39184, 91735], (
+            f"[TC_GOPAY_OB_01] Grand total GoPay (tanpa biaya tambahan) per tier jarak tidak sesuai acuan [6123, 10409, 39184, 91735]: {grand_totals}"
+        )
 
     def test_TC_GOPAY_OB_02_normal_gopay_plus_kupon(self, fare_calc):
-        self._verify_gopay_combo(fare_calc, "GoPay + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=False)
+        grand_totals = self._verify_gopay_combo(fare_calc, "GoPay + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=False)
+        # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 2)) untuk jarak 1.5 / 3.5 / 10 / 20 km
+        assert grand_totals == [1021, 5307, 34082, 86633], (
+            f"[TC_GOPAY_OB_02] Grand total GoPay (kupon -Rp5.000) per tier jarak tidak sesuai acuan [1021, 5307, 34082, 86633]: {grand_totals}"
+        )
 
     def test_TC_GOPAY_OB_03_normal_gopay_plus_waiting_fee(self, fare_calc):
-        self._verify_gopay_combo(fare_calc, "GoPay + WaitFee", use_coupon=False, waiting_minutes=20, apply_penalty=False)
+        grand_totals = self._verify_gopay_combo(fare_calc, "GoPay + WaitFee", use_coupon=False, waiting_minutes=20, apply_penalty=False)
+        # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 2)) untuk jarak 1.5 / 3.5 / 10 / 20 km
+        assert grand_totals == [8674, 12960, 41735, 94286], (
+            f"[TC_GOPAY_OB_03] Grand total GoPay (waiting fee 20 menit (+Rp2.500)) per tier jarak tidak sesuai acuan [8674, 12960, 41735, 94286]: {grand_totals}"
+        )
 
     def test_TC_GOPAY_OB_04_normal_gopay_plus_penalty(self, fare_calc):
-        self._verify_gopay_combo(fare_calc, "GoPay + Penalty", use_coupon=False, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0)
+        grand_totals = self._verify_gopay_combo(fare_calc, "GoPay + Penalty", use_coupon=False, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0)
+        # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 2)) untuk jarak 1.5 / 3.5 / 10 / 20 km
+        assert grand_totals == [11225, 15511, 44286, 96837], (
+            f"[TC_GOPAY_OB_04] Grand total GoPay (penalty +Rp5.000) per tier jarak tidak sesuai acuan [11225, 15511, 44286, 96837]: {grand_totals}"
+        )
 
     def test_TC_GOPAY_OB_05_normal_gopay_plus_kupon_plus_waiting_fee(self, fare_calc):
-        self._verify_gopay_combo(fare_calc, "GoPay + Kupon + WaitFee", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=False)
+        grand_totals = self._verify_gopay_combo(fare_calc, "GoPay + Kupon + WaitFee", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=False)
+        # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 2)) untuk jarak 1.5 / 3.5 / 10 / 20 km
+        assert grand_totals == [3572, 7858, 36633, 89184], (
+            f"[TC_GOPAY_OB_05] Grand total GoPay (kupon + waiting fee) per tier jarak tidak sesuai acuan [3572, 7858, 36633, 89184]: {grand_totals}"
+        )
 
     def test_TC_GOPAY_OB_06_normal_gopay_full_combo(self, fare_calc):
-        self._verify_gopay_combo(fare_calc, "GoPay Full Combo", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0)
+        grand_totals = self._verify_gopay_combo(fare_calc, "GoPay Full Combo", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0)
+        # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 2)) untuk jarak 1.5 / 3.5 / 10 / 20 km
+        assert grand_totals == [8674, 12960, 41735, 94286], (
+            f"[TC_GOPAY_OB_06] Grand total GoPay (kupon + waiting fee + penalty) per tier jarak tidak sesuai acuan [8674, 12960, 41735, 94286]: {grand_totals}"
+        )
 
     def test_TC_GOPAY_OB_07_normal_gopay_plus_waiting_fee_plus_penalty(self, fare_calc):
-        self._verify_gopay_combo(fare_calc, "GoPay + WaitFee + Penalty", use_coupon=False, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0)
+        grand_totals = self._verify_gopay_combo(fare_calc, "GoPay + WaitFee + Penalty", use_coupon=False, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0)
+        # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 2)) untuk jarak 1.5 / 3.5 / 10 / 20 km
+        assert grand_totals == [13776, 18062, 46837, 99388], (
+            f"[TC_GOPAY_OB_07] Grand total GoPay (waiting fee + penalty) per tier jarak tidak sesuai acuan [13776, 18062, 46837, 99388]: {grand_totals}"
+        )
 
     def test_TC_GOPAY_OB_08_normal_gopay_plus_penalty_plus_kupon_offset(self, fare_calc):
-        self._verify_gopay_combo(fare_calc, "GoPay + Penalty + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0)
+        grand_totals = self._verify_gopay_combo(fare_calc, "GoPay + Penalty + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0)
+        # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 2)) untuk jarak 1.5 / 3.5 / 10 / 20 km
+        assert grand_totals == [6123, 10409, 39184, 91735], (
+            f"[TC_GOPAY_OB_08] Grand total GoPay (penalty dioffset kupon) per tier jarak tidak sesuai acuan [6123, 10409, 39184, 91735]: {grand_totals}"
+        )
 
     def test_TC_GOPAY_OB_09_advance_gopay_only(self, fare_calc):
-        self._verify_gopay_combo(fare_calc, "Advance GoPay Only", use_coupon=False, waiting_minutes=0, apply_penalty=False, is_advance=True)
+        grand_totals = self._verify_gopay_combo(fare_calc, "Advance GoPay Only", use_coupon=False, waiting_minutes=0, apply_penalty=False, is_advance=True)
+        # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 2)) untuk jarak 1.5 / 3.5 / 10 / 20 km
+        # Kalkulator tidak membedakan advance booking: nilai acuan sama dengan skenario normal OB-01.
+        assert grand_totals == [6123, 10409, 39184, 91735], (
+            f"[TC_GOPAY_OB_09] Grand total GoPay (tanpa biaya tambahan) per tier jarak tidak sesuai acuan [6123, 10409, 39184, 91735]: {grand_totals}"
+        )
 
     def test_TC_GOPAY_OB_10_advance_gopay_plus_kupon(self, fare_calc):
-        self._verify_gopay_combo(fare_calc, "Advance GoPay + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=False, is_advance=True)
+        grand_totals = self._verify_gopay_combo(fare_calc, "Advance GoPay + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=False, is_advance=True)
+        # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 2)) untuk jarak 1.5 / 3.5 / 10 / 20 km
+        # Kalkulator tidak membedakan advance booking: nilai acuan sama dengan skenario normal OB-02.
+        assert grand_totals == [1021, 5307, 34082, 86633], (
+            f"[TC_GOPAY_OB_10] Grand total GoPay (kupon -Rp5.000) per tier jarak tidak sesuai acuan [1021, 5307, 34082, 86633]: {grand_totals}"
+        )
 
     def test_TC_GOPAY_OB_11_advance_gopay_plus_waiting_fee(self, fare_calc):
-        self._verify_gopay_combo(fare_calc, "Advance GoPay + WaitFee", use_coupon=False, waiting_minutes=20, apply_penalty=False, is_advance=True)
+        grand_totals = self._verify_gopay_combo(fare_calc, "Advance GoPay + WaitFee", use_coupon=False, waiting_minutes=20, apply_penalty=False, is_advance=True)
+        # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 2)) untuk jarak 1.5 / 3.5 / 10 / 20 km
+        # Kalkulator tidak membedakan advance booking: nilai acuan sama dengan skenario normal OB-03.
+        assert grand_totals == [8674, 12960, 41735, 94286], (
+            f"[TC_GOPAY_OB_11] Grand total GoPay (waiting fee 20 menit (+Rp2.500)) per tier jarak tidak sesuai acuan [8674, 12960, 41735, 94286]: {grand_totals}"
+        )
 
     def test_TC_GOPAY_OB_12_advance_gopay_plus_penalty(self, fare_calc):
-        self._verify_gopay_combo(fare_calc, "Advance GoPay + Penalty", use_coupon=False, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        grand_totals = self._verify_gopay_combo(fare_calc, "Advance GoPay + Penalty", use_coupon=False, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 2)) untuk jarak 1.5 / 3.5 / 10 / 20 km
+        # Kalkulator tidak membedakan advance booking: nilai acuan sama dengan skenario normal OB-04.
+        assert grand_totals == [11225, 15511, 44286, 96837], (
+            f"[TC_GOPAY_OB_12] Grand total GoPay (penalty +Rp5.000) per tier jarak tidak sesuai acuan [11225, 15511, 44286, 96837]: {grand_totals}"
+        )
 
     def test_TC_GOPAY_OB_13_advance_gopay_plus_kupon_plus_waiting_fee(self, fare_calc):
-        self._verify_gopay_combo(fare_calc, "Advance GoPay + Kupon + WaitFee", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=False, is_advance=True)
+        grand_totals = self._verify_gopay_combo(fare_calc, "Advance GoPay + Kupon + WaitFee", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=False, is_advance=True)
+        # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 2)) untuk jarak 1.5 / 3.5 / 10 / 20 km
+        # Kalkulator tidak membedakan advance booking: nilai acuan sama dengan skenario normal OB-05.
+        assert grand_totals == [3572, 7858, 36633, 89184], (
+            f"[TC_GOPAY_OB_13] Grand total GoPay (kupon + waiting fee) per tier jarak tidak sesuai acuan [3572, 7858, 36633, 89184]: {grand_totals}"
+        )
 
     def test_TC_GOPAY_OB_14_advance_gopay_full_combo(self, fare_calc):
-        self._verify_gopay_combo(fare_calc, "Advance GoPay Full Combo", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        grand_totals = self._verify_gopay_combo(fare_calc, "Advance GoPay Full Combo", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 2)) untuk jarak 1.5 / 3.5 / 10 / 20 km
+        # Kalkulator tidak membedakan advance booking: nilai acuan sama dengan skenario normal OB-06.
+        assert grand_totals == [8674, 12960, 41735, 94286], (
+            f"[TC_GOPAY_OB_14] Grand total GoPay (kupon + waiting fee + penalty) per tier jarak tidak sesuai acuan [8674, 12960, 41735, 94286]: {grand_totals}"
+        )
 
     def test_TC_GOPAY_OB_15_advance_gopay_plus_waiting_fee_plus_penalty(self, fare_calc):
-        self._verify_gopay_combo(fare_calc, "Advance GoPay + WaitFee + Penalty", use_coupon=False, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        grand_totals = self._verify_gopay_combo(fare_calc, "Advance GoPay + WaitFee + Penalty", use_coupon=False, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 2)) untuk jarak 1.5 / 3.5 / 10 / 20 km
+        # Kalkulator tidak membedakan advance booking: nilai acuan sama dengan skenario normal OB-07.
+        assert grand_totals == [13776, 18062, 46837, 99388], (
+            f"[TC_GOPAY_OB_15] Grand total GoPay (waiting fee + penalty) per tier jarak tidak sesuai acuan [13776, 18062, 46837, 99388]: {grand_totals}"
+        )
 
     def test_TC_GOPAY_OB_16_advance_gopay_plus_penalty_plus_kupon_offset(self, fare_calc):
-        self._verify_gopay_combo(fare_calc, "Advance GoPay + Penalty + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        grand_totals = self._verify_gopay_combo(fare_calc, "Advance GoPay + Penalty + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 2)) untuk jarak 1.5 / 3.5 / 10 / 20 km
+        # Kalkulator tidak membedakan advance booking: nilai acuan sama dengan skenario normal OB-08.
+        assert grand_totals == [6123, 10409, 39184, 91735], (
+            f"[TC_GOPAY_OB_16] Grand total GoPay (penalty dioffset kupon) per tier jarak tidak sesuai acuan [6123, 10409, 39184, 91735]: {grand_totals}"
+        )
 

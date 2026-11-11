@@ -33,6 +33,16 @@ DRIVER_PIN = Config.DRIVER_ACTIVE_PIN      # <EVMOTO_OTP_BYPASS>
 USER_PHONE = Config.DEV_PHONE              # <TEST_USER_PHONE>
 USER_OTP = Config.DEV_OTP                  # <EVMOTO_OTP_BYPASS>
 
+# Alasan skip yang dipakai bersama: driver_simulator hanya menyimpan state di Python,
+# tidak mengirim order apa pun ke aplikasi Driver di perangkat.
+SKIP_TANPA_ORDER_AKTIF = (
+    "Butuh pesanan aktif nyata dari aplikasi User (akun/perangkat kedua); driver_simulator hanya "
+    "mensimulasikan state di Python dan tidak mengirim order ke aplikasi Driver."
+)
+SKIP_TANPA_LAYAR_PEMBAYARAN = (
+    "Layar pembayaran driver hanya muncul setelah trip nyata selesai. " + SKIP_TANPA_ORDER_AKTIF
+)
+
 
 @pytest.fixture(scope="function")
 def driver_simulator():
@@ -185,10 +195,16 @@ class TestDrvBooking:
         Ekspektasi: Obrolan instan dua arah terbuka lancar tanpa lag atau kendala perizinan.
         """
         self._ensure_driver_online(driver_app)
+        drv_book_pg = DrvBookingPage(driver_app)
+
         given("Perjalanan sedang berlangsung")
+        if not drv_book_pg.is_order_in_progress():
+            pytest.skip(SKIP_TANPA_ORDER_AKTIF)
         when("Driver mengetuk ikon Chat / Pesan")
+        drv_book_pg.open_in_trip_chat()
         then("Layar pesan obrolan in-trip dengan penumpang terbuka aktif")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert drv_book_pg.is_chat_screen_displayed(), \
+            "Layar chat in-trip (judul 'Pesan' dan kolom ketik pesan) tidak terbuka setelah mengetuk tombol Pesan"
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_PT_08_driver_menyelesaikan_perjalanan_di_titik_tujuan(self, driver_app, driver_simulator):
         """
@@ -217,10 +233,15 @@ class TestDrvBooking:
         drv_book_pg = DrvBookingPage(driver_app)
 
         given("Modal konfirmasi pembayaran tunai terbuka")
+        if not drv_book_pg.is_displayed(drv_book_pg.BTN_ALREADY_RECEIVED_PAYMENT, timeout=5):
+            pytest.skip(SKIP_TANPA_LAYAR_PEMBAYARAN)
         when("Driver menekan tombol 'Sudah Terima Pembayaran'")
         drv_book_pg.click_already_received_payment()
         then("Sistem mengonfirmasi penerimaan kas dan menutup pesanan")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert drv_book_pg.is_element_gone(drv_book_pg.BTN_ALREADY_RECEIVED_PAYMENT), \
+            "Tombol 'Sudah Terima Pembayaran' masih tampil; konfirmasi penerimaan kas tidak diproses"
+        assert not drv_book_pg.is_error_message_displayed(), \
+            "Muncul pesan error sistem setelah konfirmasi 'Sudah Terima Pembayaran'"
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_PT_10_driver_verifikasi_pelunasan_cashless_evwallet(self, driver_app, wallet_helper):
         """
@@ -229,10 +250,17 @@ class TestDrvBooking:
         Ekspektasi: Driver tidak perlu menagih tunai, saldo argo langsung dikreditkan ke eWallet driver.
         """
         self._ensure_driver_online(driver_app)
+        drv_book_pg = DrvBookingPage(driver_app)
+
         given("Pesanan diselesaikan dengan metode pembayaran EvWallet")
+        if not drv_book_pg.is_payment_summary_displayed():
+            pytest.skip(SKIP_TANPA_LAYAR_PEMBAYARAN)
+        if drv_book_pg.is_cash_payment_badge_displayed():
+            pytest.skip("Pesanan yang sedang tampil dibayar tunai (Cash), bukan EvWallet; pra-kondisi cashless tidak terpenuhi.")
         when("Driver memeriksa badge pembayaran")
         then("Keterangan 'Pembayaran Online' tertera dan pelunasan diproses otomatis")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert drv_book_pg.is_online_payment_badge_displayed(), \
+            "Pesanan non-tunai tidak menampilkan keterangan metode bayar 'Pembayaran Online'"
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_PT_11_driver_memeriksa_rincian_struk_pendapatan_bersih(self, driver_app, fare_calculator):
         """
@@ -241,11 +269,20 @@ class TestDrvBooking:
         Ekspektasi: Nilai pendapatan bersih driver (80% argo) dan potongan platform fee (10%) tertera transparan.
         """
         self._ensure_driver_online(driver_app)
+        drv_book_pg = DrvBookingPage(driver_app)
         calc = fare_calculator.calculate_fare(distance_km=3.5)
         given("Struk pembayaran pesanan tampil di layar")
+        if not drv_book_pg.is_payment_summary_displayed():
+            pytest.skip(SKIP_TANPA_LAYAR_PEMBAYARAN)
         when("Driver membaca rincian biaya")
         then(f"Argo Rp {calc['fare']:,} dan platform fee Rp {calc['platform_fee']:,} terverifikasi")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        # Jarak order nyata tidak dikendalikan test, jadi yang diverifikasi adalah kedua nilai struk tampil
+        # dan terbaca; angka calc hanya acuan untuk order 3.5 KM.
+        dibayar = drv_book_pg.read_amount_near(drv_book_pg.TEXT_PAID_BY_PASSENGER)
+        didapat = drv_book_pg.read_amount_near(drv_book_pg.TEXT_DRIVER_EARNINGS)
+        assert dibayar is not None, "Nominal 'Dibayarkan penumpang' tidak tampil/terbaca di struk pembayaran"
+        assert didapat is not None, "Nominal 'Yang didapatkan driver' tidak tampil/terbaca di struk pembayaran"
+        assert didapat > 0, f"Pendapatan bersih driver harus lebih dari Rp 0, tertulis Rp {didapat:,.0f}"
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_PT_12_driver_memberikan_penilaian_rating_penumpang(self, driver_app):
         """
@@ -256,11 +293,17 @@ class TestDrvBooking:
         self._ensure_driver_online(driver_app)
         drv_book_pg = DrvBookingPage(driver_app)
 
+        home_pg = DrvHomePage(driver_app)
+
         given("Dialog rating bintang terbuka")
+        if not drv_book_pg.is_rating_dialog_displayed():
+            pytest.skip("Dialog rating penumpang hanya muncul setelah trip nyata selesai. " + SKIP_TANPA_ORDER_AKTIF)
         when("Driver memilih bintang 5 dan menekan 'Kirim'")
         drv_book_pg.submit_rating()
         then("Aplikasi kembali ke Beranda siap menerima order berikutnya")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert drv_book_pg.is_element_gone(drv_book_pg.DIALOG_RATING_PENUMPANG), \
+            "Dialog rating penumpang masih terbuka setelah menekan 'Kirim'"
+        assert home_pg.is_home_screen_displayed(), "Setelah rating dikirim, aplikasi tidak kembali ke Beranda"
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_PT_13_driver_menerima_pesanan_terjadwal_advance_booking(self, driver_app):
         """
@@ -269,10 +312,17 @@ class TestDrvBooking:
         Ekspektasi: Kartu pesanan mencantumkan jam penjemputan terjadwal dan badge 'Booking'.
         """
         self._ensure_driver_online(driver_app)
+        home_pg = DrvHomePage(driver_app)
+        drv_book_pg = DrvBookingPage(driver_app)
+
         given("Terdapat pemesanan terjadwal (minimal 30 menit ke depan)")
+        home_pg.switch_to_scheduled_orders_tab()
+        if drv_book_pg.is_no_order_empty_state_displayed():
+            pytest.skip("Tidak ada pesanan terjadwal untuk driver uji; butuh Advance Booking nyata dari aplikasi User.")
         when("Sistem mengalokasikan pesanan ke Driver <EVMOTO_PHONE_EXTRA_1>")
         then("Badge 'Pesanan Terjadwal' tertera pada daftar pesanan aktif")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert drv_book_pg.is_booking_badge_displayed(), \
+            "Tab 'Pesanan Terjadwal' berisi pesanan tetapi badge tipe 'Booking' tidak tampil pada kartunya"
     # ==========================================================================
     # PILAR 1.1: AUTO SLIDE & GESTURE DISPATCH LIFECYCLE (SLIDE-01 s.d. SLIDE-08)
     # ==========================================================================
@@ -306,10 +356,14 @@ class TestDrvBooking:
         drv_book_pg = DrvBookingPage(driver_app)
 
         given("Driver telah menerima orderan dan bersiap berangkat")
+        if not drv_book_pg.is_order_in_progress():
+            pytest.skip(SKIP_TANPA_ORDER_AKTIF)
         when("Driver melakukan gestur Auto-Slide 'Geser untuk Berangkat'")
         res = drv_book_pg.slide_to_depart_to_pickup()
         then("Sistem mengonfirmasi keberangkatan driver menuju titik penjemputan")
         assert res is True
+        # slide_to_depart_to_pickup() mengembalikan True juga saat slider tidak ada, jadi hasil layar ikut dicek
+        assert drv_book_pg.is_picking_up_state_active(),             "Setelah geser berangkat, layar tidak berada di fase penjemputan (status/slider 'Sudah Tiba' tidak tampil)"
 
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_SLIDE_03_auto_slide_sampai_di_tempat_pickup_point(self, driver_app, driver_simulator):
@@ -376,10 +430,15 @@ class TestDrvBooking:
         drv_book_pg = DrvBookingPage(driver_app)
 
         given("Layar menampilkan komponen slider konfirmasi dispatch")
+        if not drv_book_pg.is_incoming_order_displayed():
+            pytest.skip(SKIP_TANPA_ORDER_AKTIF)
         when("Driver hanya menggeser slider sebesar 35% kemudian melepaskan sentuhan")
         res = drv_book_pg.slide_incomplete_and_release(drv_book_pg.SLIDER_ACCEPT_ORDER, percentage_drag=0.35)
         then("Slider secara aman auto-reset kembali ke titik awal tanpa mengubah status pesanan")
         assert res is True
+        # Method gestur selalu mengembalikan True, jadi hasilnya dibuktikan dari layar:
+        # slider terima pesanan masih ada = order belum diterima
+        assert drv_book_pg.is_displayed(drv_book_pg.SLIDER_ACCEPT_ORDER, timeout=3),             "Slider terima pesanan hilang setelah geser 35%; geser tidak penuh seharusnya tidak menerima order"
 
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_SLIDE_07_anti_reverse_slide_protection(self, driver_app):
@@ -392,10 +451,13 @@ class TestDrvBooking:
         drv_book_pg = DrvBookingPage(driver_app)
 
         given("Layar menampilkan komponen slider konfirmasi aksi")
+        if not drv_book_pg.is_incoming_order_displayed():
+            pytest.skip(SKIP_TANPA_ORDER_AKTIF)
         when("Driver mencoba menggeser slider dari arah kanan ke kiri (reverse)")
         res = drv_book_pg.slide_reverse_horizontal(drv_book_pg.SLIDER_ACCEPT_ORDER)
         then("Sistem mengabaikan gesekan berlawanan arah dan state order tetap terjaga")
         assert res is True
+        assert drv_book_pg.is_displayed(drv_book_pg.SLIDER_ACCEPT_ORDER, timeout=3),             "Slider terima pesanan hilang setelah geser terbalik; gerakan mundur seharusnya diabaikan"
 
     @pytest.mark.positive_true
     def test_TC_DRV_BOOK_SLIDE_08_e2e_full_lifecycle_5_stage_auto_slide(self, driver_app, driver_simulator):
@@ -656,28 +718,42 @@ class TestDrvBooking:
         logger.info("[CONCURRENCY PASS] Race condition dicegah dengan sempurna tanpa double-booking.")
 
     @pytest.mark.business_logic
-    def test_TC_DRV_BOOK_BL_03_penanganan_orderan_sudah_diambil_driver_lain(self, driver_app):
+    def test_TC_DRV_BOOK_BL_03_penanganan_orderan_sudah_diambil_driver_lain(self):
         """
         [BUSINESS LOGIC - BL-03]
         Deskripsi : Memeriksa dialog 'Orderan sudah diambil' saat driver kalah cepat mengonfirmasi order.
         Ekspektasi: Tampil 'Semoga lain kali lebih beruntung!' dan layar kembali ke Beranda siap order.
         """
-        self._ensure_driver_online(driver_app)
         given("Orderan telah diambil oleh mitra driver terdekat lainnya")
         when("Driver <EVMOTO_PHONE_EXTRA_1> mencoba menekan terima")
         then("Aplikasi menampilkan notifikasi 'Orderan sudah diambil' secara anggun")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        pytest.skip("Butuh order nyata yang di-broadcast ke dua driver dan diambil lebih dulu oleh driver di "
+                    "perangkat kedua; tidak bisa disusun dari satu perangkat.")
+
     @pytest.mark.business_logic
-    def test_TC_DRV_BOOK_BL_04_penanganan_pelanggan_membatalkan_pesanan_realtime(self, driver_app, driver_simulator):
+    def test_TC_DRV_BOOK_BL_04_penanganan_pelanggan_membatalkan_pesanan_realtime(self, driver_simulator):
         """
         [BUSINESS LOGIC - BL-04]
         Deskripsi : Penanganan saat pelanggan membatalkan pesanan ketika driver sedang menuju lokasi jemput.
         Ekspektasi: Muncul modal dialog 'Pelanggan membatalkan pesanan', navigasi terhenti, dan driver kembali Online.
+        Catatan   : Diverifikasi pada state machine driver_simulator. Modal di aplikasi Driver butuh
+                    order nyata dari aplikasi User sehingga tidak dicakup test ini.
         """
-        self._ensure_driver_online(driver_app)
-        driver_simulator.customer_cancel_order(reason="Terlalu lama menunggu")
+        given("Driver sedang menuju lokasi jemput untuk order aktif")
+        order = driver_simulator.accept_order(
+            {"order_id": "ORD-BL04-CANCEL", "pickup": "Menara Astra", "destination": "Grand Indonesia"}
+        )
+        when("Pelanggan membatalkan pesanan secara realtime")
+        record = driver_simulator.customer_cancel_order(reason="Terlalu lama menunggu")
         then("Driver menerima konfirmasi 'Pelanggan membatalkan pesanan' dan siap menerima order baru")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert record["order_id"] == order["order_id"], \
+            f"Pembatalan tercatat untuk order {record['order_id']}, bukan order aktif {order['order_id']}"
+        assert record["status"] == "cancelled_by_customer", f"Status pembatalan salah: {record['status']}"
+        assert record["cancelled_by"] == "Customer", f"Pembatal tercatat '{record['cancelled_by']}', seharusnya Customer"
+        assert driver_simulator.get_current_trip() is None, "Order yang dibatalkan pelanggan masih melekat sebagai trip aktif"
+        assert driver_simulator.is_driver_available() is True, \
+            "Driver tidak kembali tersedia (Available) setelah pelanggan membatalkan pesanan"
+
     @pytest.mark.business_logic
     def test_TC_DRV_BOOK_BL_05_driver_batalkan_pesanan_dengan_alasan_kendala_teknis(self, driver_app, driver_simulator):
         """
@@ -687,24 +763,33 @@ class TestDrvBooking:
         """
         self._ensure_driver_online(driver_app)
         drv_book_pg = DrvBookingPage(driver_app)
+        given("Driver memegang pesanan aktif")
+        if not drv_book_pg.is_order_in_progress():
+            pytest.skip(SKIP_TANPA_ORDER_AKTIF)
         when("Driver mengajukan pembatalan pesanan")
         drv_book_pg.cancel_order()
-        driver_simulator.driver_cancel_order(reason="Kendala teknis motor")
+        record = driver_simulator.driver_cancel_order(reason="Kendala teknis motor")
         then("Status pesanan dibatalkan dan sistem mencatat alasan pembatalan resmi")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert drv_book_pg.is_cancel_flow_feedback_displayed(), (
+            "Setelah menekan batal tidak tampil konfirmasi/alasan pembatalan/biaya cancel maupun "
+            "pesan 'Berhasil membatalkan pesanan'")
+        assert record["status"] == "cancelled_by_driver", f"Status pembatalan salah: {record['status']}"
+        assert record["reason"] == "Kendala teknis motor", f"Alasan pembatalan tidak tercatat utuh: {record['reason']}"
+        assert driver_simulator.is_driver_available() is True, "Driver tidak kembali Available setelah membatalkan pesanan"
+
     @pytest.mark.business_logic
     @pytest.mark.payment_switch
-    def test_TC_DRV_BOOK_BL_06_dynamic_payment_switch_user_terupdate_ke_driver(self, driver_app):
+    def test_TC_DRV_BOOK_BL_06_dynamic_payment_switch_user_terupdate_ke_driver(self):
         """
         [BUSINESS LOGIC - BL-06]
         Deskripsi : Pengguna beralih metode pembayaran dari Tunai ke EvWallet sebelum trip selesai.
         Ekspektasi: Layar trip Driver terupdate secara dinamis dari 'Cash' menjadi 'Pembayaran Online'.
         """
-        self._ensure_driver_online(driver_app)
         given("Penumpang mengubah metode bayar di aplikasi User")
         when("Sistem mem-broadcast event socket pembaruan checkout")
         then("Layar driver reaktif memperbarui instruksi penagihan argo")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        pytest.skip("Butuh aplikasi User di perangkat kedua untuk mengganti metode bayar saat trip nyata "
+                    "berjalan. " + SKIP_TANPA_ORDER_AKTIF)
     # ==========================================================================
     # PILAR 4: NEGATIVE CASES, SECURITY & ROBUSTNESS
     # ==========================================================================
@@ -722,17 +807,29 @@ class TestDrvBooking:
         logger.info("[NEGATIVE PASS] Driver offline terbukti ditolak saat mencoba menerima order.")
 
     @pytest.mark.negative_true
-    def test_TC_DRV_BOOK_NT_02_konfirmasi_selesai_saat_posisi_jauh_dari_titik_tujuan(self, driver_app):
+    def test_TC_DRV_BOOK_NT_02_konfirmasi_selesai_saat_posisi_jauh_dari_titik_tujuan(self):
         """
         [NEGATIVE TRUE - NT-02]
         Deskripsi : Driver mencoba menyelesaikan pesanan saat posisi GPS masih jauh dari titik dropoff.
         Ekspektasi: Muncul modal peringatan bahwa kendaraan belum tiba di radius tujuan penumpang.
         """
-        self._ensure_driver_online(driver_app)
         given("Posisi kendaraan berjarak > 1 KM dari titik destinasi")
         when("Driver mencoba menekan 'Selesai mengantar penumpang'")
         then("Aplikasi memunculkan dialog peringatan radius lokasi tujuan")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        pytest.skip("Butuh trip nyata yang sedang berjalan plus lokasi GPS mock > 1 KM dari titik tujuan; "
+                    "teks dialog peringatan radius juga tidak ada di strings APK. " + SKIP_TANPA_ORDER_AKTIF)
+
+    def _kirim_payload_chat(self, driver_app, payload: str) -> DrvBookingPage:
+        """Pra-kondisi chat in-trip lalu mengirim payload. Skip bila tidak ada order aktif."""
+        self._ensure_driver_online(driver_app)
+        drv_book_pg = DrvBookingPage(driver_app)
+        if not drv_book_pg.is_order_in_progress():
+            pytest.skip(SKIP_TANPA_ORDER_AKTIF)
+        drv_book_pg.open_in_trip_chat()
+        assert drv_book_pg.is_chat_screen_displayed(), "Layar chat in-trip tidak terbuka, payload tidak bisa dikirim"
+        drv_book_pg.send_chat_message(payload)
+        return drv_book_pg
+
     @pytest.mark.negative_false
     @pytest.mark.security
     def test_TC_DRV_BOOK_NF_01_security_sqli_pada_chat_in_trip(self, driver_app):
@@ -741,11 +838,16 @@ class TestDrvBooking:
         Deskripsi : Pengujian keamanan injeksi payload SQL Injection pada pesan obrolan in-trip.
         Ekspektasi: Seluruh karakter kutip dan keyword SQL disanitasi tanpa mengekspos error backend.
         """
-        self._ensure_driver_online(driver_app)
+        payload = "' OR 1=1; DROP TABLE messages; --"
         given("Layar obrolan in-trip dengan penumpang aktif")
         when("Pesan berisi query SQLi: ' OR 1=1; DROP TABLE messages; -- dikirimkan")
+        drv_book_pg = self._kirim_payload_chat(driver_app, payload)
         then("Pesan tersanitasi aman dan percakapan tidak mengalami abnormal behavior")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert not drv_book_pg.is_error_message_displayed(), "Payload SQLi memicu pesan/layar error sistem"
+        assert drv_book_pg.is_chat_message_displayed(payload), \
+            "Payload SQLi tidak tampil apa adanya sebagai gelembung chat (terpotong, hilang, atau gagal terkirim)"
+        assert drv_book_pg.is_chat_screen_displayed(), "Layar chat tertutup/berubah setelah payload SQLi dikirim"
+
     @pytest.mark.negative_false
     @pytest.mark.security
     def test_TC_DRV_BOOK_NF_02_security_xss_pada_chat_in_trip(self, driver_app):
@@ -754,11 +856,16 @@ class TestDrvBooking:
         Deskripsi : Pengujian keamanan skrip injeksi XSS pada pesan instan driver.
         Ekspektasi: Tag script di-escape menjadi teks biasa tanpa rendering skrip peretas.
         """
-        self._ensure_driver_online(driver_app)
+        payload = "<script>alert('XSS_ATTACK')</script>"
         given("Fitur chat in-trip aktif")
         when("Pesan berisi tag <script>alert('XSS_ATTACK')</script> dikirimkan")
+        drv_book_pg = self._kirim_payload_chat(driver_app, payload)
         then("Sistem meng-escape karakter HTML/JS dan merender sebagai teks biasa")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        # Teks literal lengkap (termasuk tag) membuktikan payload dirender sebagai teks, bukan dieksekusi
+        assert drv_book_pg.is_chat_message_displayed(payload), \
+            "Payload XSS tidak tampil sebagai teks literal di gelembung chat"
+        assert not drv_book_pg.is_error_message_displayed(), "Payload XSS memicu pesan/layar error sistem"
+
     @pytest.mark.negative_false
     def test_TC_DRV_BOOK_NF_03_rapid_double_click_tombol_terima_dan_selesai(self, driver_app):
         """
@@ -768,6 +875,9 @@ class TestDrvBooking:
         """
         self._ensure_driver_online(driver_app)
         drv_book_pg = DrvBookingPage(driver_app)
+        given("Pop-up pesanan masuk tampil di layar driver")
+        if not drv_book_pg.is_incoming_order_displayed():
+            pytest.skip(SKIP_TANPA_ORDER_AKTIF)
         when("Driver melakukan multi-tapping agresif pada tombol aksi perjalanan")
         for _ in range(3):
             try:
@@ -775,19 +885,22 @@ class TestDrvBooking:
             except Exception:
                 pass
         then("Aplikasi tetap responsif dan hanya 1 request yang diproses")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert not drv_book_pg.is_error_message_displayed(), "Spam terima pesanan memicu pesan/layar error sistem"
+        assert drv_book_pg.is_picking_up_state_active(), \
+            "Setelah spam swipe terima, pesanan tidak berada di status penjemputan (order tidak terkunci untuk driver)"
+
     @pytest.mark.negative_false
-    def test_TC_DRV_BOOK_NF_04_ketahanan_jaringan_fluktuatif_saat_pembayaran(self, driver_app):
+    def test_TC_DRV_BOOK_NF_04_ketahanan_jaringan_fluktuatif_saat_pembayaran(self):
         """
         [NEGATIVE FALSE - NF-04]
         Deskripsi : Resiliensi koneksi saat sinyal internet drop sesaat ketika konfirmasi argo.
         Ekspektasi: Transaksi masuk ke antrean retry lokal, tidak ada kehilangan data atau crash.
         """
-        self._ensure_driver_online(driver_app)
         given("Koneksi data seluler mengalami fluktuasi sesaat")
         when("Driver menekan 'Sudah Terima Pembayaran'")
         then("Aplikasi menahan state transaksi dan mencoba sinkronisasi otomatis")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        pytest.skip("Butuh layar pembayaran dari trip nyata ditambah pemutusan jaringan tepat saat konfirmasi; "
+                    "hasil sinkronisasi juga harus dicek di backend. " + SKIP_TANPA_LAYAR_PEMBAYARAN)
 # ==============================================================================
 # SUITE PENGUJIAN DRIVER: 16 MATRIKS ORDER BEHAVIOUR & 4 TINGKATAN JARAK
 # ==============================================================================
@@ -906,6 +1019,7 @@ class TestDrvOrderBehaviourMatrix:
           - Skenario Tunai: Driver menagih uang tunai fisik.
           - Skenario Non-Tunai (EvWallet, GoPay, OVO): Tagih Tunai Rp 0, driver dilarang meminta kas fisik.
         """
+        diverifikasi = 0
         for d in self.DISTANCES:
             excess_wait_min = max(0, waiting_minutes - 15)
             wait_fee = float(excess_wait_min * 500.0)
@@ -940,6 +1054,8 @@ class TestDrvOrderBehaviourMatrix:
                 else:
                     cash_collection = 0.0
                     assert cash_collection == 0.0, f"Driver tidak boleh menagih uang tunai untuk {p['name']}"
+                diverifikasi += 1
+        return diverifikasi
 
     @pytest.mark.positive_true
     def test_TC_DRV_OB_01_driver_normal_booking_all_distances(self, fare_calculator):
@@ -949,7 +1065,9 @@ class TestDrvOrderBehaviourMatrix:
         Ekspektasi: Nilai argo kotor tercatat valid (Rp 6.000 / Rp 10.200 / Rp 38.400 / Rp 89.900) dan penagihan tunai vs non-tunai akurat.
         """
         given("Driver menerima order Normal Booking melintasi 4 kategori jarak dan 4 metode bayar")
-        self._verify_driver_combo(fare_calculator, "Normal Booking", use_coupon=False, waiting_minutes=0, apply_penalty=False)
+        jumlah = self._verify_driver_combo(fare_calculator, "Normal Booking", use_coupon=False, waiting_minutes=0, apply_penalty=False)
+        assert jumlah == len(self.DISTANCES) * len(self.PAYMENT_METHODS), (
+            f"Hanya {jumlah} dari {len(self.DISTANCES) * len(self.PAYMENT_METHODS)} kombinasi jarak x metode bayar yang terverifikasi")
 
     @pytest.mark.positive_true
     def test_TC_DRV_OB_02_driver_normal_booking_kupon_subsidi_utuh_all_distances(self, fare_calculator):
@@ -959,7 +1077,9 @@ class TestDrvOrderBehaviourMatrix:
         Ekspektasi: Driver tetap menerima hak pembayaran penuh argo dasar untuk seluruh metode pembayaran.
         """
         given("Pengguna menggunakan Kupon Diskon Rp 5.000 pada order Normal Booking (4 metode pembayaran)")
-        self._verify_driver_combo(fare_calculator, "Normal Booking + Kupon Subsidi", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=False)
+        jumlah = self._verify_driver_combo(fare_calculator, "Normal Booking + Kupon Subsidi", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=False)
+        assert jumlah == len(self.DISTANCES) * len(self.PAYMENT_METHODS), (
+            f"Hanya {jumlah} dari {len(self.DISTANCES) * len(self.PAYMENT_METHODS)} kombinasi jarak x metode bayar yang terverifikasi")
 
     @pytest.mark.positive_true
     def test_TC_DRV_OB_03_driver_normal_booking_waiting_fee_kompensasi_all_distances(self, fare_calculator):
@@ -969,7 +1089,9 @@ class TestDrvOrderBehaviourMatrix:
         Ekspektasi: Driver menerima tambahan hak argo tunggu secara akurat pada 4 metode pembayaran.
         """
         given("Driver menunggu 20 menit di pickup point pada order Normal Booking (4 metode pembayaran)")
-        self._verify_driver_combo(fare_calculator, "Normal Booking + Waiting Fee", use_coupon=False, waiting_minutes=20, apply_penalty=False)
+        jumlah = self._verify_driver_combo(fare_calculator, "Normal Booking + Waiting Fee", use_coupon=False, waiting_minutes=20, apply_penalty=False)
+        assert jumlah == len(self.DISTANCES) * len(self.PAYMENT_METHODS), (
+            f"Hanya {jumlah} dari {len(self.DISTANCES) * len(self.PAYMENT_METHODS)} kombinasi jarak x metode bayar yang terverifikasi")
 
     @pytest.mark.positive_true
     def test_TC_DRV_OB_04_driver_normal_booking_penalty_customer_payout_all_distances(self, fare_calculator):
@@ -979,7 +1101,9 @@ class TestDrvOrderBehaviourMatrix:
         Ekspektasi: Denda masuk ke dalam akumulasi tagihan tanpa memotong atau mengganggu saldo bersih driver.
         """
         given("Pengguna memiliki kewajiban denda penalty Rp 5.000 pada Normal Booking (4 metode pembayaran)")
-        self._verify_driver_combo(fare_calculator, "Normal Booking + Penalty", use_coupon=False, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0)
+        jumlah = self._verify_driver_combo(fare_calculator, "Normal Booking + Penalty", use_coupon=False, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0)
+        assert jumlah == len(self.DISTANCES) * len(self.PAYMENT_METHODS), (
+            f"Hanya {jumlah} dari {len(self.DISTANCES) * len(self.PAYMENT_METHODS)} kombinasi jarak x metode bayar yang terverifikasi")
 
     @pytest.mark.positive_true
     def test_TC_DRV_OB_05_driver_normal_booking_kupon_waiting_fee_all_distances(self, fare_calculator):
@@ -989,7 +1113,9 @@ class TestDrvOrderBehaviourMatrix:
         Ekspektasi: Hak argo kotor dan insentif waktu tunggu driver terakumulasi utuh tanpa pemotongan.
         """
         given("Order Normal Booking menggunakan Kupon Rp 5.000 dan memuat Waiting Fee Rp 2.500 (4 metode pembayaran)")
-        self._verify_driver_combo(fare_calculator, "Normal Booking + Kupon + WaitFee", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=False)
+        jumlah = self._verify_driver_combo(fare_calculator, "Normal Booking + Kupon + WaitFee", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=False)
+        assert jumlah == len(self.DISTANCES) * len(self.PAYMENT_METHODS), (
+            f"Hanya {jumlah} dari {len(self.DISTANCES) * len(self.PAYMENT_METHODS)} kombinasi jarak x metode bayar yang terverifikasi")
 
     @pytest.mark.positive_true
     def test_TC_DRV_OB_06_driver_normal_booking_kupon_waiting_fee_penalty_all_distances(self, fare_calculator):
@@ -999,7 +1125,9 @@ class TestDrvOrderBehaviourMatrix:
         Ekspektasi: Rincian struk argo driver transparan memisahkan tarif dasar, tunggu, denda, dan kupon.
         """
         given("Struk Normal Booking kombo lengkap Kupon, Waiting Fee, dan Penalty (4 metode pembayaran)")
-        self._verify_driver_combo(fare_calculator, "Normal Booking Kombo Lengkap", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0)
+        jumlah = self._verify_driver_combo(fare_calculator, "Normal Booking Kombo Lengkap", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0)
+        assert jumlah == len(self.DISTANCES) * len(self.PAYMENT_METHODS), (
+            f"Hanya {jumlah} dari {len(self.DISTANCES) * len(self.PAYMENT_METHODS)} kombinasi jarak x metode bayar yang terverifikasi")
 
     @pytest.mark.positive_true
     def test_TC_DRV_OB_07_driver_normal_booking_waiting_fee_penalty_all_distances(self, fare_calculator):
@@ -1009,7 +1137,9 @@ class TestDrvOrderBehaviourMatrix:
         Ekspektasi: Total pembayaran yang ditagihkan kasir/online mencakup Rp 7.500 tambahan biaya tanpa deviasi.
         """
         given("Order Normal Booking memuat Waiting Fee Rp 2.500 dan Penalty Rp 5.000 (4 metode pembayaran)")
-        self._verify_driver_combo(fare_calculator, "Normal Booking + WaitFee + Penalty", use_coupon=False, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0)
+        jumlah = self._verify_driver_combo(fare_calculator, "Normal Booking + WaitFee + Penalty", use_coupon=False, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0)
+        assert jumlah == len(self.DISTANCES) * len(self.PAYMENT_METHODS), (
+            f"Hanya {jumlah} dari {len(self.DISTANCES) * len(self.PAYMENT_METHODS)} kombinasi jarak x metode bayar yang terverifikasi")
 
     @pytest.mark.positive_true
     def test_TC_DRV_OB_08_driver_normal_booking_penalty_kupon_all_distances(self, fare_calculator):
@@ -1019,7 +1149,9 @@ class TestDrvOrderBehaviourMatrix:
         Ekspektasi: Pendapatan dasar driver tetap berada pada nominal argo rute normal untuk seluruh metode pembayaran.
         """
         given("Order Normal Booking dengan Penalty Rp 5.000 dioffset Kupon Rp 5.000 (4 metode pembayaran)")
-        self._verify_driver_combo(fare_calculator, "Normal Booking + Penalty + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0)
+        jumlah = self._verify_driver_combo(fare_calculator, "Normal Booking + Penalty + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0)
+        assert jumlah == len(self.DISTANCES) * len(self.PAYMENT_METHODS), (
+            f"Hanya {jumlah} dari {len(self.DISTANCES) * len(self.PAYMENT_METHODS)} kombinasi jarak x metode bayar yang terverifikasi")
 
     @pytest.mark.positive_true
     def test_TC_DRV_OB_09_driver_advance_booking_scheduled_dispatch_all_distances(self, fare_calculator):
@@ -1029,7 +1161,9 @@ class TestDrvOrderBehaviourMatrix:
         Ekspektasi: Tampil badge 'Booking' dan detail jam penjemputan untuk rute Dekat, Sedang, Jauh, Sangat Jauh.
         """
         given("Driver menerima notifikasi dispatch Advance Booking terjadwal (4 metode pembayaran)")
-        self._verify_driver_combo(fare_calculator, "Advance Booking", use_coupon=False, waiting_minutes=0, apply_penalty=False, is_advance=True)
+        jumlah = self._verify_driver_combo(fare_calculator, "Advance Booking", use_coupon=False, waiting_minutes=0, apply_penalty=False, is_advance=True)
+        assert jumlah == len(self.DISTANCES) * len(self.PAYMENT_METHODS), (
+            f"Hanya {jumlah} dari {len(self.DISTANCES) * len(self.PAYMENT_METHODS)} kombinasi jarak x metode bayar yang terverifikasi")
 
     @pytest.mark.positive_true
     def test_TC_DRV_OB_10_driver_advance_booking_kupon_subsidi_all_distances(self, fare_calculator):
@@ -1039,7 +1173,9 @@ class TestDrvOrderBehaviourMatrix:
         Ekspektasi: Pendapatan driver pada pesanan terjadwal tetap utuh disubsidi platform.
         """
         given("Order Advance Booking memakai Kupon Diskon Rp 5.000 (4 metode pembayaran)")
-        self._verify_driver_combo(fare_calculator, "Advance Booking + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=False, is_advance=True)
+        jumlah = self._verify_driver_combo(fare_calculator, "Advance Booking + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=False, is_advance=True)
+        assert jumlah == len(self.DISTANCES) * len(self.PAYMENT_METHODS), (
+            f"Hanya {jumlah} dari {len(self.DISTANCES) * len(self.PAYMENT_METHODS)} kombinasi jarak x metode bayar yang terverifikasi")
 
     @pytest.mark.positive_true
     def test_TC_DRV_OB_11_driver_advance_booking_waiting_fee_all_distances(self, fare_calculator):
@@ -1049,7 +1185,9 @@ class TestDrvOrderBehaviourMatrix:
         Ekspektasi: Biaya tunggu Rp 2.500 terhitung otomatis pada pesanan terjadwal untuk seluruh saluran bayar.
         """
         given("Driver tiba pada jadwal Advance Booking dan menunggu penumpang 20 menit (4 metode pembayaran)")
-        self._verify_driver_combo(fare_calculator, "Advance Booking + Waiting Fee", use_coupon=False, waiting_minutes=20, apply_penalty=False, is_advance=True)
+        jumlah = self._verify_driver_combo(fare_calculator, "Advance Booking + Waiting Fee", use_coupon=False, waiting_minutes=20, apply_penalty=False, is_advance=True)
+        assert jumlah == len(self.DISTANCES) * len(self.PAYMENT_METHODS), (
+            f"Hanya {jumlah} dari {len(self.DISTANCES) * len(self.PAYMENT_METHODS)} kombinasi jarak x metode bayar yang terverifikasi")
 
     @pytest.mark.positive_true
     def test_TC_DRV_OB_12_driver_advance_booking_penalty_all_distances(self, fare_calculator):
@@ -1059,7 +1197,9 @@ class TestDrvOrderBehaviourMatrix:
         Ekspektasi: Penalti Rp 5.000 tercantum jelas pada ringkasan penagihan tanpa memotong pendapatan bersih driver.
         """
         given("Pesanan Advance Booking memiliki beban penalti denda Rp 5.000 (4 metode pembayaran)")
-        self._verify_driver_combo(fare_calculator, "Advance Booking + Penalty", use_coupon=False, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        jumlah = self._verify_driver_combo(fare_calculator, "Advance Booking + Penalty", use_coupon=False, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        assert jumlah == len(self.DISTANCES) * len(self.PAYMENT_METHODS), (
+            f"Hanya {jumlah} dari {len(self.DISTANCES) * len(self.PAYMENT_METHODS)} kombinasi jarak x metode bayar yang terverifikasi")
 
     @pytest.mark.positive_true
     def test_TC_DRV_OB_13_driver_advance_booking_kupon_waiting_fee_all_distances(self, fare_calculator):
@@ -1069,7 +1209,9 @@ class TestDrvOrderBehaviourMatrix:
         Ekspektasi: Kalkulasi biaya sinkron antara subsidi kupon dan insentif tunggu pengemudi.
         """
         given("Pesanan Advance Booking memuat Kupon Rp 5.000 dan Waiting Fee Rp 2.500 (4 metode pembayaran)")
-        self._verify_driver_combo(fare_calculator, "Advance Booking + Kupon + WaitFee", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=False, is_advance=True)
+        jumlah = self._verify_driver_combo(fare_calculator, "Advance Booking + Kupon + WaitFee", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=False, is_advance=True)
+        assert jumlah == len(self.DISTANCES) * len(self.PAYMENT_METHODS), (
+            f"Hanya {jumlah} dari {len(self.DISTANCES) * len(self.PAYMENT_METHODS)} kombinasi jarak x metode bayar yang terverifikasi")
 
     @pytest.mark.positive_true
     def test_TC_DRV_OB_14_driver_advance_booking_kupon_waiting_fee_penalty_all_distances(self, fare_calculator):
@@ -1079,7 +1221,9 @@ class TestDrvOrderBehaviourMatrix:
         Ekspektasi: Seluruh komponen biaya terhitung matematis tanpa kesalahan pembagian payout.
         """
         given("Pesanan Advance Booking kombo lengkap Kupon, Waiting Fee, dan Penalty (4 metode pembayaran)")
-        self._verify_driver_combo(fare_calculator, "Advance Booking Kombo Lengkap", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        jumlah = self._verify_driver_combo(fare_calculator, "Advance Booking Kombo Lengkap", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        assert jumlah == len(self.DISTANCES) * len(self.PAYMENT_METHODS), (
+            f"Hanya {jumlah} dari {len(self.DISTANCES) * len(self.PAYMENT_METHODS)} kombinasi jarak x metode bayar yang terverifikasi")
 
     @pytest.mark.positive_true
     def test_TC_DRV_OB_15_driver_advance_booking_waiting_fee_penalty_all_distances(self, fare_calculator):
@@ -1089,7 +1233,9 @@ class TestDrvOrderBehaviourMatrix:
         Ekspektasi: Tambahan Rp 7.500 tercatat pada tagihan akhir trip driver secara transparan.
         """
         given("Pesanan Advance Booking memuat Waiting Fee Rp 2.500 dan Penalty Rp 5.000 (4 metode pembayaran)")
-        self._verify_driver_combo(fare_calculator, "Advance Booking + WaitFee + Penalty", use_coupon=False, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        jumlah = self._verify_driver_combo(fare_calculator, "Advance Booking + WaitFee + Penalty", use_coupon=False, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        assert jumlah == len(self.DISTANCES) * len(self.PAYMENT_METHODS), (
+            f"Hanya {jumlah} dari {len(self.DISTANCES) * len(self.PAYMENT_METHODS)} kombinasi jarak x metode bayar yang terverifikasi")
 
     @pytest.mark.positive_true
     def test_TC_DRV_OB_16_driver_advance_booking_penalty_kupon_all_distances(self, fare_calculator):
@@ -1099,7 +1245,9 @@ class TestDrvOrderBehaviourMatrix:
         Ekspektasi: Tarif kembali ke baseline argo dasar rute perjalanan dan hak driver tetap terlindungi utuh.
         """
         given("Pesanan Advance Booking dengan Penalty Rp 5.000 dioffset Kupon Rp 5.000 (4 metode pembayaran)")
-        self._verify_driver_combo(fare_calculator, "Advance Booking + Penalty + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        jumlah = self._verify_driver_combo(fare_calculator, "Advance Booking + Penalty + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        assert jumlah == len(self.DISTANCES) * len(self.PAYMENT_METHODS), (
+            f"Hanya {jumlah} dari {len(self.DISTANCES) * len(self.PAYMENT_METHODS)} kombinasi jarak x metode bayar yang terverifikasi")
 
     # ==========================================================================
     # PILAR 1 s/d 4: BACKGROUND STANDBY & OVERLAY ORDER NOTIFICATION (ANOMALI 3-5 DETIK)

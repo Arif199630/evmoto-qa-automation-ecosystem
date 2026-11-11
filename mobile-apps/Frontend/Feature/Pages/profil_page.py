@@ -212,9 +212,42 @@ class ProfilPage(BasePage):
         "contains(@content-desc, 'menghapus kontak')]"
     )
 
+    # Teks resmi dari file terjemahan aplikasi (assets/jsons/user_lang_id.json & user_lang_en.json, APK 1.2.33)
+    # add_emergency_contact_add_title = 'Tambah Kontak Darurat' / 'Add Emergency Contact'.
+    # Dicocokkan PERSIS agar tidak tertukar dengan tombol daftar '+ Tambah Kontak Darurat'.
+    TITLE_EMERGENCY_CONTACT_FORM = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Tambah Kontak Darurat' or @text='Tambah Kontak Darurat' or "
+        "@content-desc='Add Emergency Contact' or @text='Add Emergency Contact']"
+    )
+    # emergency_contact_successfully_added = 'Kontak darurat berhasil ditambah' / 'Emergency contact added successfully.'
+    SNACKBAR_EMERGENCY_CONTACT_ADDED = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Kontak darurat berhasil ditambah') or "
+        "contains(@text, 'Kontak darurat berhasil ditambah') or "
+        "contains(@content-desc, 'Emergency contact added successfully') or "
+        "contains(@text, 'Emergency contact added successfully')]"
+    )
+    # account_emergency_contact_list_not_found_description
+    TEXT_EMERGENCY_EMPTY_DESC = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Tambahkan kontak untuk akses cepat saat keadaan darurat') or "
+        "contains(@text, 'Tambahkan kontak untuk akses cepat saat keadaan darurat') or "
+        "contains(@content-desc, 'Add a contact for quick access during emergencies') or "
+        "contains(@text, 'Add a contact for quick access during emergencies')]"
+    )
+
     # ==========================================================================
     # 4. ALAMAT TERSIMPAN / FAVORIT (SAVED ADDRESSES)
     # ==========================================================================
+    # saved_address_not_found_description = 'Tambahkan alamat favorit untuk pemesanan lebih cepat'
+    TEXT_EMPTY_SAVED_ADDRESS_DESC = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Tambahkan alamat favorit untuk pemesanan lebih cepat') or "
+        "contains(@text, 'Tambahkan alamat favorit untuk pemesanan lebih cepat') or "
+        "contains(@content-desc, 'Add favorite addresses for quicker booking') or "
+        "contains(@text, 'Add favorite addresses for quicker booking')]"
+    )
     MENU_SAVED_ADDRESSES = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Saved Address') or contains(@content-desc, 'Alamat Tersimpan') or "
@@ -281,6 +314,12 @@ class ProfilPage(BasePage):
     OPT_LANG_INDONESIAN = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Indonesia') or contains(@text, 'Indonesia')]"
+    )
+    # Label menu/judul pengaturan bahasa versi Inggris (setting_language EN = 'Language').
+    # Bahasa Indonesia memakai 'Bahasa', jadi label ini hanya muncul saat antarmuka berbahasa Inggris.
+    LABEL_LANGUAGE_EN = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Language') or contains(@text, 'Language')]"
     )
     SNACKBAR_LANG_SUCCESS = (
         AppiumBy.XPATH,
@@ -592,7 +631,44 @@ class ProfilPage(BasePage):
     def is_delete_emergency_contact_dialog_displayed(self, timeout: int = 5) -> bool:
         return self.is_displayed(self.MODAL_DELETE_EMERGENCY_CONFIRM, timeout=timeout)
 
+    def is_emergency_contact_form_displayed(self, timeout: int = 5) -> bool:
+        """True bila form 'Tambah Kontak Darurat' masih terbuka (data belum tersimpan)."""
+        return self.is_displayed(self.TITLE_EMERGENCY_CONTACT_FORM, timeout=timeout)
+
+    def is_emergency_contact_added_snackbar_displayed(self, timeout: int = 5) -> bool:
+        """True bila snackbar 'Kontak darurat berhasil ditambah' tampil."""
+        return self.is_displayed(self.SNACKBAR_EMERGENCY_CONTACT_ADDED, timeout=timeout)
+
+    def is_emergency_contact_empty_description_displayed(self, timeout: int = 5) -> bool:
+        """True bila deskripsi empty state kontak darurat tampil."""
+        return self.is_displayed(self.TEXT_EMERGENCY_EMPTY_DESC, timeout=timeout)
+
+    def is_text_shown_literally(self, text: str, timeout: int = 5) -> bool:
+        """True bila teks persis (sebagai bagian content-desc/text) tampil di layar, termasuk tanda kutip."""
+        literal = self._xpath_literal(text)
+        locator = (AppiumBy.XPATH, f"//*[contains(@content-desc, {literal}) or contains(@text, {literal})]")
+        return self.is_displayed(locator, timeout=timeout)
+
+    @staticmethod
+    def _xpath_literal(text: str) -> str:
+        """Membentuk literal XPath yang aman untuk teks berisi tanda kutip tunggal/ganda."""
+        if "'" not in text:
+            return f"'{text}'"
+        if '"' not in text:
+            return f'"{text}"'
+        parts = text.split("'")
+        return "concat(" + ", \"'\", ".join(f"'{p}'" for p in parts) + ")"
+
+    def is_app_in_foreground(self) -> bool:
+        """True bila aplikasi EvMoto User masih berada di depan (tidak crash / force close)."""
+        from config import config
+        return self.driver.current_package == config.APP_PACKAGE
+
     # 4. Alamat Tersimpan / Favorit
+    def is_saved_address_empty_description_displayed(self, timeout: int = 5) -> bool:
+        """True bila deskripsi empty state alamat favorit tampil."""
+        return self.is_displayed(self.TEXT_EMPTY_SAVED_ADDRESS_DESC, timeout=timeout)
+
     def navigate_to_saved_addresses(self):
         """Membuka menu Alamat Tersimpan / Favorit."""
         self.click(self.MENU_SAVED_ADDRESSES, label="Menu 'Saved Addresses'")
@@ -638,6 +714,10 @@ class ProfilPage(BasePage):
         else:
             self.click(self.OPT_LANG_ENGLISH, label="Pilihan Bahasa Inggris")
         time.sleep(1.5)
+
+    def is_ui_in_english(self, timeout: int = 5) -> bool:
+        """True bila label pengaturan bahasa berbahasa Inggris ('Language') tampil di layar."""
+        return self.is_displayed(self.LABEL_LANGUAGE_EN, timeout=timeout)
 
     def is_language_snackbar_displayed(self, timeout: int = 4) -> bool:
         """Memverifikasi kemunculan snackbar notifikasi perubahan bahasa."""

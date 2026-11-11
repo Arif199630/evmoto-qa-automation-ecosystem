@@ -90,8 +90,8 @@ class TestEcgoSuperAppsAuthenticationApi:
         assert resp.status_code == 200, f"Gagal request OTP: {resp.status_code} - {resp.data}"
         res_json = resp.json()
         if res_json.get("message") == "still have active otp, please wait":
-            # Cooldown aktif dari pengujian sebelumnya - respons rate limit valid dari server
-            assert True
+            # Cooldown aktif dari pengujian sebelumnya: skema OTP baru tidak bisa diperiksa pada run ini
+            pytest.skip("OTP ECGO masih aktif dari run sebelumnya (cooldown server); skema respons tidak bisa diperiksa")
         else:
             jsonschema.validate(instance=res_json, schema=ECGO_GENERATE_OTP_SCHEMA)
             assert res_json.get("message") == "success"

@@ -98,7 +98,9 @@ class TestRegister:
         register_page.fill_otp(data["otp"])
 
         register_page.submit_register()
-        register_page.pause(2.0, 3.0, "Memproses pendaftaran akun baru")
+        assert register_page.is_register_success_displayed(timeout=15), (
+            f"[GAGAL PT-01] Layar 'Pendaftaran Berhasil.' tidak muncul untuk nomor baru {fresh_phone}!"
+        )
         print(">>> [PASSED PT-01] Pendaftaran akun baru berhasil disubmit!")
 
     @pytest.mark.positive_true
@@ -129,7 +131,12 @@ class TestRegister:
         register_page.fill_otp(data["otp"])
 
         register_page.submit_register()
-        register_page.pause(2.0, 3.0, "Memproses pendaftaran akun dan klaim referral")
+        assert register_page.is_register_success_displayed(timeout=15), (
+            f"[GAGAL PT-02] Layar 'Pendaftaran Berhasil.' tidak muncul untuk pendaftaran dengan referral {data['referral_code']}!"
+        )
+        assert register_page.is_referral_applied_displayed(timeout=5), (
+            f"[GAGAL PT-02] Keterangan 'Kode referral berhasil diterapkan.' tidak tampil untuk kode {data['referral_code']}!"
+        )
         print(">>> [PASSED PT-02] Pendaftaran akun dengan referral berhasil diproses!")
 
     @pytest.mark.positive_true
@@ -157,7 +164,9 @@ class TestRegister:
         register_page.fill_otp(data["otp"])
         register_page.submit_register()
 
-        register_page.pause(1.5, 2.5, "Memproses nama dengan karakter apostrof dan tanda hubung")
+        assert register_page.is_register_success_displayed(timeout=15), (
+            f"[GAGAL PT-03] Nama '{data['full_name']}' (apostrof/tanda hubung) ditolak: layar 'Pendaftaran Berhasil.' tidak muncul!"
+        )
         print(">>> [PASSED PT-03] Nama sah Indonesia dengan apostrof/tanda hubung diterima!")
 
     @pytest.mark.positive_true
@@ -210,7 +219,17 @@ class TestRegister:
         register_page.fill_name(data["full_name"])
         register_page.request_otp()
 
-        register_page.pause(1.5, 2.5, "Membaca respons validasi nomor sudah terdaftar")
+        and_step("Pengguna tetap mencoba menyelesaikan pendaftaran dengan OTP dev")
+        register_page.fill_otp(os.environ.get("EVMOTO_OTP_BYPASS", ""))
+        register_page.submit_register()
+
+        # Hasil yang diharapkan: akun duplikat tidak pernah dibuat dan pengguna tetap di form 'Daftar Akun'
+        assert not register_page.is_register_success_displayed(timeout=8), (
+            "[GAGAL PF-01] Nomor yang sudah terdaftar berhasil didaftarkan ulang (muncul 'Pendaftaran Berhasil.')!"
+        )
+        assert register_page.is_register_screen_displayed(timeout=5), (
+            "[GAGAL PF-01] Form 'Daftar Akun' hilang setelah pendaftaran nomor duplikat ditolak!"
+        )
         print(f">>> [PASSED PF-01] Penolakan duplikasi akun terverifikasi: '{data['expected_error']}'")
 
     @pytest.mark.positive_false
@@ -235,7 +254,13 @@ class TestRegister:
         register_page.fill_otp(data["otp"])
         register_page.submit_register()
 
-        register_page.pause(1.5, 2.5, "Membaca penolakan kode referral tidak valid")
+        # Hasil yang diharapkan: kode referral kadaluarsa membuat pendaftaran ditolak
+        assert not register_page.is_register_success_displayed(timeout=5), (
+            f"[GAGAL PF-02] Pendaftaran tetap berhasil walau kode referral '{data['referral_code']}' tidak valid!"
+        )
+        assert register_page.is_register_screen_displayed(timeout=5), (
+            "[GAGAL PF-02] Form 'Daftar Akun' hilang setelah pendaftaran dengan referral tidak valid ditolak!"
+        )
         print(f">>> [PASSED PF-02] Penolakan kode referral tidak valid terverifikasi: '{data['expected_error']}'")
 
     @pytest.mark.positive_false
@@ -258,7 +283,13 @@ class TestRegister:
 
         # Langsung submit tanpa request OTP
         register_page.submit_register()
-        register_page.pause(1.0, 1.8, "Memverifikasi sistem mencegah pendaftaran tanpa OTP")
+
+        assert not register_page.is_register_success_displayed(timeout=8), (
+            "[GAGAL PF-03] Akun berhasil dibuat padahal Kode OTP belum pernah diminta/diisi!"
+        )
+        assert register_page.is_register_screen_displayed(timeout=5), (
+            "[GAGAL PF-03] Form 'Daftar Akun' hilang setelah submit tanpa OTP ditolak!"
+        )
         print(">>> [PASSED PF-03] Sistem menolak pembuatan akun tanpa proses Request OTP!")
 
     @pytest.mark.positive_false
@@ -287,7 +318,10 @@ class TestRegister:
         except Exception:
             pass
 
-        register_page.pause(1.2, 2.0, "Memeriksa aktivasi cooldown countdown timer")
+        # Selama cooldown, tombol 'Minta Kode OTP' harus nonaktif atau berganti menjadi hitung mundur
+        assert not register_page.is_request_otp_button_enabled(timeout=3), (
+            "[GAGAL PF-04] Tombol 'Minta Kode OTP' masih aktif setelah OTP diminta, tidak ada cooldown anti-spam!"
+        )
         print(">>> [PASSED PF-04] Mekanisme cooldown proteksi spam OTP berfungsi aktif!")
 
 
@@ -316,7 +350,12 @@ class TestRegister:
         register_page.fill_otp(data["otp_wrong"])
         register_page.submit_register()
 
-        register_page.pause(1.0, 2.0, "Membaca pesan error OTP salah")
+        assert not register_page.is_register_success_displayed(timeout=8), (
+            f"[GAGAL NT-01] Akun berhasil dibuat dengan OTP salah '{data['otp_wrong']}'!"
+        )
+        assert register_page.is_register_screen_displayed(timeout=5), (
+            "[GAGAL NT-01] Form 'Daftar Akun' hilang setelah OTP salah ditolak!"
+        )
         print(f">>> [PASSED NT-01] Validasi OTP salah terverifikasi: '{data['expected_error']}'")
 
     @pytest.mark.negative_true
@@ -334,7 +373,9 @@ class TestRegister:
         login_page.navigate_to_register()
         register_page.fill_phone(data["phone"])
 
-        register_page.pause(1.0, 1.5, "Membaca teks peringatan harus diawali 8")
+        assert register_page.is_phone_must_start_with_8_displayed(timeout=5), (
+            f"[GAGAL NT-02] Validasi 'Nomor telepon harus diawali dengan 8' tidak tampil untuk nomor '{data['phone']}'!"
+        )
         print(f">>> [PASSED NT-02] Validasi format terverifikasi: '{data['expected_error']}'")
 
     @pytest.mark.negative_true
@@ -353,7 +394,9 @@ class TestRegister:
         register_page.fill_phone(data["phone"])
         register_page.fill_name("QA Tester Short Phone")
 
-        register_page.pause(1.0, 1.5, "Membaca validasi panjang minimum nomor HP")
+        assert register_page.is_phone_min_8_digit_displayed(timeout=5), (
+            f"[GAGAL NT-03] Validasi 'Nomor telepon minimal 8 digit' tidak tampil untuk nomor '{data['phone']}'!"
+        )
         print(f">>> [PASSED NT-03] Validasi minimum 8 digit terverifikasi: '{data['expected_error']}'")
 
     @pytest.mark.negative_true
@@ -376,7 +419,12 @@ class TestRegister:
         register_page.fill_otp(os.environ.get("EVMOTO_OTP_BYPASS", ""))
         register_page.submit_register()
 
-        register_page.pause(1.0, 1.8, "Membaca validasi field nama wajib diisi")
+        assert register_page.is_full_name_required_displayed(timeout=5), (
+            "[GAGAL NT-04] Validasi 'Silakan masukkan nama lengkap' tidak tampil saat nama dikosongkan!"
+        )
+        assert not register_page.is_register_success_displayed(timeout=3), (
+            "[GAGAL NT-04] Akun berhasil dibuat padahal Nama Lengkap kosong!"
+        )
         print(f">>> [PASSED NT-04] Validasi nama wajib diisi terverifikasi: '{data['expected_error']}'")
 
     @pytest.mark.negative_true
@@ -396,7 +444,9 @@ class TestRegister:
         register_page.fill_name("QA Tester Empty Phone")
         register_page.request_otp()
 
-        register_page.pause(1.0, 1.8, "Membaca validasi nomor telepon wajib diisi")
+        assert register_page.is_phone_required_displayed(timeout=5), (
+            "[GAGAL NT-05] Validasi 'Silakan masukkan nomor ponsel Anda' tidak tampil saat OTP diminta dengan nomor kosong!"
+        )
         print(f">>> [PASSED NT-05] Validasi nomor HP wajib diisi terverifikasi: '{data['expected_error']}'")
 
     @pytest.mark.negative_true
@@ -419,7 +469,12 @@ class TestRegister:
         register_page.fill_otp(data["otp_incomplete"])
         register_page.submit_register()
 
-        register_page.pause(1.0, 1.5, "Memverifikasi proteksi panjang digit OTP")
+        assert not register_page.is_register_success_displayed(timeout=8), (
+            f"[GAGAL NT-06] Akun berhasil dibuat dengan OTP tidak lengkap '{data['otp_incomplete']}'!"
+        )
+        assert register_page.is_register_screen_displayed(timeout=5), (
+            "[GAGAL NT-06] Form 'Daftar Akun' hilang setelah OTP kurang dari 4 digit ditolak!"
+        )
         print(f">>> [PASSED NT-06] Validasi panjang OTP terverifikasi: '{data['expected_error']}'")
 
     @pytest.mark.negative_true
@@ -440,7 +495,16 @@ class TestRegister:
         register_page.fill_name(data["full_name_numeric"])
         register_page.request_otp()
 
-        register_page.pause(1.0, 1.5, "Memverifikasi validasi nama harus memuat alfabet")
+        and_step("Pengguna tetap mencoba menyelesaikan pendaftaran dengan OTP dev")
+        register_page.fill_otp(os.environ.get("EVMOTO_OTP_BYPASS", ""))
+        register_page.submit_register()
+
+        assert not register_page.is_register_success_displayed(timeout=8), (
+            f"[GAGAL NT-07] Akun berhasil dibuat dengan nama hanya angka '{data['full_name_numeric']}'!"
+        )
+        assert register_page.is_register_screen_displayed(timeout=5), (
+            "[GAGAL NT-07] Form 'Daftar Akun' hilang setelah nama hanya angka ditolak!"
+        )
         print(f">>> [PASSED NT-07] Validasi nama non-numerik terverifikasi: '{data['expected_error']}'")
 
     @pytest.mark.negative_true

@@ -308,39 +308,47 @@ class TestComprehensiveE2E:
         given("Pengguna berada di Halaman Aktivitas")
         self.activity_page.navigate_to_activity_screen()
         time.sleep(1.0)
+        assert self.activity_page.is_activity_screen_displayed(timeout=10), "[E2E-04] Halaman Aktivitas tidak terbuka"
 
         when("Mengetuk Tab 'Booking' untuk melihat riwayat Advance Booking")
         self.activity_page.select_booking_tab()
         time.sleep(1.5)
 
         then("Memverifikasi daftar pesanan terjadwal di masa depan")
-        has_advance = self.activity_page.has_advance_booking_cards(timeout=4)
-        print(f"  [Tab Booking] Kartu Advance Booking Terdeteksi: {has_advance}")
+        if self.activity_page.is_empty_booking_state_displayed(timeout=4):
+            pytest.skip("[E2E-04] Akun uji belum punya pesanan Advance Booking; modal Ubah Jadwal dan "
+                        "dialog pembatalan booking tidak bisa diuji.")
+        scheduled_time = self.activity_page.get_scheduled_datetime_text()
+        print(f"  [Advance Booking] Waktu Penjemputan Terjadwal: '{scheduled_time}'")
 
-        if has_advance:
-            scheduled_time = self.activity_page.get_scheduled_datetime_text()
-            print(f"  [Advance Booking] Waktu Penjemputan Terjadwal: '{scheduled_time}'")
+        when("Menguji modal Ubah Jadwal (Reschedule) pada pesanan terjadwal")
+        self.activity_page.open_reschedule_modal()
+        time.sleep(1.5)
+        assert self.activity_page.is_reschedule_modal_displayed(timeout=4), \
+            "[E2E-04] Modal Ubah Jadwal tidak terbuka setelah tombol Ubah Jadwal diketuk"
+        self.activity_page.cancel_reschedule_modal()
+        time.sleep(1.0)
+        assert not self.activity_page.is_reschedule_modal_displayed(timeout=2), \
+            "[E2E-04] Modal Ubah Jadwal masih terbuka setelah dibatalkan"
 
-            when("Menguji modal Ubah Jadwal (Reschedule) pada pesanan terjadwal")
-            self.activity_page.open_reschedule_modal()
-            time.sleep(1.5)
-
-            if self.activity_page.is_reschedule_modal_displayed(timeout=3):
-                self.activity_page.cancel_reschedule_modal()
-                time.sleep(1.0)
-
-            and_step("Menguji tombol batalkan Advance Booking dan menutup dialog konfirmasi")
-            self.activity_page.click_cancel_advance_booking()
-            time.sleep(1.0)
-            if self.activity_page.is_cancel_advance_dialog_displayed(timeout=3):
-                self.activity_page.abort_cancel_order()
-                time.sleep(1.0)
+        and_step("Menguji tombol batalkan Advance Booking dan menutup dialog konfirmasi")
+        self.activity_page.click_cancel_advance_booking()
+        time.sleep(1.0)
+        assert self.activity_page.is_cancel_advance_dialog_displayed(timeout=3), \
+            "[E2E-04] Dialog konfirmasi pembatalan Advance Booking tidak muncul"
+        self.activity_page.abort_cancel_order()
+        time.sleep(1.0)
+        assert not self.activity_page.is_cancel_advance_dialog_displayed(timeout=2), \
+            "[E2E-04] Dialog pembatalan Advance Booking masih terbuka setelah dibatalkan"
 
         and_step("Melakukan transisi cepat dua arah antara Tab Booking dan Tab Regular")
         self.activity_page.select_regular_tab()
         time.sleep(1.0)
         self.activity_page.select_booking_tab()
         time.sleep(1.0)
+        # Pembatalan dialog tadi tidak boleh ikut membatalkan pesanan: tab Booking tidak berubah jadi kosong.
+        assert not self.activity_page.is_empty_booking_state_displayed(timeout=3), \
+            "[E2E-04] Pesanan Advance Booking hilang setelah dialog pembatalan ditutup tanpa konfirmasi"
         self.activity_page.select_regular_tab()
         time.sleep(1.0)
         print(">>> [E2E-04] Berhasil Menguji Tab Booking & Fitur Advance Booking Terjadwal! <<<")
@@ -475,24 +483,23 @@ class TestComprehensiveE2E:
         time.sleep(1.5)
 
         when("Membuka Pengaturan Bahasa dan memilih bahasa 'English'")
-        self.profil_page.navigate_to_language()
-        time.sleep(1.5)
+        # select_language() sudah membuka menu bahasa sendiri; memanggil navigate_to_language() lebih dulu
+        # membuat locator menu 'Bahasa' ikut cocok dengan opsi 'Bahasa Indonesia' di layar pilihan bahasa.
         self.profil_page.select_language("en")
         time.sleep(2.0)
-
-        then("Bahasa antarmuka berhasil beralih ke Bahasa Inggris")
         has_english_snackbar = self.profil_page.is_language_snackbar_displayed(timeout=4)
         print(f"  [Bilingual] Snackbar Switch to English: {has_english_snackbar}")
 
         when("Membuka kembali Pengaturan Bahasa dan mengembalikan ke 'Indonesia'")
-        self.profil_page.navigate_to_language()
-        time.sleep(1.5)
+        # Selalu dikembalikan dulu ke Indonesia sebelum assert, agar test berikutnya tidak berjalan dalam bahasa Inggris.
         self.profil_page.select_language("id")
         time.sleep(2.0)
-
-        then("Bahasa antarmuka berhasil kembali ke Bahasa Indonesia")
         has_indo_snackbar = self.profil_page.is_language_snackbar_displayed(timeout=4)
         print(f"  [Bilingual] Snackbar Switch to Indonesia: {has_indo_snackbar}")
+
+        then("Bahasa antarmuka berhasil beralih ke Bahasa Inggris lalu kembali ke Bahasa Indonesia")
+        assert has_english_snackbar, "[E2E-07] Snackbar sukses ganti bahasa tidak muncul saat memilih 'English'"
+        assert has_indo_snackbar, "[E2E-07] Snackbar sukses ganti bahasa tidak muncul saat kembali ke 'Bahasa Indonesia'"
         print(">>> [E2E-07] Berhasil Memvalidasi Fitur Bilingual Language Dua Arah! <<<")
 
     # ==========================================================================

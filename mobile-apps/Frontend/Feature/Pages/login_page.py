@@ -30,6 +30,19 @@ class LoginPage(BasePage):
     FIELD_OTP = (AppiumBy.XPATH, "//android.widget.EditText")
     BTN_CONFIRM_OTP = (AppiumBy.XPATH, "//*[contains(@content-desc, 'Confirm') or contains(@content-desc, 'Konfirmasi')]")
     TEXT_ERROR_OTP = (AppiumBy.XPATH, "//*[contains(@content-desc, 'wrong') or contains(@content-desc, 'salah') or contains(@content-desc, 'not match')]")
+    # Teks resmi dari file terjemahan aplikasi (assets/jsons/user_lang_id.json & user_lang_en.json, APK 1.2.33):
+    # verification_otp_not_match = 'Kode verifikasi salah. Silakan coba lagi.' / 'Incorrect verification code. Please try again.'
+    TEXT_OTP_NOT_MATCH = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Kode verifikasi salah') or contains(@text, 'Kode verifikasi salah') or "
+        "contains(@content-desc, 'Incorrect verification code') or contains(@text, 'Incorrect verification code')]"
+    )
+    # snackbar_phone_not_registered = 'Nomor telepon belum terdaftar' / 'Phone number is not registered'
+    TEXT_PHONE_NOT_REGISTERED = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Nomor telepon belum terdaftar') or contains(@text, 'Nomor telepon belum terdaftar') or "
+        "contains(@content-desc, 'Phone number is not registered') or contains(@text, 'Phone number is not registered')]"
+    )
 
     # Legalitas & Navigasi
     LINK_TERMS = (AppiumBy.XPATH, "//*[contains(@content-desc, 'Terms and Conditions')]")
@@ -277,6 +290,14 @@ class LoginPage(BasePage):
             return field.get_attribute("text") or field.text or ""
         except Exception:
             return ""
+
+    def is_otp_not_match_error_displayed(self, timeout: int = 8) -> bool:
+        """True bila pesan 'Kode verifikasi salah. Silakan coba lagi.' tampil di layar OTP."""
+        return self.is_displayed(self.TEXT_OTP_NOT_MATCH, timeout=timeout)
+
+    def is_phone_not_registered_message_displayed(self, timeout: int = 8) -> bool:
+        """True bila snackbar 'Nomor telepon belum terdaftar' tampil setelah menekan Masuk."""
+        return self.is_displayed(self.TEXT_PHONE_NOT_REGISTERED, timeout=timeout)
 
     def is_error_displayed(self, text_snippet: str = "", timeout: int = 5) -> bool:
         """Memeriksa apakah pesan error atau validasi muncul di layar."""

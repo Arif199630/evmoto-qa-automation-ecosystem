@@ -74,16 +74,21 @@ class ActivityPage(BasePage):
     # 2. TAB UTAMA HALAMAN AKTIVITAS (TAB REGULAR VS TAB BOOKING)
     # ==========================================================================
     # Tab 1: Tab Regular -> Untuk melihat history order dari Normal Booking (Instant Ride)
+    # Label resmi aplikasi (user_lang_id.json / user_lang_en.json, APK 1.2.33):
+    # activity_category_normal = 'Normal' (ID) / 'Reguler' (EN); activity_category_booking = 'Dipesan' (ID) / 'Booking' (EN).
+    # 'Normal' dan 'Dipesan' dicocokkan persis karena kata pendek.
     TAB_REGULAR = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Regular') or contains(@text, 'Regular') or "
-        "contains(@content-desc, 'Reguler') or contains(@text, 'Reguler')]"
+        "contains(@content-desc, 'Reguler') or contains(@text, 'Reguler') or "
+        "@content-desc='Normal' or @text='Normal']"
     )
     # Tab 2: Tab Booking -> Untuk melihat history order dari Advance Booking (Scheduled Ride)
     TAB_BOOKING = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Booking') or contains(@text, 'Booking') or "
-        "contains(@content-desc, 'Advance') or contains(@text, 'Advance')]"
+        "contains(@content-desc, 'Advance') or contains(@text, 'Advance') or "
+        "@content-desc='Dipesan' or @text='Dipesan']"
     )
 
     # Sub-Filter Status di Dalam Tab (Ongoing vs Completed vs Cancelled)
@@ -174,10 +179,13 @@ class ActivityPage(BasePage):
         "//*[contains(@resource-id, 'activity_list') or contains(@resource-id, 'order_list') or "
         "//android.widget.ScrollView or //android.widget.ListView]"
     )
+    # Kartu pesanan dikenali dari ID order atau label status resmi (order_completed / canceled).
+    # Nama layanan (EvRide/EvSend/EvRent) sengaja tidak dipakai karena juga cocok dengan chip filter layanan.
     CARD_ORDER_FIRST = (
         AppiumBy.XPATH,
-        "(//*[contains(@content-desc, 'ORD-') or contains(@content-desc, 'EvRide') or "
-        "contains(@content-desc, 'EvSend') or contains(@content-desc, 'EvRent') or "
+        "(//*[contains(@content-desc, 'ORD-') or "
+        "contains(@content-desc, 'Pesanan Selesai') or contains(@content-desc, 'Pesanan Dibatalkan') or "
+        "contains(@content-desc, 'Order Completed') or contains(@content-desc, 'Order Cancelled') or "
         "contains(@resource-id, 'card_order') or contains(@resource-id, 'item_order')])[1]"
     )
     ORDER_CARD_SERVICE_ICON = (
@@ -225,9 +233,12 @@ class ActivityPage(BasePage):
         "//*[contains(@content-desc, 'Batalkan Pesanan') or contains(@content-desc, 'Cancel Order') or "
         "contains(@text, 'Batalkan Pesanan') or contains(@text, 'Cancel Order')]"
     )
+    # cancel_order_title_dialog = 'Apakah Anda yakin ingin membatalkan pesanan?' / 'Are you sure you want to cancel your order?'
     DIALOG_CONFIRM_CANCEL_ORDER = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Konfirmasi Pembatalan') or contains(@text, 'Yakin ingin membatalkan') or "
+        "contains(@content-desc, 'yakin ingin membatalkan pesanan') or contains(@text, 'yakin ingin membatalkan pesanan') or "
+        "contains(@content-desc, 'Are you sure you want to cancel your order') or "
         "contains(@resource-id, 'dialog_cancel_order')]"
     )
     BTN_PROCEED_CANCEL_ORDER = (
@@ -281,16 +292,24 @@ class ActivityPage(BasePage):
         "//*[contains(@content-desc, 'Batalkan Booking') or contains(@text, 'Batalkan Booking') or "
         "contains(@content-desc, 'Batal Pesanan') or contains(@text, 'Batalkan')]"
     )
+    # advanced_booking_cancel_title = 'Ingin Batalkan Pesanan' / 'Cancel Order';
+    # advanced_booking_cancel_description = 'Apakah Anda yakin ingin melanjutkan pembatalan pesanan?'
     DIALOG_CANCEL_ADVANCE_BOOKING = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Konfirmasi Pembatalan Booking') or contains(@text, 'Batalkan Advance Booking') or "
+        "contains(@content-desc, 'Ingin Batalkan Pesanan') or contains(@text, 'Ingin Batalkan Pesanan') or "
+        "contains(@content-desc, 'melanjutkan pembatalan pesanan') or contains(@text, 'melanjutkan pembatalan pesanan') or "
+        "contains(@content-desc, 'continue cancelling this order') or "
         "contains(@resource-id, 'dialog_cancel_advance')]"
     )
+    # advanced_booking_list_not_found_title = 'Rencanakan Perjalanan Anda' / 'Plan Your Trip'
     EMPTY_STATE_BOOKING = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Belum Ada Booking') or contains(@text, 'Belum Ada Booking') or "
         "contains(@content-desc, 'Tidak ada jadwal booking') or contains(@text, 'Belum ada Advance Booking') or "
-        "contains(@text, 'Belum ada jadwal perjalanan')]"
+        "contains(@text, 'Belum ada jadwal perjalanan') or "
+        "contains(@content-desc, 'Rencanakan Perjalanan Anda') or contains(@text, 'Rencanakan Perjalanan Anda') or "
+        "contains(@content-desc, 'Plan Your Trip') or contains(@text, 'Plan Your Trip')]"
     )
 
     # ==========================================================================
@@ -394,9 +413,12 @@ class ActivityPage(BasePage):
     # ==========================================================================
     # 7. MODAL PENILAIAN & ULASAN DRIVER (RATING MODAL)
     # ==========================================================================
+    # how_travel_experience = 'Bagaimana pengalaman perjalanan Anda?' / 'How was your trip?'
     MODAL_RATING_CONTAINER = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Beri Penilaian') or contains(@text, 'Bagaimana perjalananmu') or "
+        "//*[contains(@content-desc, 'Bagaimana pengalaman perjalanan Anda') or "
+        "contains(@text, 'Bagaimana pengalaman perjalanan Anda') or contains(@content-desc, 'How was your trip') or "
+        "contains(@content-desc, 'Beri Penilaian') or contains(@text, 'Bagaimana perjalananmu') or "
         "contains(@content-desc, 'Rating Driver') or contains(@resource-id, 'rating_dialog') or "
         "contains(@content-desc, 'Nilai Pengemudi')]"
     )
@@ -453,12 +475,18 @@ class ActivityPage(BasePage):
     SNACKBAR_RATING_SUCCESS = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Terima kasih atas ulasan') or contains(@text, 'Terima kasih atas ulasan') or "
-        "contains(@text, 'Ulasan berhasil dikirim') or contains(@content-desc, 'Ulasan terkirim')]"
+        "contains(@text, 'Ulasan berhasil dikirim') or contains(@content-desc, 'Ulasan terkirim') or "
+        # successfully_rating_review = 'Penilaian dan ulasan berhasil dikirim'
+        "contains(@content-desc, 'Penilaian dan ulasan berhasil dikirim') or "
+        "contains(@text, 'Penilaian dan ulasan berhasil dikirim')]"
     )
+    # please_tap_star_to_rate = 'Silakan ketuk bintang untuk memberi rating' / 'Please tap a star to rate'
     WARNING_ZERO_STAR = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Pilih minimal 1 bintang') or contains(@text, 'Pilih minimal 1 bintang') or "
-        "contains(@text, 'Silakan beri nilai')]"
+        "contains(@text, 'Silakan beri nilai') or "
+        "contains(@content-desc, 'Silakan ketuk bintang') or contains(@text, 'Silakan ketuk bintang') or "
+        "contains(@content-desc, 'Please tap a star to rate') or contains(@text, 'Please tap a star to rate')]"
     )
 
     # ==========================================================================
@@ -528,10 +556,13 @@ class ActivityPage(BasePage):
     # ==========================================================================
     # 9. EMPTY STATES & RESILIENSI JARINGAN PADA HALAMAN AKTIVITAS
     # ==========================================================================
+    # activity_not_found_title = 'Belum ada riwayat perjalanan' / 'No trip history yet'
     EMPTY_STATE_CONTAINER = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Belum Ada Aktivitas') or contains(@text, 'Belum Ada Aktivitas') or "
         "contains(@content-desc, 'Tidak ada riwayat') or contains(@text, 'Tidak ada riwayat') or "
+        "contains(@content-desc, 'Belum ada riwayat perjalanan') or contains(@text, 'Belum ada riwayat perjalanan') or "
+        "contains(@content-desc, 'No trip history yet') or contains(@text, 'No trip history yet') or "
         "contains(@resource-id, 'empty_state_activity')]"
     )
     BTN_START_EXPLORING = (
@@ -554,10 +585,22 @@ class ActivityPage(BasePage):
         "//*[contains(@resource-id, 'progress_bar') or contains(@class, 'ProgressBar') or "
         "contains(@content-desc, 'Memuat') or contains(@text, 'Memuat')]"
     )
+    # Pesan jaringan resmi: socket_connection_disconnected, dio_exception_connection_error, network_unreachable
     SNACKBAR_OFFLINE_ACTIVITY = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Koneksi internet terputus') or contains(@text, 'Koneksi internet terputus') or "
-        "contains(@content-desc, 'Tidak ada koneksi') or contains(@text, 'Tidak ada koneksi')]"
+        "contains(@content-desc, 'Tidak ada koneksi') or contains(@text, 'Tidak ada koneksi') or "
+        "contains(@content-desc, 'Jaringan terputus') or contains(@text, 'Jaringan terputus') or "
+        "contains(@content-desc, 'Tidak dapat terhubung ke server') or contains(@text, 'Tidak dapat terhubung ke server') or "
+        "contains(@content-desc, 'Network tidak tersedia') or contains(@text, 'Network tidak tersedia') or "
+        "contains(@content-desc, 'The connection has been lost') or contains(@text, 'The connection has been lost') or "
+        "contains(@content-desc, 'Unable to connect to the server') or contains(@text, 'Unable to connect to the server')]"
+    )
+    # Layar pemesanan setelah 'Pesan Lagi': tombol order_ev_moto = 'Pesan EVMoto' / 'Order EVMoto' (dicocokkan persis)
+    BTN_ORDER_EVMOTO = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Pesan EVMoto' or @text='Pesan EVMoto' or "
+        "@content-desc='Order EVMoto' or @text='Order EVMoto']"
     )
     BTN_RETRY_ACTIVITY = (
         AppiumBy.XPATH,
@@ -972,6 +1015,60 @@ class ActivityPage(BasePage):
         except Exception as e:
             logger.warning(f"Background app disimulasikan: {e}")
             time.sleep(duration_seconds)
+
+    # --- PEMERIKSAAN HASIL (DIPAKAI SEBAGAI ASSERTION DI TEST) ---
+    def is_order_id_displayed(self, timeout: int = 6) -> bool:
+        """True bila label 'ID Pesanan' / nomor ORD- tampil, penanda layar Rincian Pesanan terbuka."""
+        return self.is_displayed(self.TEXT_ORDER_ID, timeout=timeout)
+
+    def is_service_filter_selected(self, chip_locator, timeout: int = 4) -> bool:
+        """True bila chip filter layanan berstatus terpilih (atribut selected/checked = true)."""
+        chips = self.find_all(chip_locator, timeout=timeout)
+        if not chips:
+            return False
+        chip = chips[0]
+        return chip.get_attribute("selected") == "true" or chip.get_attribute("checked") == "true"
+
+    def is_reorder_button_displayed(self, timeout: int = 4) -> bool:
+        """True bila tombol 'Pesan Lagi' tersedia pada kartu riwayat pesanan."""
+        return self.is_displayed(self.BTN_REORDER_NOW, timeout=timeout)
+
+    def is_order_booking_screen_displayed(self, timeout: int = 10) -> bool:
+        """True bila layar pemesanan dengan tombol 'Pesan EVMoto' terbuka (hasil fitur 'Pesan Lagi')."""
+        return self.is_displayed(self.BTN_ORDER_EVMOTO, timeout=timeout)
+
+    def is_cancel_active_order_button_displayed(self, timeout: int = 4) -> bool:
+        """True bila tombol batalkan pesanan aktif tersedia (ada pesanan yang sedang berjalan)."""
+        return self.is_displayed(self.BTN_CANCEL_ACTIVE_ORDER, timeout=timeout)
+
+    def is_rate_driver_button_displayed(self, timeout: int = 4) -> bool:
+        """True bila tombol beri nilai driver tersedia pada kartu pesanan selesai."""
+        return self.is_displayed(self.BTN_RATE_DRIVER_CARD, timeout=timeout)
+
+    def is_report_issue_button_displayed(self, timeout: int = 4) -> bool:
+        """True bila tombol 'Laporkan Masalah' tersedia di Rincian Pesanan."""
+        return self.is_displayed(self.BTN_REPORT_ORDER_ISSUE, timeout=timeout)
+
+    def is_app_in_foreground(self) -> bool:
+        """True bila aplikasi EvMoto User masih berada di depan (tidak crash / force close)."""
+        from config import config
+        return self.driver.current_package == config.APP_PACKAGE
+
+    def set_device_network(self, enabled: bool) -> bool:
+        """Menyalakan/mematikan Wi-Fi dan data seluler lewat 'mobile: shell'.
+
+        Mengembalikan False bila perintah ditolak Appium (server tanpa izin adb_shell),
+        supaya test bisa di-skip dengan alasan jelas, bukan lulus tanpa memutus jaringan.
+        """
+        state = "enable" if enabled else "disable"
+        try:
+            self.driver.execute_script("mobile: shell", {"command": "svc", "args": ["wifi", state]})
+            self.driver.execute_script("mobile: shell", {"command": "svc", "args": ["data", state]})
+            time.sleep(2.0)
+            return True
+        except Exception as e:
+            logger.warning(f"Gagal mengubah status jaringan perangkat ({state}): {e}")
+            return False
 
 
 # Backward compatibility aliases

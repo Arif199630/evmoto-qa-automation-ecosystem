@@ -769,8 +769,12 @@ class TestDrvWallet:
 
         when("Driver membuka menu Isi Ulang Saldo")
         wallet_pg.open_isi_ulang_saldo()
-        then("Halaman opsi isi ulang saldo tampil siap dipilih")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        then("Halaman riwayat isi ulang tampil: daftar transaksi isi ulang atau empty state")
+        # Dua hasil yang sah dan sama-sama spesifik untuk layar ini: ada riwayat, atau empty state resmi.
+        assert wallet_pg.has_recharge_history_items() or wallet_pg.is_recharge_empty_state_displayed(), \
+            "Layar riwayat isi ulang tidak terbuka: tidak ada item 'Top-up Saldo'/rute isi ulang " \
+            "maupun empty state 'Tidak Memiliki Riwayat Isi Ulang Saldo'"
+
     @pytest.mark.positive_true
     def test_TC_DRV_WAL_PT_27_rute_topup_bank_ke_saldo_evmoto(self, driver_app):
         """
@@ -778,13 +782,9 @@ class TestDrvWallet:
         Deskripsi : Memilih metode transfer 'Bank → Saldo EVMoto'.
         Ekspektasi: Menampilkan nomor Virtual Account bank tujuan transfer resmi.
         """
-        wallet_pg = DrvWalletPage(driver_app)
-        self._ensure_driver_on_wallet(driver_app)
+        pytest.skip("Nomor Virtual Account baru muncul setelah membuat transaksi top-up nyata ke bank; "
+                    "teks/tata letak layar VA juga tidak ada di string resmi APK, jadi belum bisa diverifikasi.")
 
-        given("Layar isi ulang saldo terbuka")
-        when("Driver memilih rute 'Bank → Saldo EVMoto'")
-        then("Nomor VA bank dan petunjuk transfer ditampilkan lengkap")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_WAL_PT_28_rute_topup_qris_ke_saldo_evmoto(self, driver_app):
         """
@@ -792,13 +792,9 @@ class TestDrvWallet:
         Deskripsi : Memilih metode instant pay 'QRIS → Saldo EVMoto'.
         Ekspektasi: Kode QRIS dinamis berhasil di-generate beserta nominal top-up.
         """
-        wallet_pg = DrvWalletPage(driver_app)
-        self._ensure_driver_on_wallet(driver_app)
+        pytest.skip("Kode QRIS baru dibuat setelah transaksi top-up nyata diajukan ke payment gateway; "
+                    "butuh akun dan nominal top-up khusus pengujian.")
 
-        given("Layar isi ulang saldo terbuka")
-        when("Driver memilih rute 'QRIS → Saldo EVMoto'")
-        then("Kode QRIS pembayaran tampil di layar")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_WAL_PT_29_simpan_gambar_qris_ke_galeri_ponsel(self, driver_app):
         """
@@ -806,14 +802,9 @@ class TestDrvWallet:
         Deskripsi : Mengetuk tombol simpan gambar QRIS ke galeri ponsel.
         Ekspektasi: Muncul snackbar konfirmasi 'Berhasil menyimpan gambar pada gallery'.
         """
-        wallet_pg = DrvWalletPage(driver_app)
-        self._ensure_driver_on_wallet(driver_app)
+        pytest.skip("Pra-kondisi 'kode QRIS tampil' butuh transaksi top-up QRIS nyata (lihat PT-28); "
+                    "tanpa itu tombol simpan QRIS tidak ada di layar.")
 
-        given("Kode QRIS tampil pada layar ponsel")
-        when("Driver mengetuk tombol 'Simpan Gambar'")
-        wallet_pg.click_simpan_gambar_qris()
-        then("Gambar QRIS tersimpan di galeri perangkat")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.positive_true
     def test_TC_DRV_WAL_PT_30_salin_nomor_transaksi_ke_clipboard(self, driver_app):
         """
@@ -828,7 +819,11 @@ class TestDrvWallet:
         when("Driver mengetuk ikon salin nomor transaksi")
         wallet_pg.click_salin_no_transaksi()
         then("Sistem mengonfirmasi nomor transaksi tersalin ke clipboard")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert wallet_pg.is_txn_copied_snackbar_displayed(), \
+            "Snackbar 'No. transaksi berhasil disalin.' tidak muncul setelah mengetuk ikon salin"
+        assert wallet_pg.get_clipboard_text().strip() != "", \
+            "Clipboard perangkat masih kosong setelah menyalin nomor transaksi"
+
     @pytest.mark.positive_true
     def test_TC_DRV_WAL_PT_31_verifikasi_kartu_total_tunggakan_dan_denda_penalti(self, driver_app):
         """
@@ -841,8 +836,14 @@ class TestDrvWallet:
 
         when("Driver membuka menu Bayar Tagihan")
         wallet_pg.open_bayar_tagihan()
-        then("Rincian total tunggakan dan estimasi denda pinalti tertera")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        if wallet_pg.is_no_outstanding_displayed():
+            pytest.skip("Akun uji tidak punya tunggakan ('Tidak ada tunggakan'), kartu Total Tunggakan tidak muncul.")
+        then("Rincian total tunggakan dan penjelasan denda tertera")
+        assert wallet_pg.is_total_tunggakan_displayed(), \
+            "Kartu 'Total Tunggakan' tidak tampil di layar Bayar Tagihan"
+        assert wallet_pg.is_tunggakan_description_displayed(), \
+            "Penjelasan '... mohon segera melunasi tunggakan untuk menghindari denda' tidak tampil"
+
     @pytest.mark.positive_true
     def test_TC_DRV_WAL_PT_32_rincian_tagihan_swap_baterai_dan_motor_bulanan(self, driver_app):
         """
@@ -853,9 +854,14 @@ class TestDrvWallet:
         wallet_pg = DrvWalletPage(driver_app)
         self._ensure_driver_on_wallet(driver_app)
 
-        when("Driver meninjau daftar tagihan armada")
-        then("Pos tagihan swap baterai dan sewa bulanan terdaftar")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        when("Driver membuka Bayar Tagihan dan meninjau daftar tagihan armada")
+        wallet_pg.open_bayar_tagihan()
+        if wallet_pg.is_no_bills_displayed():
+            pytest.skip("Akun uji tidak punya tagihan ('Tidak ada tagihan yang dapat dibayar.').")
+        then("Pos tagihan armada (swap baterai / sewa motor) terdaftar")
+        assert wallet_pg.has_bill_type_items(), \
+            "Daftar tagihan tidak memuat jenis tagihan armada (Swap Baterai / Motor Bulanan / Motor Harian / Garansi Baterai)"
+
     @pytest.mark.positive_true
     def test_TC_DRV_WAL_PT_33_buka_dialog_putuskan_hubungan_ewallet_ecgo(self, driver_app):
         """
@@ -866,10 +872,17 @@ class TestDrvWallet:
         wallet_pg = DrvWalletPage(driver_app)
         self._ensure_driver_on_wallet(driver_app)
 
+        if not wallet_pg.is_ecgo_connected():
+            pytest.skip("eWallet akun uji belum terhubung dengan ECGO, tombol 'Putuskan eWallet' tidak tersedia.")
         when("Driver mengetuk 'Putuskan eWallet'")
         wallet_pg.click_putuskan_ewallet()
         then("Dialog konfirmasi 'Putuskan eWallet' dan peringatan ditampilkan")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        dialog_tampil = wallet_pg.is_putuskan_dialog_displayed()
+        # Tutup dialog tanpa memutuskan agar akun uji tetap terhubung untuk test berikutnya.
+        wallet_pg.press_back()
+        assert dialog_tampil, \
+            "Dialog putuskan eWallet tidak tampil: teks 'Jika diputuskan, eWallet EVMoto ...' atau tombol 'Ya, Putuskan' tidak ada"
+
     @pytest.mark.positive_true
     def test_TC_DRV_WAL_PT_34_batal_putuskan_ewallet_tetap_terhubung(self, driver_app):
         """
@@ -880,10 +893,17 @@ class TestDrvWallet:
         wallet_pg = DrvWalletPage(driver_app)
         self._ensure_driver_on_wallet(driver_app)
 
+        if not wallet_pg.is_ecgo_connected():
+            pytest.skip("eWallet akun uji belum terhubung dengan ECGO, dialog putuskan tidak bisa dibuka.")
         given("Dialog konfirmasi putuskan eWallet aktif")
+        wallet_pg.click_putuskan_ewallet()
+        assert wallet_pg.is_putuskan_dialog_displayed(), "Pra-kondisi gagal: dialog putuskan eWallet tidak tampil"
         when("Driver memilih tombol 'Batal'")
-        then("Koneksi eWallet ECGO tetap aktif terjaga")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        wallet_pg.cancel_putuskan_ewallet()
+        then("Dialog tertutup dan koneksi eWallet ECGO tetap aktif")
+        assert not wallet_pg.is_putuskan_dialog_displayed(), "Dialog putuskan eWallet masih terbuka setelah mengetuk Batal"
+        assert wallet_pg.is_ecgo_connected(), "Status eWallet tidak lagi 'Terhubung' setelah membatalkan pemutusan"
+
     @pytest.mark.business_logic
     def test_TC_DRV_WAL_BL_06_pencegahan_bayar_tagihan_saat_ewallet_belum_terhubung(self, driver_app):
         """
@@ -895,9 +915,17 @@ class TestDrvWallet:
         self._ensure_driver_on_wallet(driver_app)
 
         given("Akun driver belum menghubungkan dompet ECGO")
+        if wallet_pg.is_ecgo_connected():
+            pytest.skip("eWallet akun uji sudah terhubung; skenario ini butuh akun yang belum terhubung "
+                        "(memutus koneksi akun uji bersama tidak dilakukan otomatis).")
         when("Driver mencoba membayar tagihan armada")
+        wallet_pg.open_bayar_tagihan()
         then("Sistem mengarahkan driver untuk menghubungkan eWallet terlebih dahulu")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        # Dua bentuk arahan yang sah: pesan resmi, atau langsung membuka modal Hubungkan EVMoto dengan ECGO.
+        assert wallet_pg.is_link_required_message_displayed() or wallet_pg.is_link_ecgo_modal_displayed(), \
+            "Bayar tagihan tanpa eWallet terhubung tidak diarahkan: pesan 'Hubungkan eWallet terlebih dahulu ...' " \
+            "maupun modal 'Hubungkan EVMoto dengan ECGO' tidak tampil"
+
     @pytest.mark.negative_true
     def test_TC_DRV_WAL_NT_05_transaksi_topup_kedaluwarsa_expired(self, driver_app):
         """
@@ -905,13 +933,9 @@ class TestDrvWallet:
         Deskripsi : Menangani status 'Transaksi kedaluwarsa' saat batas waktu bayar habis.
         Ekspektasi: Tampil status kedaluwarsa dan instruksi membuat transaksi top-up baru.
         """
-        wallet_pg = DrvWalletPage(driver_app)
-        self._ensure_driver_on_wallet(driver_app)
+        pytest.skip("Butuh transaksi top-up yang sudah melewati batas waktu bayar (dibuat lalu ditunggu kedaluwarsa); "
+                    "data seperti itu belum disiapkan di akun uji.")
 
-        given("Transaksi top-up melewati batas waktu SLA pembayaran")
-        when("Driver membuka detail transaksi")
-        then("Sistem menampilkan status 'Transaksi kedaluwarsa' secara aman")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_true
     def test_TC_DRV_WAL_NT_06_empty_state_tidak_memiliki_riwayat_isi_ulang(self, driver_app):
         """
@@ -922,10 +946,17 @@ class TestDrvWallet:
         wallet_pg = DrvWalletPage(driver_app)
         self._ensure_driver_on_wallet(driver_app)
 
-        given("Akun driver baru belum pernah melakukan top-up")
+        given("Akun driver belum pernah melakukan top-up")
         when("Driver membuka riwayat isi ulang")
+        wallet_pg.open_isi_ulang_saldo()
+        if wallet_pg.has_recharge_history_items():
+            pytest.skip("Akun uji sudah punya riwayat isi ulang, empty state tidak akan tampil.")
         then("Tampil pesan 'Tidak Memiliki Riwayat Isi Ulang Saldo'")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert wallet_pg.is_recharge_empty_state_displayed(), \
+            "Empty state 'Tidak Memiliki Riwayat Isi Ulang Saldo' tidak tampil padahal tidak ada riwayat"
+        assert wallet_pg.is_recharge_empty_description_displayed(), \
+            "Penjelasan 'Anda belum pernah melakukan isi ulang saldo.' tidak tampil"
+
     @pytest.mark.negative_false
     def test_TC_DRV_WAL_NF_04_penolakan_akses_izin_penyimpanan_galeri_qris(self, driver_app):
         """
@@ -933,11 +964,5 @@ class TestDrvWallet:
         Deskripsi : Menangani saat user menolak izin akses penyimpanan galeri untuk QRIS.
         Ekspektasi: Muncul 'Tidak memiliki akses menyimpan gambar ke gallery' tanpa crash.
         """
-        wallet_pg = DrvWalletPage(driver_app)
-        self._ensure_driver_on_wallet(driver_app)
-
-        given("Izin penyimpanan eksternal dinonaktifkan")
-        when("Driver mencoba menyimpan QRIS")
-        wallet_pg.click_simpan_gambar_qris()
-        then("Aplikasi menampilkan pesan penolakan izin secara anggun tanpa crash")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        pytest.skip("Butuh kode QRIS tampil (transaksi top-up nyata, lihat PT-28) dan izin penyimpanan dicabut; "
+                    "sesi Appium memakai autoGrantPermissions sehingga penolakan izin tidak bisa disimulasikan.")

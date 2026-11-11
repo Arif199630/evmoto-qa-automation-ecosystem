@@ -354,7 +354,14 @@ class TestLogin:
         login_page.input_phone_number(data["phone"])
         login_page.click_submit_login()
 
-        login_page.pause(1.5, 2.5, "Membaca pesan penolakan nomor belum terdaftar")
+        # Snackbar penolakan hanya tampil beberapa detik, jadi diperiksa langsung setelah tombol Masuk ditekan
+        has_rejection = login_page.is_phone_not_registered_message_displayed(timeout=8)
+        assert has_rejection, (
+            "[GAGAL PF-01] Pesan 'Nomor telepon belum terdaftar' tidak muncul setelah login dengan nomor yang belum terdaftar!"
+        )
+        assert not login_page.is_otp_screen_displayed(timeout=3), (
+            "[GAGAL PF-01] Nomor belum terdaftar tetap diteruskan ke layar Verifikasi OTP!"
+        )
         print(f">>> [PASSED PF-01] Penolakan nomor belum terdaftar terverifikasi: '{data['expected_error']}'")
 
     @pytest.mark.positive_false
@@ -420,6 +427,13 @@ class TestLogin:
             login_page.input_otp_dev(data["otp_wrong"])
             login_page.pause(1.0, 1.5, f"Percobaan input OTP salah ke-{attempt + 1}")
 
+        # Hasil yang diharapkan: setiap OTP salah ditolak dan pengguna tidak pernah masuk ke Beranda
+        assert login_page.is_otp_not_match_error_displayed(timeout=8), (
+            "[GAGAL PF-04] Pesan 'Kode verifikasi salah' tidak muncul setelah OTP salah dimasukkan berulang kali!"
+        )
+        assert not HomePage(driver).is_home_screen_displayed(timeout=3), (
+            "[GAGAL PF-04] Pengguna masuk ke Beranda padahal OTP yang dimasukkan salah!"
+        )
         print(">>> [PASSED PF-04] Proteksi brute-force verifikasi OTP terverifikasi.")
 
 
@@ -443,7 +457,13 @@ class TestLogin:
         login_page.click_submit_login()
 
         login_page.input_otp_dev(data["otp_wrong"])
-        login_page.pause(1.2, 2.0, "Menunggu pesan validasi error OTP invalid")
+
+        assert login_page.is_otp_not_match_error_displayed(timeout=8), (
+            "[GAGAL NT-01] Pesan 'Kode verifikasi salah. Silakan coba lagi.' tidak muncul setelah OTP salah dimasukkan!"
+        )
+        assert not HomePage(driver).is_home_screen_displayed(timeout=3), (
+            "[GAGAL NT-01] Pengguna masuk ke Beranda padahal OTP yang dimasukkan salah!"
+        )
         print(f">>> [PASSED NT-01] Validasi OTP salah terverifikasi: '{data['expected_error']}'")
 
     @pytest.mark.negative_true

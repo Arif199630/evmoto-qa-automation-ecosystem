@@ -13,6 +13,7 @@ Aturan (keputusan 11 Nov 2026):
     - placeholder   : hanya `assert True  # TODO(QA)`
     - tanpa_assert  : menjalankan langkah tanpa memeriksa hasil
     - simulator     : hanya menguji simulator/kalkulator Python, tidak menyentuh aplikasi atau backend
+    - logika_lokal  : memeriksa nilai yang ditulis test itu sendiri (tidak memanggil aplikasi/backend)
     - skip          : sengaja di-skip dengan alasan (tidak dihitung lulus/gagal)
 Klasifikasi dibaca dari kode (statis); hasil lulus/gagal ada di laporan run.
 """
@@ -40,7 +41,7 @@ MOCK_TESTS = {"test_tc_api_usr_02_fare_estimation", "test_tc_api_usr_03_create_b
 
 
 def real_asserts(body):
-    lines = [l for l in body.splitlines() if re.match(r"\s*(assert\b|self\.assert\w+\()", l)]
+    lines = [l for l in body.splitlines() if re.match(r"\s*(assert\b|self\.assert\w+\(|with pytest\.raises\()", l)]
     return [l for l in lines if "TODO(QA)" not in l and not re.match(r"\s*assert\s+True\b", l)
             and "assertTrue(True" not in l]
 
@@ -64,7 +65,8 @@ def classify(path, func, body, suite):
         return "http_staging"
     if args & SIM_FIXTURES or re.search(r"[Ss]imulator|AdminDashboardFareCalculator|calculate_", body):
         return "simulator"
-    return "simulator" if suite == "cross" else "tanpa_assert"
+    # Assertion hanya pada nilai yang ditulis test itu sendiri: tidak menguji sistem
+    return "simulator" if suite == "cross" else "logika_lokal"
 
 
 def scan():

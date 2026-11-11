@@ -10,6 +10,7 @@ Metodologi      : Page Object Model (POM) & 4 Pilar QA Lengkap
 Wording         : 100% Presisi strings resmi APK driver_lang_id.json
 ================================================================================
 """
+import os
 import time
 import pytest
 from Pages.drv_login_page import DrvLoginPage
@@ -393,7 +394,9 @@ class TestDrvMenu:
         when("Driver membuka menu Cara Penggunaan Aplikasi")
         menu_pg.open_cara_penggunaan()
         then("Panduan Langkah 'Unduh dan Daftar' ditampilkan jelas")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert menu_pg.is_faq_step_download_displayed(), \
+            "Langkah panduan 'Unduh dan Daftar' tidak tampil setelah membuka 'Cara Penggunaan Aplikasi'"
+
     @pytest.mark.positive_true
     def test_TC_DRV_MENU_PT_14_akses_detail_langkah_buka_halaman_utama(self, driver_app):
         """
@@ -404,9 +407,12 @@ class TestDrvMenu:
         menu_pg = DrvMenuPage(driver_app)
         self._ensure_driver_on_menu(driver_app)
 
-        when("Driver meninjau langkah kedua panduan")
+        when("Driver membuka panduan dan meninjau langkah kedua")
+        menu_pg.open_cara_penggunaan()
         then("Penjelasan 'Buka Halaman Utama' tertera informatif")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert menu_pg.is_faq_step_open_home_displayed(), \
+            "Langkah panduan 'Buka Halaman Utama' tidak ditemukan di layar 'Cara Penggunaan Aplikasi'"
+
     @pytest.mark.positive_true
     def test_TC_DRV_MENU_PT_15_akses_detail_langkah_cara_mengaktifkan_aplikasi(self, driver_app):
         """
@@ -417,9 +423,12 @@ class TestDrvMenu:
         menu_pg = DrvMenuPage(driver_app)
         self._ensure_driver_on_menu(driver_app)
 
-        when("Driver meninjau langkah ketiga panduan")
+        when("Driver membuka panduan dan meninjau langkah ketiga")
+        menu_pg.open_cara_penggunaan()
         then("Instruksi 'Cara mengaktifkan aplikasi' terverifikasi")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert menu_pg.is_faq_step_activate_displayed(), \
+            "Langkah panduan 'Cara mengaktifkan aplikasi' tidak ditemukan di layar 'Cara Penggunaan Aplikasi'"
+
     @pytest.mark.positive_true
     def test_TC_DRV_MENU_PT_16_verifikasi_halaman_tentang_kami_dan_versi_apk(self, driver_app):
         """
@@ -433,7 +442,9 @@ class TestDrvMenu:
         when("Driver mengetuk menu 'Tentang Kami'")
         menu_pg.open_tentang_kami()
         then("Halaman Tentang Kami dan nomor versi aplikasi ditampilkan")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert menu_pg.is_app_version_number_displayed(), \
+            "Nomor versi aplikasi (format x.y.z) tidak tampil di halaman 'Tentang Kami'"
+
     @pytest.mark.positive_true
     def test_TC_DRV_MENU_PT_17_buka_formulir_kirim_masukan_feedback(self, driver_app):
         """
@@ -447,7 +458,9 @@ class TestDrvMenu:
         when("Driver mengetuk menu formulir Masukan")
         menu_pg.open_feedback_form()
         then("Field teks masukan dan tombol submit tertera")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert menu_pg.is_feedback_form_displayed(), \
+            "Form masukan tidak terbuka: kolom input atau tombol 'Kirim' tidak tampil"
+
     @pytest.mark.positive_true
     def test_TC_DRV_MENU_PT_18_submit_masukan_driver_sukses(self, driver_app):
         """
@@ -459,10 +472,13 @@ class TestDrvMenu:
         self._ensure_driver_on_menu(driver_app)
 
         given("Formulir masukan terbuka")
+        menu_pg.open_feedback_form()
         when("Driver mengetik pesan 'Aplikasi berjalan lancar' dan mengetuk Kirim")
         menu_pg.submit_feedback("Aplikasi berjalan lancar")
         then("Sistem menampilkan notifikasi bahwa masukan berhasil diterima")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert menu_pg.is_feedback_success_displayed(), \
+            "Snackbar 'Masukan anda berhasil terkirim!' tidak muncul setelah mengirim masukan valid"
+
     @pytest.mark.positive_true
     def test_TC_DRV_MENU_PT_19_tips_driver_koneksi_stabil_dan_background_app(self, driver_app):
         """
@@ -473,9 +489,12 @@ class TestDrvMenu:
         menu_pg = DrvMenuPage(driver_app)
         self._ensure_driver_on_menu(driver_app)
 
-        when("Driver membaca seksi Tips untuk Driver")
+        when("Driver membuka panduan dan membaca seksi Tips untuk Driver")
+        menu_pg.open_cara_penggunaan()
         then("Himbauan koneksi stabil dan background service aktif ditampilkan")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert menu_pg.is_tips_description_displayed(), \
+            "Teks tips 'Pastikan koneksi internet stabil, Applikasi selalu aktif di latar belakang.' tidak tampil"
+
     @pytest.mark.business_logic
     def test_TC_DRV_MENU_BL_07_validasi_submit_feedback_pesan_kosong(self, driver_app):
         """
@@ -487,9 +506,16 @@ class TestDrvMenu:
         self._ensure_driver_on_menu(driver_app)
 
         given("Kolom input saran/masukan dalam keadaan kosong")
+        menu_pg.open_feedback_form()
+        assert menu_pg.is_feedback_form_displayed(), "Pra-kondisi gagal: form masukan tidak terbuka"
         when("Driver mengetuk tombol 'Kirim'")
+        menu_pg.click_submit_feedback()
         then("Sistem menahan submit dan mewajibkan penulisan pesan")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert not menu_pg.is_feedback_success_displayed(), \
+            "Masukan kosong ternyata terkirim (snackbar sukses muncul), seharusnya ditolak"
+        assert menu_pg.is_feedback_form_displayed(), \
+            "Form masukan tertutup setelah submit kosong, seharusnya tetap terbuka menunggu isian"
+
     @pytest.mark.business_logic
     def test_TC_DRV_MENU_BL_08_verifikasi_countdown_resend_otp_hapus_akun(self, driver_app):
         """
@@ -497,14 +523,23 @@ class TestDrvMenu:
         Deskripsi : Memeriksa timer hitung mundur pengiriman ulang OTP penghapusan akun.
         Ekspektasi: Tombol resend dinonaktifkan dengan countdown 60 detik demi keamanan.
         """
+        if os.environ.get("DRV_IZINKAN_ALUR_HAPUS_AKUN") != "1":
+            pytest.skip("Alur hapus akun ('Hapus Sekarang' lalu OTP) hanya boleh dijalankan pada akun driver "
+                        "sekali pakai. Set DRV_IZINKAN_ALUR_HAPUS_AKUN=1 bila akun uji boleh diajukan hapus.")
         menu_pg = DrvMenuPage(driver_app)
-        self._ensure_driver_logged_in = getattr(self, '_ensure_driver_on_menu', None)
         self._ensure_driver_on_menu(driver_app)
 
         given("Driver berada pada langkah verifikasi OTP hapus akun")
+        menu_pg.click_delete_account_menu()
+        assert menu_pg.is_delete_account_confirmation_displayed(), "Pra-kondisi gagal: dialog hapus akun tidak tampil"
         when("Kode OTP pertama kali diminta")
+        menu_pg.confirm_hapus_akun()
+        assert menu_pg.is_delete_account_otp_screen_displayed(), \
+            "Layar 'Masukkan Kode OTP' hapus akun tidak tampil setelah mengetuk 'Hapus Sekarang'"
         then("Timer hitung mundur kirim ulang kode aktif berjalan")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert menu_pg.is_resend_otp_countdown_displayed(), \
+            "Hitung mundur 'Kirim ulang kode dalam ...' tidak tampil di layar OTP hapus akun"
+
     @pytest.mark.negative_true
     def test_TC_DRV_MENU_NT_07_input_otp_salah_pada_verifikasi_hapus_akun(self, driver_app):
         """
@@ -512,13 +547,26 @@ class TestDrvMenu:
         Deskripsi : Memasukkan kode OTP salah (misal: 9999) pada verifikasi hapus akun.
         Ekspektasi: Sistem menolak verifikasi dan akun tetap terlindungi tanpa terhapus.
         """
+        if os.environ.get("DRV_IZINKAN_ALUR_HAPUS_AKUN") != "1":
+            pytest.skip("Alur hapus akun ('Hapus Sekarang' lalu OTP) hanya boleh dijalankan pada akun driver "
+                        "sekali pakai. Set DRV_IZINKAN_ALUR_HAPUS_AKUN=1 bila akun uji boleh diajukan hapus.")
         menu_pg = DrvMenuPage(driver_app)
         self._ensure_driver_on_menu(driver_app)
 
         given("Driver menginput kode OTP yang tidak cocok")
+        menu_pg.click_delete_account_menu()
+        menu_pg.confirm_hapus_akun()
+        assert menu_pg.is_delete_account_otp_screen_displayed(), \
+            "Pra-kondisi gagal: layar 'Masukkan Kode OTP' hapus akun tidak tampil"
+        menu_pg.enter_delete_account_otp("9999")
         when("Driver mengonfirmasi penghapusan")
-        then("Sistem memunculkan peringatan 'Kode OTP tidak valid'")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        menu_pg.click_confirm_delete_otp()
+        then("Sistem menolak OTP salah dan akun tidak terhapus")
+        assert not menu_pg.is_delete_account_success_displayed(), \
+            "OTP salah (9999) diterima: pesan 'Akun Anda telah berhasil dihapus.' muncul"
+        assert menu_pg.is_delete_account_otp_screen_displayed(), \
+            "Setelah OTP salah, driver tidak tetap di layar verifikasi OTP hapus akun"
+
     @pytest.mark.negative_true
     def test_TC_DRV_MENU_NT_08_penanganan_video_tutorial_gagal_dimuat(self, driver_app):
         """
@@ -526,13 +574,10 @@ class TestDrvMenu:
         Deskripsi : Penanganan saat video tutorial gagal dimuat (network timeout).
         Ekspektasi: Muncul teks fallback informatif 'Video gagal dimuat' tanpa crash.
         """
-        menu_pg = DrvMenuPage(driver_app)
-        self._ensure_driver_on_menu(driver_app)
+        pytest.skip("Butuh gangguan khusus pada CDN video (koneksi aplikasi tetap hidup tetapi video gagal). "
+                    "Mematikan seluruh jaringan memunculkan layar 'Tidak Ada Koneksi Internet', bukan "
+                    "'Video gagal dimuat', jadi hasil ini belum bisa diuji dari UI.")
 
-        given("Koneksi CDN video mengalami kendala latensi")
-        when("Driver membuka tutorial interaktif")
-        then("Aplikasi menampilkan placeholder 'Video gagal dimuat' secara aman")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
     @pytest.mark.negative_false
     def test_TC_DRV_MENU_NF_07_security_sqli_pada_formulir_kirim_masukan(self, driver_app):
         """
@@ -544,10 +589,16 @@ class TestDrvMenu:
         self._ensure_driver_on_menu(driver_app)
 
         given("Formulir masukan aktif")
+        menu_pg.open_feedback_form()
         when("Driver memasukkan teks payload SQLi: ' OR 1=1; DROP TABLE feedback; --")
         menu_pg.submit_feedback("' OR 1=1; DROP TABLE feedback; --")
         then("Sistem mensanitasi payload tanpa mengekspos error basis data")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert not menu_pg.is_database_error_exposed(), "Pesan error basis data (SQL) bocor ke layar"
+        assert not menu_pg.is_critical_error_displayed(), \
+            "Server gagal memproses payload SQLi ('Maaf terjadi kesalahan' / 'Kesalahan server' tampil)"
+        assert menu_pg.is_feedback_success_displayed(), \
+            "Payload SQLi seharusnya diterima sebagai teks biasa, tetapi snackbar sukses tidak muncul"
+
     @pytest.mark.negative_false
     def test_TC_DRV_MENU_NF_08_security_xss_pada_formulir_kirim_masukan(self, driver_app):
         """
@@ -559,10 +610,17 @@ class TestDrvMenu:
         self._ensure_driver_on_menu(driver_app)
 
         given("Formulir masukan aktif")
+        menu_pg.open_feedback_form()
         when("Driver menginputkan payload XSS")
         menu_pg.submit_feedback("<script>alert('xss')</script>")
         then("Teks tersimpan aman sebagai string biasa tanpa dieksekusi")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        # Catatan: cara teks ditampilkan di dashboard admin tidak bisa dilihat dari aplikasi driver;
+        # dari sisi aplikasi yang bisa dipastikan adalah server menerima payload tanpa error.
+        assert not menu_pg.is_critical_error_displayed(), \
+            "Server gagal memproses payload XSS ('Maaf terjadi kesalahan' / 'Kesalahan server' tampil)"
+        assert menu_pg.is_feedback_success_displayed(), \
+            "Payload XSS seharusnya diterima sebagai teks biasa, tetapi snackbar sukses tidak muncul"
+
     @pytest.mark.negative_false
     def test_TC_DRV_MENU_NF_09_rapid_click_spamming_tombol_bersihkan_cache(self, driver_app):
         """
@@ -578,5 +636,8 @@ class TestDrvMenu:
         for _ in range(5):
             menu_pg.click_bersihkan_cache()
         then("Aplikasi tetap stabil dan menampilkan notifikasi sukses membersihkan cache")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
-        logger.info("[SUCCESS] Verifikasi OTP penghapusan akun terverifikasi.")
+        assert menu_pg.is_cache_cleared_success_displayed(), \
+            "Snackbar 'Berhasil membersihkan cache' tidak muncul setelah 5 ketukan beruntun"
+        assert not menu_pg.is_critical_error_displayed(), \
+            "Muncul 'Maaf terjadi kesalahan' setelah 5 ketukan beruntun 'Bersihkan cache'"
+        logger.info("[SUCCESS] Ketukan beruntun Bersihkan cache terverifikasi.")

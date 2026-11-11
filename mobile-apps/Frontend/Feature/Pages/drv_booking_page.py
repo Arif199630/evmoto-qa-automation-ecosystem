@@ -10,6 +10,7 @@ Target  : Layar Dispatch Order Masuk, Swipe/Terima Pesanan, Penjemputan Penumpan
 Wording : 100% Presisi bersumber dari strings resmi APK driver_strings_id.json
 ================================================================================
 """
+import re
 import time
 from appium.webdriver.common.appiumby import AppiumBy
 from core.base_page import BasePage
@@ -549,4 +550,191 @@ class DrvBookingPage(BasePage):
         except Exception as e:
             logger.warning(f"Tab Advance Booking tidak memerlukan klik khusus: {e}")
             return True
+
+    # ==========================================================================
+    # 7. LOCATOR VERIFIKASI HASIL (teks dari driver_strings_id.json, nama key di komentar)
+    # ==========================================================================
+    # Status order berjalan, dicocokkan PERSIS agar tidak ikut cocok dengan teks Beranda:
+    # order_detail_status_pickup, order_detail_status_dropoff, order_state_serving,
+    # order_state_wait_for_passengers_to_board, delivering_passengers,
+    # arrive_at_the_pick_up_location, finished_dropping_off_passenger
+    STATUS_ORDER_AKTIF = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Penjemputan' or @text='Penjemputan' or "
+        "@content-desc='Pengantaran' or @text='Pengantaran' or "
+        "@content-desc='Sedang Berlangsung' or @text='Sedang Berlangsung' or "
+        "@content-desc='Tunggu Penumpang untuk Naik' or @text='Tunggu Penumpang untuk Naik' or "
+        "@content-desc='Mengantar penumpang' or @text='Mengantar penumpang' or "
+        "@content-desc='Tiba dilokasi penjemputan' or @text='Tiba dilokasi penjemputan' or "
+        "@content-desc='Selesai mengantar penumpang' or @text='Selesai mengantar penumpang']"
+    )
+    # message / chat_title = 'Pesan' (persis, supaya tidak cocok dengan kata 'Pesanan')
+    BTN_CHAT_TRIP_EXACT = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Pesan' or @text='Pesan' or @content-desc='Chat' or @text='Chat']"
+    )
+    CHAT_INPUT = (AppiumBy.XPATH, "//android.widget.EditText")
+    # no_message_yet, no_message_yet_start_converstation, chat_empty_description
+    CHAT_SCREEN_MARKER = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Pesan' or @text='Pesan' or "
+        "contains(@content-desc, 'Belum ada pesan') or contains(@text, 'Belum ada pesan') or "
+        "contains(@content-desc, 'Percakapan akan ditampilkan di sini') or "
+        "contains(@text, 'Percakapan akan ditampilkan di sini')]"
+    )
+    BTN_CHAT_SEND = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Kirim' or @text='Kirim' or @content-desc='Send' or @text='Send']"
+    )
+    # Layar error sistem (dump nyata) + order_detail_error_occurred
+    PESAN_ERROR_SISTEM = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Maaf terjadi kesalahan') or contains(@text, 'Maaf terjadi kesalahan') or "
+        "contains(@content-desc, 'Terjadi kesalahan, silakan coba lagi') or "
+        "contains(@text, 'Terjadi kesalahan, silakan coba lagi')]"
+    )
+    # overall_rating = 'Keseluruhan Penilaian'
+    DIALOG_RATING_PENUMPANG = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Keseluruhan Penilaian') or contains(@text, 'Keseluruhan Penilaian')]"
+    )
+    # home_cancel_order_confirm, home_cancel_order_success, reason_for_cancellation,
+    # dialog_cancel_order_fee_title, order_canceled
+    FEEDBACK_PEMBATALAN = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Apakah Anda yakin ingin membatalkan pesanan') or "
+        "contains(@text, 'Apakah Anda yakin ingin membatalkan pesanan') or "
+        "contains(@content-desc, 'Berhasil membatalkan pesanan') or contains(@text, 'Berhasil membatalkan pesanan') or "
+        "contains(@content-desc, 'Alasan Pembatalan') or contains(@text, 'Alasan Pembatalan') or "
+        "contains(@content-desc, 'Biaya Cancel Fee') or contains(@text, 'Biaya Cancel Fee') or "
+        "@content-desc='Pesanan Dibatalkan' or @text='Pesanan Dibatalkan']"
+    )
+    # online_payment = 'Pembayaran Online'; cash_payment = 'Pembayaran Cash'; order_payment_cash = 'Cash'
+    BADGE_PEMBAYARAN_ONLINE = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Pembayaran Online') or contains(@text, 'Pembayaran Online')]"
+    )
+    BADGE_PEMBAYARAN_CASH = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Pembayaran Cash') or contains(@text, 'Pembayaran Cash') or "
+        "@content-desc='Cash' or @text='Cash']"
+    )
+    # no_order_title, no_order_accept_order_description
+    EMPTY_STATE_TANPA_PESANAN = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Belum Ada Pesanan') or contains(@text, 'Belum Ada Pesanan') or "
+        "contains(@content-desc, 'Saat ini belum ada pesanan yang sedang berjalan') or "
+        "contains(@text, 'Saat ini belum ada pesanan yang sedang berjalan')]"
+    )
+    # my_order_type_booking = 'Booking' (persis, supaya tidak cocok dengan 'Advance Booking')
+    BADGE_BOOKING_EXACT = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Booking' or @text='Booking']"
+    )
+
+    # ==========================================================================
+    # 8. METHOD VERIFIKASI HASIL
+    # ==========================================================================
+    @staticmethod
+    def _xpath_literal(teks: str) -> str:
+        """Literal XPath aman untuk teks yang memuat tanda kutip (payload SQLi/XSS)."""
+        if "'" not in teks:
+            return f"'{teks}'"
+        if '"' not in teks:
+            return f'"{teks}"'
+        return "concat(" + ", \"'\", ".join(f"'{bagian}'" for bagian in teks.split("'")) + ")"
+
+    @staticmethod
+    def parse_rupiah(teks: str):
+        """Nominal Rupiah pertama di teks UI ('Rp 10.200' -> 10200.0). None bila tidak ada."""
+        m = re.search(r"([+\-−]?)\s*Rp\s?(\d[\d.]*(?:,\d+)?)", teks or "", re.I)
+        if not m:
+            return None
+        angka = float(m.group(2).rstrip(".").replace(".", "").replace(",", "."))
+        return -angka if m.group(1) in ("-", "−") else angka
+
+    def read_amount_near(self, locator):
+        """Nominal Rupiah milik label: dicari di label itu, saudara berikutnya, lalu induknya."""
+        try:
+            el = self.find(locator, timeout=5)
+        except Exception:
+            return None
+        kandidat = [el]
+        for xpath_relatif in ("following-sibling::*[1]", ".."):
+            try:
+                kandidat.append(el.find_element(AppiumBy.XPATH, xpath_relatif))
+            except Exception:
+                pass
+        for elemen in kandidat:
+            teks = elemen.get_attribute("content-desc") or elemen.get_attribute("text") or ""
+            nominal = self.parse_rupiah(teks)
+            if nominal is not None:
+                return nominal
+        return None
+
+    def is_order_in_progress(self) -> bool:
+        """True bila layar menampilkan status order berjalan (penjemputan/pengantaran/menunggu penumpang)."""
+        return self.is_displayed(self.STATUS_ORDER_AKTIF, timeout=4)
+
+    def is_element_gone(self, locator, timeout: int = 8) -> bool:
+        """True bila elemen hilang/tidak terlihat dalam batas waktu."""
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        try:
+            return bool(WebDriverWait(self.driver, timeout).until(EC.invisibility_of_element_located(locator)))
+        except Exception:
+            return False
+
+    def open_in_trip_chat(self):
+        """Mengetuk tombol 'Pesan' / 'Chat' pada layar perjalanan."""
+        self.click(self.BTN_CHAT_TRIP_EXACT, label="Tombol Pesan In-Trip")
+        time.sleep(1.5)
+
+    def is_chat_screen_displayed(self) -> bool:
+        """True bila layar chat terbuka: kolom ketik pesan ada dan judul/empty state chat tampil."""
+        return self.is_displayed(self.CHAT_INPUT, timeout=5) and self.is_displayed(self.CHAT_SCREEN_MARKER, timeout=3)
+
+    def send_chat_message(self, pesan: str):
+        """Mengetik pesan di kolom chat lalu mengirimnya (tombol Kirim, atau Enter bila tombol tidak berlabel)."""
+        self.type_text(self.CHAT_INPUT, pesan, label="Kolom Pesan Chat", use_human_pacing=False)
+        if self.is_displayed(self.BTN_CHAT_SEND, timeout=2):
+            self.click(self.BTN_CHAT_SEND, label="Tombol Kirim Pesan")
+        else:
+            self.driver.press_keycode(66)
+        time.sleep(2)
+
+    def is_chat_message_displayed(self, pesan: str) -> bool:
+        """True bila gelembung chat menampilkan pesan apa adanya (teks literal, bukan dirender)."""
+        literal = self._xpath_literal(pesan)
+        locator = (AppiumBy.XPATH, f"//*[contains(@content-desc, {literal}) or contains(@text, {literal})]"
+                                   f"[not(self::android.widget.EditText)]")
+        return self.is_displayed(locator, timeout=6)
+
+    def is_error_message_displayed(self) -> bool:
+        """True bila aplikasi menampilkan pesan/layar error sistem."""
+        return self.is_displayed(self.PESAN_ERROR_SISTEM, timeout=2)
+
+    def is_rating_dialog_displayed(self) -> bool:
+        """True bila dialog penilaian penumpang tampil."""
+        return self.is_displayed(self.DIALOG_RATING_PENUMPANG, timeout=4)
+
+    def is_cancel_flow_feedback_displayed(self) -> bool:
+        """True bila alur pembatalan menampilkan konfirmasi, alasan, biaya cancel, atau pesan berhasil batal."""
+        return self.is_displayed(self.FEEDBACK_PEMBATALAN, timeout=5)
+
+    def is_online_payment_badge_displayed(self) -> bool:
+        """True bila metode bayar pesanan tertulis 'Pembayaran Online'."""
+        return self.is_displayed(self.BADGE_PEMBAYARAN_ONLINE, timeout=3)
+
+    def is_cash_payment_badge_displayed(self) -> bool:
+        """True bila metode bayar pesanan tertulis tunai ('Pembayaran Cash' / 'Cash')."""
+        return self.is_displayed(self.BADGE_PEMBAYARAN_CASH, timeout=3)
+
+    def is_no_order_empty_state_displayed(self) -> bool:
+        """True bila daftar pesanan kosong ('Belum Ada Pesanan')."""
+        return self.is_displayed(self.EMPTY_STATE_TANPA_PESANAN, timeout=3)
+
+    def is_booking_badge_displayed(self) -> bool:
+        """True bila kartu pesanan menampilkan badge 'Booking' (pesanan terjadwal)."""
+        return self.is_displayed(self.BADGE_BOOKING_EXACT, timeout=3)
 

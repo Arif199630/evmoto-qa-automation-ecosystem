@@ -13,12 +13,43 @@ Mengakomodasi seluruh spesifikasi Sheet 'User':
 - Review Placing Order & Fare Breakdown
 ================================================================================
 """
+import re
 import time
 from appium.webdriver.common.appiumby import AppiumBy
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 from core.base_page import BasePage
 from utils.logger import get_logger
 
 logger = get_logger("BookingPage")
+
+
+def _exact(*labels: str) -> str:
+    """XPath yang cocok PERSIS dengan salah satu label (content-desc atau text).
+
+    Teks label diambil dari file bahasa aplikasi User (assets/jsons/user_lang_id.json
+    di APK evmoto-user-1.2.33). Sengaja tidak memakai contains() agar kata pendek
+    tidak ikut cocok dengan label lain.
+    """
+    kondisi = " or ".join(f"@content-desc='{label}' or @text='{label}'" for label in labels)
+    return f"//*[{kondisi}]"
+
+
+def _contains_phrase(*phrases: str) -> str:
+    """XPath contains() khusus untuk KALIMAT panjang yang unik (bukan kata pendek).
+
+    Dipakai untuk teks dialog/snackbar yang bisa tergabung dengan deskripsi di
+    satu node semantics Flutter, sehingga pencocokan persis berisiko gagal.
+    """
+    kondisi = " or ".join(
+        f"contains(@content-desc, '{phrase}') or contains(@text, '{phrase}')" for phrase in phrases
+    )
+    return f"//*[{kondisi}]"
+
+
+# Pola jam (08:30 / 08.30) untuk membaca waktu jadwal yang tampil di layar Place Order.
+_TIME_PATTERN = re.compile(r"(?<!\d)([01]?\d|2[0-3])[:.]([0-5]\d)(?!\d)")
 
 
 class BookingPage(BasePage):
@@ -34,7 +65,8 @@ class BookingPage(BasePage):
     )
     BTN_SET_ON_MAP = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Set on Map') or contains(@content-desc, 'Pilih lewat Peta') or "
+        "//*[@content-desc='Pilih Lewat Peta' or @text='Pilih Lewat Peta' or "
+        "contains(@content-desc, 'Set on Map') or contains(@content-desc, 'Pilih lewat Peta') or "
         "contains(@text, 'Set on Map') or contains(@text, 'Peta')]"
     )
     MAP_POINTER_PIN = (
@@ -92,7 +124,8 @@ class BookingPage(BasePage):
     # ==========================================================================
     FIELD_DESTINATION = (
         AppiumBy.XPATH,
-        "//android.widget.EditText[contains(@hint, 'Tujuan') or contains(@hint, 'Destination') or "
+        "//android.widget.EditText[@text='Titik tujuan' or @text='Masukkan tujuan' or "
+        "contains(@hint, 'Tujuan') or contains(@hint, 'Destination') or "
         "contains(@content-desc, 'Tujuan') or contains(@text, 'Mau ke mana')]"
     )
     FIRST_SUGGESTION_WORD = (
@@ -137,11 +170,13 @@ class BookingPage(BasePage):
     )
     OPTION_PAYMENT_WALLET = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'EvWallet') or contains(@text, 'EvWallet')]"
+        "//*[@content-desc='Saldo EVMoto' or @text='Saldo EVMoto' or @content-desc='Dompet EVMoto' or "
+        "@text='Dompet EVMoto' or contains(@content-desc, 'EvWallet') or contains(@text, 'EvWallet')]"
     )
     OPTION_PAYMENT_CASH = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Tunai') or contains(@content-desc, 'Cash') or contains(@text, 'Tunai')]"
+        "//*[@content-desc='Cash' or @text='Cash' or "
+        "contains(@content-desc, 'Tunai') or contains(@content-desc, 'Cash') or contains(@text, 'Tunai')]"
     )
     OPTION_PAYMENT_GOPAY = (
         AppiumBy.XPATH,
@@ -216,6 +251,70 @@ class BookingPage(BasePage):
     )
 
     # ==========================================================================
+    # 7. LOCATOR VERIFIKASI HASIL (TEKS NYATA DARI user_lang_id.json APK v1.2.33)
+    # ==========================================================================
+    # Ajakan pencarian tujuan di Beranda (home_ride_ready_to_go_hint / hello_where_today)
+    TEXT_HOME_DESTINATION_PROMPT = (
+        AppiumBy.XPATH,
+        _exact("Hai, mau ke mana hari ini?", "Hello, mau kemana hari ini?", "Siap jalan? tentukan tujuanmu")
+    )
+    # Dialog izin lokasi (location_access_consent / enable_location)
+    DIALOG_LOCATION_PERMISSION = (AppiumBy.XPATH, _exact("Izin lokasi", "Aktifkan lokasi"))
+    # Snackbar simpan alamat favorit (successfully_saved_address / snackbar_address_edit_success)
+    SNACKBAR_ADDRESS_SAVED = (AppiumBy.XPATH, _exact("Alamat berhasil disimpan"))
+    # Tombol simpan pada form alamat favorit (save_address)
+    BTN_SAVE_ADDRESS_EXACT = (AppiumBy.XPATH, _exact("Simpan alamat"))
+    # Kolom input yang sudah terisi nilai (bukan placeholder). showing-hint='false' = berisi teks asli.
+    FIELD_INPUT_PREFILLED = (
+        AppiumBy.XPATH,
+        "//android.widget.EditText[@showing-hint='false' and string-length(@text) > 0]"
+    )
+    # Layar pilih lokasi lewat peta (map_select_button / map_select_pickup / map_select_destination)
+    BTN_MAP_SELECT_LOCATION = (AppiumBy.XPATH, _exact("Pilih Lokasi"))
+    # Tombol utama layar Place Order (order_ev_moto)
+    BTN_PESAN_EVMOTO_EXACT = (AppiumBy.XPATH, _exact("Pesan EVMoto"))
+    # Tombol jadwal pada Place Order (advance_booking_button)
+    BTN_JADWALKAN_EXACT = (AppiumBy.XPATH, _exact("Jadwalkan"))
+    # Semua elemen yang mungkin memuat jam (pemisah ':' atau '.')
+    ANY_TEXT_WITH_TIME_SEPARATOR = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, ':') or contains(@text, ':') or "
+        "contains(@content-desc, '.') or contains(@text, '.')]"
+    )
+    # Dialog sukses pesanan terjadwal (advanced_booking_created_title / _button)
+    DIALOG_SCHEDULED_CREATED = (AppiumBy.XPATH, _contains_phrase("Pesan Terjadwal Berhasil Dibuat"))
+    BTN_SCHEDULED_CREATED_CONTINUE = (AppiumBy.XPATH, _exact("Lanjutkan"))
+    # Status kartu pesanan terjadwal di Aktivitas (advanced_booking_status_order_scheduled)
+    TEXT_SCHEDULED_ORDER_STATUS = (AppiumBy.XPATH, _exact("Pesanan Terjadwal"))
+    # Judul detail pesanan terjadwal (advance_booking_detail_title)
+    TEXT_SCHEDULED_DETAIL_TITLE = (AppiumBy.XPATH, _exact("Detail Jadwal Pemesanan"))
+    # Snackbar pemilihan metode bayar (ride_checkout_select_payment_method_*_select_success)
+    SNACKBAR_PAYMENT_CASH_SELECTED = (
+        AppiumBy.XPATH,
+        _contains_phrase("Pembayaran cash berhasil dipilih sebagai metode pembayaran")
+    )
+    SNACKBAR_PAYMENT_WALLET_SELECTED = (
+        AppiumBy.XPATH,
+        _contains_phrase("Dompet EVMoto berhasil dipilih sebagai metode pembayaran")
+    )
+    # Snackbar promo diterapkan (snackbar_coupon_select_success)
+    SNACKBAR_PROMO_APPLIED = (AppiumBy.XPATH, _contains_phrase("Promo berhasil diterapkan ke pesanan Anda"))
+    # Dialog saldo kurang (order_checkout_insufficient_balance_title / _button)
+    DIALOG_INSUFFICIENT_BALANCE = (AppiumBy.XPATH, _exact("Saldo Anda Tidak Cukup"))
+    BTN_OTHER_PAYMENT_METHOD = (AppiumBy.XPATH, _exact("Pilih Metode Pembayaran Lain"))
+    # Label saldo di kartu dompet Beranda (home_ewallet_amount / my_balance)
+    TEXT_HOME_BALANCE_AMOUNT = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Saldo Anda' or @text='Saldo Anda' or @content-desc='Saldo Kamu' or "
+        "@text='Saldo Kamu']/following::*[contains(@content-desc, 'Rp') or contains(@text, 'Rp')][1]"
+    )
+    # Validasi titik jemput = tujuan (pickup_dropoff_same_location / same_location)
+    WARNING_SAME_LOCATION_EXACT = (
+        AppiumBy.XPATH,
+        _exact("Titik penjemputan dan tujuan tidak boleh sama", "Titik jemput dan tujuan sama")
+    )
+
+    # ==========================================================================
     # METHODS / ACTIONS
     # ==========================================================================
     def open_pickup_section(self):
@@ -278,9 +377,14 @@ class BookingPage(BasePage):
         self.click(self.TEXT_SERVICE_EVRIDE, label="Layanan EvRide")
 
     def get_estimated_fare(self) -> str:
-        """Mengambil teks estimasi tarif. String kosong bila tidak tampil (tidak ada angka cadangan)."""
+        """Mengambil teks estimasi tarif. String kosong bila tidak tampil (tidak ada angka cadangan).
+
+        Flutter menaruh teks di atribut content-desc, jadi content-desc dibaca dulu lalu text.
+        """
         el = self.find_element(self.TEXT_ESTIMATED_FARE, timeout=5)
-        return el.text if el else ""
+        if not el:
+            return ""
+        return el.get_attribute("content-desc") or el.get_attribute("text") or ""
 
 
     def apply_voucher(self, promo_code: str):
@@ -324,19 +428,26 @@ class BookingPage(BasePage):
         time.sleep(1.0)
 
     def get_selected_payment_method(self) -> str:
-        """Mengambil teks metode pembayaran yang saat ini terpilih."""
+        """Mengambil teks metode pembayaran yang saat ini terpilih.
+
+        Mengembalikan string kosong bila tombol metode bayar tidak terbaca
+        (tanpa nilai cadangan palsu seperti 'Tunai'/'OVO').
+        """
         try:
             el = self.find(self.BTN_PAYMENT_METHOD, timeout=4)
-            return el.text if el else "Tunai"
         except Exception:
-            return "OVO"
+            return ""
+        return el.get_attribute("content-desc") or el.get_attribute("text") or ""
 
     def get_numeric_fare_amount(self) -> int:
-        """Mengekstrak nilai nominal tarif sebagai integer (misal: 'Rp 18.000' -> 18000)."""
-        import re
+        """Mengekstrak nilai nominal tarif sebagai integer (misal: 'Rp 18.000' -> 18000).
+
+        Mengembalikan 0 bila tarif tidak terbaca (tanpa angka cadangan), supaya test
+        yang memakainya bisa mendeteksi kegagalan membaca tarif dari layar.
+        """
         fare_text = self.get_estimated_fare()
         digits = re.sub(r"[^\d]", "", fare_text)
-        return int(digits) if digits else 10200
+        return int(digits) if digits else 0
 
     # Order Submission
     def submit_book_evmoto(self):
@@ -346,6 +457,141 @@ class BookingPage(BasePage):
     def click_back(self):
         """Menekan tombol kembali."""
         self.click(self.BTN_BACK, label="Tombol Kembali")
+
+    # ==========================================================================
+    # METHOD VERIFIKASI HASIL (dipakai assertion test booking)
+    # ==========================================================================
+    def wait_until_gone(self, locator, timeout: int = 8) -> bool:
+        """True bila elemen hilang/tidak terlihat dalam batas waktu (untuk cek dialog tertutup)."""
+        try:
+            WebDriverWait(self.driver, timeout).until(EC.invisibility_of_element_located(locator))
+            return True
+        except TimeoutException:
+            return False
+
+    def is_home_destination_prompt_displayed(self, timeout: int = 10) -> bool:
+        """Beranda aktif: ajakan 'Hai, mau ke mana hari ini?' tampil."""
+        return self.is_displayed(self.TEXT_HOME_DESTINATION_PROMPT, timeout=timeout)
+
+    def is_location_permission_dialog_displayed(self, timeout: int = 3) -> bool:
+        """Dialog 'Izin lokasi' / 'Aktifkan lokasi' tampil (lokasi pengguna belum tersedia)."""
+        return self.is_displayed(self.DIALOG_LOCATION_PERMISSION, timeout=timeout)
+
+    def is_address_saved_snackbar_displayed(self, timeout: int = 8) -> bool:
+        """Snackbar 'Alamat berhasil disimpan' tampil setelah menyimpan alamat favorit."""
+        return self.is_displayed(self.SNACKBAR_ADDRESS_SAVED, timeout=timeout)
+
+    def is_saved_location_form_displayed(self, timeout: int = 3) -> bool:
+        """Form alamat favorit (kolom nama lokasi / tombol 'Simpan alamat') masih tampil."""
+        return (
+            self.is_displayed(self.BTN_SAVE_ADDRESS_EXACT, timeout=timeout)
+            or self.is_displayed(self.FIELD_SAVED_LOCATION_NAME, timeout=1)
+        )
+
+    def is_destination_field_displayed(self, timeout: int = 8) -> bool:
+        """Kolom input tujuan ('Titik tujuan' / 'Masukkan tujuan') tampil."""
+        return self.is_displayed(self.FIELD_DESTINATION, timeout=timeout)
+
+    def get_prefilled_input_texts(self, timeout: int = 8) -> list:
+        """Isi semua kolom input yang sudah berisi nilai asli (bukan placeholder).
+
+        Di form rute, kolom tujuan masih kosong, jadi nilai yang terbaca di sini
+        adalah alamat titik jemput yang terisi otomatis.
+        """
+        elements = self.find_all(self.FIELD_INPUT_PREFILLED, timeout=timeout)
+        texts = [(el.get_attribute("text") or "").strip() for el in elements]
+        return [t for t in texts if t]
+
+    def is_map_picker_displayed(self, timeout: int = 8) -> bool:
+        """Layar pilih lokasi lewat peta tampil (tombol 'Pilih Lokasi')."""
+        return self.is_displayed(self.BTN_MAP_SELECT_LOCATION, timeout=timeout)
+
+    def is_place_order_displayed(self, timeout: int = 10) -> bool:
+        """Layar Place Order tampil (tombol 'Pesan EVMoto')."""
+        return self.is_displayed(self.BTN_PESAN_EVMOTO_EXACT, timeout=timeout)
+
+    def is_schedule_button_displayed(self, timeout: int = 5) -> bool:
+        """Tombol 'Jadwalkan' (mode reguler, belum ada jadwal) tampil di Place Order."""
+        return self.is_displayed(self.BTN_JADWALKAN_EXACT, timeout=timeout)
+
+    def get_visible_time_texts(self) -> set:
+        """Kumpulan label di layar yang memuat jam (mis. '08:30' / '08.30').
+
+        Label nominal rupiah dan jarak (km) diabaikan agar angka tarif tidak terbaca sebagai jam.
+        """
+        labels = set()
+        for el in self.driver.find_elements(*self.ANY_TEXT_WITH_TIME_SEPARATOR):
+            label = (el.get_attribute("content-desc") or el.get_attribute("text") or "").strip()
+            if not label or "Rp" in label or "km" in label:
+                continue
+            if _TIME_PATTERN.search(label):
+                labels.add(label)
+        return labels
+
+    def is_scheduled_created_dialog_displayed(self, timeout: int = 15) -> bool:
+        """Dialog 'Pesan Terjadwal Berhasil Dibuat' tampil."""
+        return self.is_displayed(self.DIALOG_SCHEDULED_CREATED, timeout=timeout)
+
+    def close_scheduled_created_dialog(self):
+        """Menutup dialog pesanan terjadwal dengan tombol 'Lanjutkan'."""
+        self.click(self.BTN_SCHEDULED_CREATED_CONTINUE, label="Tombol Lanjutkan (Pesanan Terjadwal)")
+
+    def is_scheduled_order_status_displayed(self, timeout: int = 8) -> bool:
+        """Kartu berstatus 'Pesanan Terjadwal' tampil di Tab Booking Aktivitas."""
+        return self.is_displayed(self.TEXT_SCHEDULED_ORDER_STATUS, timeout=timeout)
+
+    def open_first_scheduled_order(self):
+        """Membuka kartu pesanan terjadwal pertama (label 'Pesanan Terjadwal')."""
+        self.click(self.TEXT_SCHEDULED_ORDER_STATUS, label="Kartu Pesanan Terjadwal")
+
+    def is_scheduled_detail_displayed(self, timeout: int = 8) -> bool:
+        """Halaman 'Detail Jadwal Pemesanan' tampil."""
+        return self.is_displayed(self.TEXT_SCHEDULED_DETAIL_TITLE, timeout=timeout)
+
+    def is_payment_selected_snackbar_displayed(self, method: str = "cash", timeout: int = 6) -> bool:
+        """Snackbar konfirmasi metode bayar terpilih: 'cash' atau 'wallet' (Dompet EVMoto)."""
+        locator = (
+            self.SNACKBAR_PAYMENT_WALLET_SELECTED
+            if method.lower().strip() in ("wallet", "cashless", "evwallet")
+            else self.SNACKBAR_PAYMENT_CASH_SELECTED
+        )
+        return self.is_displayed(locator, timeout=timeout)
+
+    def is_promo_applied_snackbar_displayed(self, timeout: int = 6) -> bool:
+        """Snackbar 'Promo berhasil diterapkan ke pesanan Anda.' tampil."""
+        return self.is_displayed(self.SNACKBAR_PROMO_APPLIED, timeout=timeout)
+
+    def get_all_fare_amounts(self, timeout: int = 5) -> list:
+        """Semua nominal rupiah (int) yang tampil di layar, mis. ['Rp 10.200'] -> [10200]."""
+        amounts = []
+        for el in self.find_all(self.TEXT_ESTIMATED_FARE, timeout=timeout):
+            label = el.get_attribute("content-desc") or el.get_attribute("text") or ""
+            for match in re.findall(r"Rp\s?([\d.]+)", label):
+                digits = match.replace(".", "")
+                if digits:
+                    amounts.append(int(digits))
+        return amounts
+
+    def is_insufficient_balance_dialog_displayed(self, timeout: int = 8) -> bool:
+        """Dialog 'Saldo Anda Tidak Cukup' beserta tombol 'Pilih Metode Pembayaran Lain' tampil."""
+        return (
+            self.is_displayed(self.DIALOG_INSUFFICIENT_BALANCE, timeout=timeout)
+            and self.is_displayed(self.BTN_OTHER_PAYMENT_METHOD, timeout=3)
+        )
+
+    def get_home_wallet_balance_amount(self, timeout: int = 8):
+        """Saldo dompet di Beranda sebagai int, atau None bila label saldo tidak terbaca."""
+        try:
+            el = self.find(self.TEXT_HOME_BALANCE_AMOUNT, timeout=timeout)
+        except TimeoutException:
+            return None
+        label = el.get_attribute("content-desc") or el.get_attribute("text") or ""
+        digits = re.sub(r"[^\d]", "", label)
+        return int(digits) if digits else None
+
+    def is_same_location_warning_displayed(self, timeout: int = 8) -> bool:
+        """Validasi 'Titik penjemputan dan tujuan tidak boleh sama' tampil."""
+        return self.is_displayed(self.WARNING_SAME_LOCATION_EXACT, timeout=timeout)
 
 
 BookingLocators = BookingPage

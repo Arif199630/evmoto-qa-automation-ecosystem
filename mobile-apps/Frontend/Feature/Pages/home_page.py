@@ -357,6 +357,22 @@ class HomePage(BasePage):
         "contains(@content-desc, 'Retry')]"
     )
 
+    # Penanda layar Beranda berdasarkan teks resmi (user_lang_id.json / user_lang_en.json, APK 1.2.33):
+    # - tab navigasi home = 'Beranda' / 'Home' (starts-with karena Flutter menambah "\nTab 1 dari 3" pada content-desc)
+    # - hello_where_today = 'Hai, mau ke mana hari ini?'; home_ride_ready_to_go_hint = 'Hello, mau kemana hari ini?'
+    #   (EN keduanya 'Hi, where are you going today?')
+    # - home_ride_ready_to_go_title = 'Siap jalan? tentukan tujuanmu' / 'Ready to go? Determine your destination'
+    HOME_SCREEN_MARKER = (
+        AppiumBy.XPATH,
+        "//*[starts-with(@content-desc, 'Beranda') or @text='Beranda' or "
+        "starts-with(@content-desc, 'Home') or @text='Home' or "
+        "contains(@content-desc, 'mau ke mana hari ini') or contains(@text, 'mau ke mana hari ini') or "
+        "contains(@content-desc, 'mau kemana hari ini') or contains(@text, 'mau kemana hari ini') or "
+        "contains(@content-desc, 'where are you going today') or contains(@text, 'where are you going today') or "
+        "contains(@content-desc, 'Siap jalan? tentukan tujuanmu') or "
+        "contains(@content-desc, 'Ready to go? Determine your destination')]"
+    )
+
     # ==========================================================================
     # ACTION METHODS
     # ==========================================================================
@@ -373,13 +389,13 @@ class HomePage(BasePage):
             pass
 
     def is_home_screen_displayed(self, timeout: int = 15) -> bool:
-        """Memeriksa apakah layar Beranda aktif dan elemen utama termuat."""
+        """Memeriksa apakah layar Beranda aktif dan elemen utama termuat.
+
+        Memakai satu locator HOME_SCREEN_MARKER yang hanya berisi teks resmi aplikasi, bukan
+        contains('Home') / contains('Hi,') yang terlalu lebar dan bisa cocok di layar lain.
+        """
         self.dismiss_welcome_popup_if_present()
-        return (
-            self.is_displayed(self.SEARCH_DESTINATION, timeout=timeout) or
-            self.is_displayed(self.NAV_HOME, timeout=timeout) or
-            self.is_displayed(self.TEXT_GREETING_TITLE, timeout=timeout)
-        )
+        return self.is_displayed(self.HOME_SCREEN_MARKER, timeout=timeout)
 
     # 1. Header & Greeting
     def get_user_greeting_text(self) -> str:

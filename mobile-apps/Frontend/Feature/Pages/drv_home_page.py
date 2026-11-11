@@ -9,10 +9,12 @@ Target  : Layar Utama / Beranda Mitra Driver, Status Online / Offline,
 Wording : Bersumber 100% dari strings resmi APK driver_lang_id.json
 ================================================================================
 """
+import re
 import time
 from appium.webdriver.common.appiumby import AppiumBy
 from core.base_page import BasePage
 from utils.logger import get_logger
+from config.config import Config
 
 
 logger = get_logger("DrvHomePage")
@@ -279,3 +281,145 @@ class DrvHomePage(BasePage):
         """Mengetuk tombol Pengaturan Jaringan."""
         self.click(self.BTN_NETWORK_SETTINGS, label="Tombol Pengaturan Jaringan")
 
+    # ==========================================================================
+    # 7. LOCATOR TAMBAHAN UNTUK VERIFIKASI HASIL (TEKS DARI driver_strings_id.json)
+    # ==========================================================================
+    # home_soft_update_title / home_update_now / update_later
+    TEXT_SOFT_UPDATE_TITLE = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Versi Terbaru Telah Tersedia' or @text='Versi Terbaru Telah Tersedia']"
+    )
+    BTN_PERBARUI_SEKARANG = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Perbarui sekarang' or @text='Perbarui sekarang']"
+    )
+    BTN_PERBARUI_NANTI = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Perbarui nanti' or @text='Perbarui nanti']"
+    )
+    # home_force_update_title
+    TEXT_FORCE_UPDATE_TITLE = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Update Sekarang' or @text='Update Sekarang']"
+    )
+    # home_operating_hours_description
+    TEXT_OPERATING_HOURS_DESCRIPTION = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'layanan mengikuti jam operasional') or contains(@text, 'layanan mengikuti jam operasional')]"
+    )
+    # widgets_no_internet_title, snackbar_network_disconnected, dio_exception_connection_error, widgets_connection_error
+    TEXT_NETWORK_ERROR = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Tidak Ada Koneksi Internet' or @text='Tidak Ada Koneksi Internet' or "
+        "contains(@content-desc, 'Jaringan terputus, harap untuk periksa') or contains(@text, 'Jaringan terputus, harap untuk periksa') or "
+        "contains(@content-desc, 'Tidak dapat terhubung ke server') or contains(@text, 'Tidak dapat terhubung ke server')]"
+    )
+    # critical_error_title (terlihat di dump layar emulator)
+    TEXT_CRITICAL_ERROR = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Maaf terjadi kesalahan' or @text='Maaf terjadi kesalahan']"
+    )
+    # home_overlay_order_active (label persis)
+    TEXT_OVERLAY_ORDER_ACTIVE = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Order Dihalaman Depan Aktif' or @text='Order Dihalaman Depan Aktif']"
+    )
+
+    def get_saldo_labels(self) -> list:
+        """Mengambil semua label di layar yang memuat nominal 'Rp' atau karakter sensor (•, ●, *)."""
+        labels = []
+        for el in self.driver.find_elements(AppiumBy.XPATH, "//*[@content-desc!='' or @text!='']"):
+            label = (el.get_attribute("content-desc") or el.get_attribute("text") or "").strip()
+            if "Rp" in label or re.search(r"[•●*]{3,}", label):
+                labels.append(label)
+        return labels
+
+    @staticmethod
+    def has_masked_label(labels: list) -> bool:
+        """True bila salah satu label berisi minimal tiga karakter sensor berturut-turut (mis. ••••••)."""
+        return any(re.search(r"[•●*]{3,}", label) for label in labels)
+
+    def is_soft_update_dialog_displayed(self) -> bool:
+        """Memeriksa dialog 'Versi Terbaru Telah Tersedia'."""
+        return self.is_displayed(self.TEXT_SOFT_UPDATE_TITLE, timeout=3)
+
+    def is_perbarui_sekarang_displayed(self) -> bool:
+        """Memeriksa tombol 'Perbarui sekarang'."""
+        return self.is_displayed(self.BTN_PERBARUI_SEKARANG, timeout=3)
+
+    def is_perbarui_nanti_displayed(self) -> bool:
+        """Memeriksa tombol 'Perbarui nanti' (tombol tutup dialog update)."""
+        return self.is_displayed(self.BTN_PERBARUI_NANTI, timeout=2)
+
+    def is_force_update_dialog_displayed(self) -> bool:
+        """Memeriksa dialog wajib 'Update Sekarang'."""
+        return self.is_displayed(self.TEXT_FORCE_UPDATE_TITLE, timeout=3)
+
+    def is_operating_hours_description_displayed(self) -> bool:
+        """Memeriksa penjelasan 'Saat ini layanan mengikuti jam operasional yang berlaku...'."""
+        return self.is_displayed(self.TEXT_OPERATING_HOURS_DESCRIPTION, timeout=3)
+
+    def is_network_settings_button_displayed(self) -> bool:
+        """Memeriksa tombol 'Pengaturan Jaringan' (muncul di widget tanpa koneksi)."""
+        return self.is_displayed(self.BTN_NETWORK_SETTINGS, timeout=5)
+
+    def is_network_error_displayed(self) -> bool:
+        """Memeriksa pesan gangguan jaringan resmi aplikasi."""
+        return self.is_displayed(self.TEXT_NETWORK_ERROR, timeout=6)
+
+    def is_critical_error_displayed(self) -> bool:
+        """Memeriksa layar 'Maaf terjadi kesalahan'."""
+        return self.is_displayed(self.TEXT_CRITICAL_ERROR, timeout=2)
+
+    def is_overlay_order_badge_displayed(self) -> bool:
+        """Memeriksa badge 'Order Dihalaman Depan Aktif'."""
+        return self.is_displayed(self.TEXT_OVERLAY_ORDER_ACTIVE, timeout=4)
+
+    def get_current_package(self) -> str:
+        """Nama package aplikasi yang sedang tampil di depan."""
+        return self.driver.current_package or ""
+
+    def is_driver_app_in_foreground(self) -> bool:
+        """True bila aplikasi EvMoto Driver sedang tampil di depan."""
+        return self.get_current_package() == Config.DRIVER_PACKAGE
+
+    def return_to_driver_app(self):
+        """Membawa aplikasi EvMoto Driver kembali ke depan."""
+        self.driver.activate_app(Config.DRIVER_PACKAGE)
+        time.sleep(1.5)
+
+    def set_device_network(self, enabled: bool):
+        """Menyalakan/mematikan Wi-Fi dan data seluler emulator lewat perintah Appium 'mobile: setConnectivity'."""
+        self.driver.execute_script("mobile: setConnectivity", {"wifi": enabled, "data": enabled})
+        time.sleep(2)
+
+    def grant_overlay_permission(self):
+        """Memberi izin tampil di atas aplikasi lain (SYSTEM_ALERT_WINDOW) lewat appops Appium."""
+        self.driver.execute_script("mobile: changePermissions", {
+            "permissions": ["SYSTEM_ALERT_WINDOW"],
+            "appPackage": Config.DRIVER_PACKAGE,
+            "action": "allow",
+            "target": "appops",
+        })
+
+    def background_and_resume(self, seconds: int = 2):
+        """Memindahkan aplikasi ke latar belakang lalu membukanya lagi (memicu cek ulang izin)."""
+        self.driver.background_app(seconds)
+        time.sleep(1.5)
+
+    def pull_to_refresh(self):
+        """Gestur tarik ke bawah (pull-to-refresh) dari area atas layar Beranda."""
+        size = self.driver.get_window_size()
+        x = int(size["width"] / 2)
+        self.swipe(x, int(size["height"] * 0.3), x, int(size["height"] * 0.8), 600)
+        time.sleep(2)
+
+    def open_notification_shade(self):
+        """Membuka panel notifikasi Android di atas aplikasi."""
+        self.driver.open_notifications()
+        time.sleep(1.5)
+
+    def press_back(self):
+        """Menekan tombol Back Android."""
+        self.driver.back()
+        time.sleep(1)

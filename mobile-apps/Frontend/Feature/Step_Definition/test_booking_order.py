@@ -126,6 +126,47 @@ def authenticated_home(driver, login_page, home_page):
 
 
 # ==============================================================================
+# HELPER PRASYARAT (dipakai beberapa skenario agar mulai dari layar yang benar)
+# ==============================================================================
+ALASAN_BUTUH_DRIVER_NYATA = (
+    "Belum ada mitra driver nyata yang menerima pesanan. Skenario ini butuh akun/perangkat "
+    "Driver kedua yang benar-benar menerima order; DriverRoleSimulator hanya simulasi in-memory "
+    "dan tidak mengubah layar aplikasi User."
+)
+
+
+def _buka_place_order(booking_page, tujuan: str):
+    """Membuka form rute, mengisi tujuan, memilih saran pertama, lalu memastikan Place Order tampil."""
+    booking_page.open_pickup_section()
+    booking_page.enter_destination(tujuan)
+    booking_page.select_first_suggestion()
+    assert booking_page.is_place_order_displayed(), (
+        f"Prasyarat gagal: layar Place Order (tombol 'Pesan EVMoto') tidak tampil setelah memilih tujuan '{tujuan}'"
+    )
+
+
+def _buat_pesanan_instan(booking_page, tracking_page, tujuan: str):
+    """Membuat pesanan instan sampai status pencarian driver tampil."""
+    _buka_place_order(booking_page, tujuan)
+    booking_page.submit_book_evmoto()
+    assert tracking_page.is_searching_driver(timeout=15), (
+        "Prasyarat gagal: status 'Sedang mencari driver terdekat untuk Anda' tidak tampil setelah menekan 'Pesan EVMoto'"
+    )
+
+
+def _tunggu_driver_ditugaskan_atau_skip(tracking_page, timeout: int = 60):
+    """Menunggu driver menerima pesanan. Skip jujur bila memang tidak ada driver nyata yang menerima."""
+    if tracking_page.is_driver_on_the_way_displayed(timeout=timeout):
+        return
+    if tracking_page.is_searching_driver(timeout=3) or tracking_page.is_driver_not_available_displayed(timeout=3):
+        pytest.skip(ALASAN_BUTUH_DRIVER_NYATA)
+    pytest.fail(
+        "Status pesanan tidak dikenali: bukan 'Sedang mencari driver', bukan 'Driver Tidak Ada yang Tersedia', "
+        "dan status driver ditugaskan ('Driver sedang menuju titik jemput') juga tidak tampil"
+    )
+
+
+# ==============================================================================
 # PART 1: NORMAL BOOKING / INSTANT RIDE SUITE (TC01 s/d TC89)
 # ==============================================================================
 class TestNormalBookingSuite:
@@ -144,7 +185,16 @@ class TestNormalBookingSuite:
 
         then("Peta kembali terpusat ke koordinat lokasi pengguna secara akurat")
         time.sleep(1)
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        # Titik tengah peta (PlatformView Google Maps) tidak terekspos di accessibility tree.
+        # Yang bisa diamati: re-center memakai lokasi pengguna, jadi dialog izin lokasi TIDAK boleh muncul,
+        # dan pengguna tetap di Beranda (tombol tidak membuka layar lain).
+        assert not booking_page.is_location_permission_dialog_displayed(), (
+            "Re-center memunculkan dialog 'Izin lokasi'/'Aktifkan lokasi': lokasi pengguna tidak tersedia untuk memusatkan peta"
+        )
+        assert booking_page.is_home_destination_prompt_displayed(), (
+            "Setelah menekan Re-Center, Beranda ('Hai, mau ke mana hari ini?') tidak lagi tampil"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_NORM_05_verify_popup_operational_hours_notice(self, authenticated_home, home_page):
@@ -173,7 +223,10 @@ class TestNormalBookingSuite:
         booking_page.fill_saved_location_details(name="Rumah Idaman", detail_address="Tower 2 Lantai 15")
 
         then("Data alamat rumah berhasil tersimpan")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert booking_page.is_address_saved_snackbar_displayed(), (
+            "Snackbar 'Alamat berhasil disimpan' tidak tampil setelah menyimpan alamat Rumah 'Rumah Idaman'"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar3
     def test_TC_NORM_11_verify_saved_home_mandatory_field_validation(self, authenticated_home, booking_page):
@@ -198,7 +251,13 @@ class TestNormalBookingSuite:
         booking_page.click_back()
 
         then("Layar kembali menampilkan Beranda dengan aman")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert booking_page.is_home_destination_prompt_displayed(), (
+            "Setelah menekan Kembali dari form alamat Rumah, Beranda ('Hai, mau ke mana hari ini?') tidak tampil"
+        )
+        assert not booking_page.is_saved_location_form_displayed(timeout=2), (
+            "Form alamat favorit (tombol 'Simpan alamat'/kolom nama lokasi) masih tampil setelah menekan Kembali"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_NORM_15_to_23_verify_saved_work_location(self, authenticated_home, booking_page):
@@ -212,7 +271,10 @@ class TestNormalBookingSuite:
         booking_page.fill_saved_location_details(name="Kantor Pusat Astra", detail_address="Lantai 30")
 
         then("Alamat kantor berhasil disimpan dalam daftar lokasi favorit")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert booking_page.is_address_saved_snackbar_displayed(), (
+            "Snackbar 'Alamat berhasil disimpan' tidak tampil setelah menyimpan alamat Kantor 'Kantor Pusat Astra'"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_NORM_24_to_32_verify_saved_other_location(self, authenticated_home, booking_page):
@@ -226,7 +288,10 @@ class TestNormalBookingSuite:
         booking_page.fill_saved_location_details(name="Tempat Nongkrong", detail_address="East Mall Lobby")
 
         then("Lokasi lainnya berhasil disimpan")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert booking_page.is_address_saved_snackbar_displayed(), (
+            "Snackbar 'Alamat berhasil disimpan' tidak tampil setelah menyimpan Lokasi Lainnya 'Tempat Nongkrong'"
+        )
+
     # --------------------------------------------------------------------------
     # 3. Pickup Point Section & Destination Suggestions
     # --------------------------------------------------------------------------
@@ -239,7 +304,14 @@ class TestNormalBookingSuite:
         booking_page.open_pickup_section()
 
         then("Layar beralih ke form destinasi dengan titik jemput otomatis terisi")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert booking_page.is_destination_field_displayed(), (
+            "Form destinasi tidak tampil: kolom 'Titik tujuan'/'Masukkan tujuan' tidak ditemukan setelah membuka Pickup Section"
+        )
+        terisi = booking_page.get_prefilled_input_texts()
+        assert terisi, (
+            "Titik jemput tidak terisi otomatis: tidak ada kolom input yang berisi alamat (semua masih placeholder)"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_NORM_34_verify_cta_set_on_map(self, authenticated_home, booking_page):
@@ -251,7 +323,10 @@ class TestNormalBookingSuite:
         booking_page.click_set_on_map()
 
         then("Peta penentuan titik tampil dan pin pointer aktif")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert booking_page.is_map_picker_displayed(), (
+            "Layar pilih lokasi lewat peta tidak tampil: tombol 'Pilih Lokasi' tidak ditemukan setelah mengetuk 'Pilih Lewat Peta'"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_NORM_35_verify_field_destination_auto_suggest(self, authenticated_home, booking_page):
@@ -265,17 +340,28 @@ class TestNormalBookingSuite:
         booking_page.select_first_suggestion()
 
         then("Data destinasi tersimpan dan aplikasi beralih ke layar Place Order")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert booking_page.is_place_order_displayed(), (
+            "Setelah memilih saran 'Grand Indonesia', layar Place Order (tombol 'Pesan EVMoto') tidak tampil"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar2
-    def test_TC_NORM_36_37_verify_cta_back_from_place_order(self, authenticated_home, booking_page):
+    def test_TC_NORM_36_37_verify_cta_back_from_place_order(self, authenticated_home, booking_page, tracking_page):
         """[TC36-TC37] Verify CTA Back: Kembali ke halaman sebelumnya dari Place Order."""
         given("Pengguna berada di layar Place Order")
+        _buka_place_order(booking_page, "Grand Indonesia")
+
         when("Pengguna menekan tombol Back")
         booking_page.click_back()
 
         then("Aplikasi kembali ke halaman Beranda tanpa membuat order")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert booking_page.wait_until_gone(booking_page.BTN_PESAN_EVMOTO_EXACT), (
+            "Layar Place Order (tombol 'Pesan EVMoto') masih tampil setelah menekan Back"
+        )
+        assert not tracking_page.is_searching_driver(timeout=3), (
+            "Menekan Back dari Place Order justru membuat order: status pencarian driver tampil"
+        )
+
     # --------------------------------------------------------------------------
     # 4. Place Order, Searching Driver & Cancel Flow (TC38 - TC42)
     # --------------------------------------------------------------------------
@@ -299,31 +385,55 @@ class TestNormalBookingSuite:
     def test_TC_NORM_40_verify_snackbar_searching_driver(self, authenticated_home, tracking_page, booking_page):
         """[TC40] Verify snackbar searching driver saat pengguna menekan Back."""
         given("Pengguna dalam status mencari driver")
+        _buat_pesanan_instan(booking_page, tracking_page, "Senayan City")
+
         when("Pengguna menekan tombol Back")
         booking_page.click_back()
 
         then("Snackbar aktivitas pencarian driver yang sedang berjalan tampil di bagian bawah")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert booking_page.is_home_destination_prompt_displayed(), (
+            "Setelah Back dari layar pencarian driver, Beranda ('Hai, mau ke mana hari ini?') tidak tampil"
+        )
+        assert tracking_page.is_searching_driver(timeout=8), (
+            "Di Beranda tidak ada snackbar pencarian driver yang sedang berjalan setelah menekan Back"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar1
-    def test_TC_NORM_41_verify_popup_confirmation_cancel_order(self, authenticated_home, tracking_page):
+    def test_TC_NORM_41_verify_popup_confirmation_cancel_order(self, authenticated_home, booking_page, tracking_page):
         """[TC41] Verify popup konfirmasi cancel: Membatalkan pencarian driver."""
         given("Pengguna sedang dalam layar pencarian driver")
+        _buat_pesanan_instan(booking_page, tracking_page, "Senayan City")
+
         when("Pengguna mengetuk tombol Cancel lalu memilih konfirmasi Ya/Cancel")
         tracking_page.cancel_searching_driver(confirm=True)
 
         then("Pencarian driver berhasil dibatalkan dan pengguna kembali ke Beranda")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert tracking_page.wait_until_searching_gone(), (
+            "Status pencarian driver masih tampil setelah konfirmasi pembatalan"
+        )
+        assert booking_page.is_home_destination_prompt_displayed(), (
+            "Setelah pencarian dibatalkan, pengguna tidak kembali ke Beranda ('Hai, mau ke mana hari ini?')"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar2
-    def test_TC_NORM_42_verify_popup_confirmation_cancel_close(self, authenticated_home, tracking_page):
+    def test_TC_NORM_42_verify_popup_confirmation_cancel_close(self, authenticated_home, booking_page, tracking_page):
         """[TC42] Verify popup konfirmasi cancel (Close): Menutup popup tanpa membatalkan order."""
         given("Pengguna berada di popup konfirmasi pembatalan")
+        _buat_pesanan_instan(booking_page, tracking_page, "Senayan City")
+
         when("Pengguna memilih tombol Close / X")
         tracking_page.cancel_searching_driver(confirm=False)
 
         then("Popup tertutup dan pencarian driver tetap berlanjut secara aman")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert tracking_page.is_cancel_order_dialog_closed(), (
+            "Dialog 'Apakah Anda yakin ingin membatalkan pesanan?' masih tampil setelah menekan Close"
+        )
+        assert tracking_page.is_searching_driver(timeout=5), (
+            "Pencarian driver ikut berhenti setelah dialog pembatalan ditutup (seharusnya tetap mencari)"
+        )
+
     # --------------------------------------------------------------------------
     # 5. Order Complete Lifecycle Flow (TC61 - TC71)
     # --------------------------------------------------------------------------
@@ -332,45 +442,78 @@ class TestNormalBookingSuite:
     def test_TC_NORM_61_to_65_verify_get_driver_information(self, authenticated_home, booking_page, tracking_page):
         """[TC61-TC65] Verify Get Driver: Menampilkan informasi driver, plat motor, dan jarak ETA."""
         given("Pengguna melakukan booking perjalanan")
-        booking_page.open_pickup_section()
-        booking_page.enter_destination("Plaza Indonesia")
-        booking_page.select_first_suggestion()
-        booking_page.submit_book_evmoto()
+        _buat_pesanan_instan(booking_page, tracking_page, "Plaza Indonesia")
 
         then("Saat driver ditugaskan, kontainer informasi driver (nama, nomor plat, estimasi waktu) tampil")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        _tunggu_driver_ditugaskan_atau_skip(tracking_page)
+        assert tracking_page.is_driver_on_the_way_displayed(timeout=5), (
+            "Status 'Driver sedang menuju titik jemput' tidak tampil pada kontainer informasi driver"
+        )
+        assert tracking_page.is_chat_driver_button_displayed(), (
+            "Tombol 'Chat Driver' tidak tampil pada kontainer informasi driver setelah driver ditugaskan"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar1
-    def test_TC_NORM_66_verify_cta_chat_driver_text_and_photo(self, authenticated_home, tracking_page):
+    def test_TC_NORM_66_verify_cta_chat_driver_text_and_photo(self, authenticated_home, booking_page, tracking_page):
         """[TC66] Verify CTA Chat: Mengirim pesan teks dan foto ke driver."""
         given("Pengguna telah mendapatkan driver penjemputan")
+        _buat_pesanan_instan(booking_page, tracking_page, "Plaza Indonesia")
+        _tunggu_driver_ditugaskan_atau_skip(tracking_page)
+
         when("Pengguna membuka menu Chat, mengetik pesan 'Saya di lobi barat', dan mengirim")
-        tracking_page.send_chat_message("Saya di lobi barat memakai jaket hitam")
+        pesan = "Saya di lobi barat memakai jaket hitam"
+        tracking_page.send_chat_message(pesan)
 
         then("Pesan berhasil terkirim ke obrolan driver secara realtime")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert tracking_page.is_chat_message_displayed(pesan), (
+            f"Gelembung chat berisi '{pesan}' tidak tampil di percakapan setelah menekan Kirim"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar1
-    def test_TC_NORM_67_68_verify_driver_container_scroll_expand_collapse(self, authenticated_home, tracking_page):
+    def test_TC_NORM_67_68_verify_driver_container_scroll_expand_collapse(self, authenticated_home, booking_page, tracking_page):
         """[TC67-TC68] Verify Driver information Container: Scroll Up (Expand) dan Scroll Down (Collapse)."""
         given("Kontainer informasi driver tampil")
+        _buat_pesanan_instan(booking_page, tracking_page, "Plaza Indonesia")
+        _tunggu_driver_ditugaskan_atau_skip(tracking_page)
+        posisi_awal = tracking_page.get_chat_driver_button_y()
+
         when("Pengguna melakukan swipe up pada panel driver")
         tracking_page.expand_driver_container()
+        time.sleep(1)
+        posisi_expand = tracking_page.get_chat_driver_button_y()
+        assert posisi_expand < posisi_awal, (
+            f"Panel driver tidak naik saat swipe up: posisi tombol 'Chat Driver' {posisi_awal}px -> {posisi_expand}px"
+        )
+
         and_step("Pengguna melakukan swipe down pada panel driver")
         tracking_page.collapse_driver_container()
+        time.sleep(1)
 
         then("Kontainer driver merespons gesture ekspansi dan kolaps secara mulus")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        posisi_collapse = tracking_page.get_chat_driver_button_y()
+        assert posisi_collapse > posisi_expand, (
+            f"Panel driver tidak turun saat swipe down: posisi tombol 'Chat Driver' {posisi_expand}px -> {posisi_collapse}px"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar1
-    def test_TC_NORM_69_verify_cta_emergency_sos_icon(self, authenticated_home, tracking_page):
+    def test_TC_NORM_69_verify_cta_emergency_sos_icon(self, authenticated_home, booking_page, tracking_page):
         """[TC69] Verify CTA Emergency Icon: Mengalihkan ke nomor panggilan darurat sistem."""
         given("Perjalanan sedang berlangsung")
+        _buat_pesanan_instan(booking_page, tracking_page, "Plaza Indonesia")
+        _tunggu_driver_ditugaskan_atau_skip(tracking_page)
+
         when("Pengguna mengetuk ikon Emergency SOS")
         tracking_page.click(tracking_page.BTN_EMERGENCY_ICON, label="Tombol SOS Darurat")
+        time.sleep(2)
 
         then("Sistem membuka shortcut panggilan darurat telepon")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert tracking_page.is_phone_dialer_opened(), (
+            f"Tombol SOS tidak membuka aplikasi telepon; aplikasi di depan: '{tracking_page.get_current_package()}'"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_NORM_70_verify_cta_customer_service_whatsapp(self, authenticated_home, tracking_page):
@@ -378,49 +521,97 @@ class TestNormalBookingSuite:
         given("Pengguna membutuhkan bantuan operasional")
         when("Pengguna mengetuk ikon Customer Service")
         tracking_page.click(tracking_page.BTN_CUSTOMER_SERVICE_ICON, label="Tombol CS WhatsApp")
+        time.sleep(2)
 
         then("Sistem mengalihkan ke kontak Customer Service WhatsApp")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        if not tracking_page.is_whatsapp_opened() and tracking_page.is_whatsapp_unavailable_displayed():
+            pytest.skip(
+                "Aplikasi menampilkan 'Tidak dapat membuka WhatsApp': WhatsApp tidak terpasang di emulator, "
+                "pengalihan ke WhatsApp CS tidak bisa diverifikasi di perangkat ini"
+            )
+        assert tracking_page.is_whatsapp_opened(), (
+            f"Tombol Customer Service tidak membuka WhatsApp; aplikasi di depan: '{tracking_page.get_current_package()}'"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_NORM_71_verify_order_complete_and_driver_rating(self, authenticated_home, tracking_page):
         """[TC71] Verify Order Complete & Rating: Driver Cash Collected lalu submit rating 5 bintang."""
         given("Pengguna tiba di tujuan dan pembayaran selesai (Cash Collected)")
+        if not tracking_page.is_rating_screen_displayed(timeout=5):
+            pytest.skip(
+                "Layar penilaian ('Bagaimana pengalaman perjalanan Anda?') tidak tampil: trip harus diselesaikan "
+                "oleh driver nyata dari perangkat Driver kedua sebelum pengguna bisa memberi rating"
+            )
+
         when("Pengguna memberikan penilaian bintang 5 dan ulasan")
         tracking_page.submit_driver_review(stars=5, comment="Perjalanan sangat nyaman dan driver ramah")
 
         then("Penilaian berhasil disimpan dan snackbar hijau konfirmasi rating tampil")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert tracking_page.is_rating_success_displayed(), (
+            "Snackbar 'Penilaian dan ulasan berhasil dikirim' tidak tampil setelah menekan 'Kirim Penilaian'"
+        )
+
     # --------------------------------------------------------------------------
     # 6. Cancellation Flows & Boundaries (TC72 - TC89)
     # --------------------------------------------------------------------------
     @pytest.mark.booking
     @pytest.mark.pilar1
-    def test_TC_NORM_76_to_79_verify_cancel_trip_with_reason(self, authenticated_home, tracking_page):
+    def test_TC_NORM_76_to_79_verify_cancel_trip_with_reason(self, authenticated_home, booking_page, tracking_page):
         """[TC76-TC79] Verify User Cancel After Get Driver: Membatalkan dengan memilih alasan pembatalan."""
         given("Pengguna telah mendapat driver tetapi ingin membatalkan perjalanan")
+        _buat_pesanan_instan(booking_page, tracking_page, "Plaza Indonesia")
+        _tunggu_driver_ditugaskan_atau_skip(tracking_page)
+
         when("Pengguna memilih batalkan trip, memilih alasan pembatalan, dan konfirmasi")
         tracking_page.cancel_trip_with_reason()
 
         then("Pesanan dibatalkan secara resmi dan pengguna diarahkan kembali ke Beranda")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert tracking_page.wait_until_gone(tracking_page.TEXT_DRIVER_ASSIGNED_STATUS), (
+            "Status driver ('Driver sedang menuju titik jemput') masih tampil setelah pembatalan dikonfirmasi"
+        )
+        assert booking_page.is_home_destination_prompt_displayed(), (
+            "Setelah membatalkan trip, pengguna tidak diarahkan kembali ke Beranda ('Hai, mau ke mana hari ini?')"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_NORM_80_to_83_verify_driver_cancel_and_try_again(self, authenticated_home, tracking_page):
         """[TC80-TC83] Verify Driver Cancel: Driver membatalkan, popup tampil, dan tombol Try Again mencari ulang."""
         given("Mitra driver membatalkan penjemputan")
+        if not tracking_page.is_driver_cancelled_popup_displayed(timeout=5):
+            pytest.skip(
+                "Popup 'Driver Membatalkan Perjalanan' tidak tampil: pembatalan oleh driver harus dilakukan dari "
+                "perangkat Driver kedua yang nyata; DriverRoleSimulator tidak mengubah layar aplikasi User"
+            )
+
         when("Popup pembatalan driver tampil dan pengguna menekan 'Try Again'")
         tracking_page.click_try_again_after_driver_cancel()
 
         then("Sistem secara otomatis melanjutkan pencarian driver pengganti")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert tracking_page.is_searching_driver(timeout=10), (
+            "Setelah menekan 'Coba Lagi', status pencarian driver pengganti tidak tampil"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar3
-    def test_TC_NORM_84_to_87_verify_driver_not_available_timeout(self, authenticated_home, tracking_page):
+    def test_TC_NORM_84_to_87_verify_driver_not_available_timeout(self, authenticated_home, booking_page, tracking_page):
         """[TC84-TC87] Verify Timeout 5 Menit: Driver tidak ditemukan mengalihkan ke Beranda dengan snackbar."""
         given("Pencarian driver berjalan hingga batas waktu timeout")
+        _buat_pesanan_instan(booking_page, tracking_page, "Plaza Indonesia")
+
         then("Aplikasi otomatis kembali ke Beranda dan menampilkan snackbar 'Driver not available'")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        # Batas timeout pencarian 5 menit + toleransi 60 detik
+        tampil = tracking_page.is_driver_not_available_displayed(timeout=360)
+        if not tampil and tracking_page.is_driver_on_the_way_displayed(timeout=3):
+            pytest.skip("Ada driver nyata yang menerima pesanan, sehingga skenario timeout 5 menit tidak terjadi")
+        assert tampil, (
+            "Setelah 6 menit mencari, dialog 'Driver Tidak Ada yang Tersedia' tidak tampil"
+        )
+        assert tracking_page.wait_until_searching_gone(), (
+            "Status pencarian driver masih tampil setelah timeout 'Driver Tidak Ada yang Tersedia'"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar3
     def test_TC_NORM_88_89_verify_destination_more_than_60km_boundary(self, authenticated_home, booking_page):
@@ -448,41 +639,55 @@ class TestAdvanceBookingSuite:
     def test_TC_ADV_38_verify_cta_scheduled_time_picker_confirm(self, authenticated_home, booking_page):
         """[TC_ADV_38] Verify CTA Scheduled: Memilih tanggal dan jam (30 mnt s/d 18 jam) lalu tekan Pilih."""
         given("Pengguna berada di layar Place Order")
-        booking_page.open_pickup_section()
-        booking_page.enter_destination("Bandara Soekarno Hatta Terminal 3")
-        booking_page.select_first_suggestion()
+        _buka_place_order(booking_page, "Bandara Soekarno Hatta Terminal 3")
+        jam_sebelum = booking_page.get_visible_time_texts()
 
         when("Pengguna mengetuk tombol CTA Scheduled, memilih tanggal besok jam 08:00, dan menekan 'Pilih'")
         booking_page.open_scheduled_modal()
         booking_page.confirm_scheduled_time()
+        time.sleep(1)
 
         then("Jadwal penjemputan berhasil terpasang dan halaman Place Order menampilkan waktu jadwal")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert booking_page.is_place_order_displayed(), (
+            "Setelah menekan 'Pilih' pada modal jadwal, layar Place Order (tombol 'Pesan EVMoto') tidak tampil kembali"
+        )
+        jam_baru = booking_page.get_visible_time_texts() - jam_sebelum
+        assert jam_baru, (
+            "Place Order tidak menampilkan waktu jadwal baru setelah memilih jadwal "
+            f"(label jam sebelum: {sorted(jam_sebelum)})"
+        )
+
     @pytest.mark.booking
     @pytest.mark.advance_booking
     @pytest.mark.pilar2
     def test_TC_ADV_39_verify_cta_scheduled_time_picker_cancel(self, authenticated_home, booking_page):
         """[TC_ADV_39] Verify CTA Scheduled (Batalkan): Menutup picker tanpa mengubah jadwal."""
         given("Pengguna membuka modal jadwal advance booking")
-        booking_page.open_pickup_section()
-        booking_page.enter_destination("Stasiun Gambir")
-        booking_page.select_first_suggestion()
+        _buka_place_order(booking_page, "Stasiun Gambir")
+        jam_sebelum = booking_page.get_visible_time_texts()
         booking_page.open_scheduled_modal()
 
         when("Pengguna menekan tombol 'Batalkan' pada modal jadwal")
         booking_page.cancel_scheduled_time()
+        time.sleep(1)
 
         then("Modal tertutup dan pesanan tetap dalam mode reguler tanpa mutasi waktu")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert booking_page.is_place_order_displayed(), (
+            "Setelah 'Batalkan' pada modal jadwal, layar Place Order (tombol 'Pesan EVMoto') tidak tampil kembali"
+        )
+        assert booking_page.is_schedule_button_displayed(), (
+            "Tombol 'Jadwalkan' tidak tampil lagi: pesanan tidak lagi dalam mode reguler setelah membatalkan picker"
+        )
+        jam_baru = booking_page.get_visible_time_texts() - jam_sebelum
+        assert not jam_baru, f"Waktu jadwal berubah walaupun picker dibatalkan: {sorted(jam_baru)}"
+
     @pytest.mark.booking
     @pytest.mark.advance_booking
     @pytest.mark.pilar1
-    def test_TC_ADV_40_to_42_verify_scheduled_order_creation_and_driver_assignment(self, authenticated_home, booking_page):
+    def test_TC_ADV_40_to_42_verify_scheduled_order_creation_and_driver_assignment(self, authenticated_home, booking_page, activity_page):
         """[TC_ADV_40-42] Verify Scheduled Booked: Order created notification & driver assignment."""
         given("Pengguna telah mengatur jadwal advance booking")
-        booking_page.open_pickup_section()
-        booking_page.enter_destination("Cilandak Town Square")
-        booking_page.select_first_suggestion()
+        _buka_place_order(booking_page, "Cilandak Town Square")
         booking_page.open_scheduled_modal()
         booking_page.confirm_scheduled_time()
 
@@ -490,19 +695,45 @@ class TestAdvanceBookingSuite:
         booking_page.submit_book_evmoto()
 
         then("Notifikasi 'Pesanan Terjadwal Berhasil Dibuat' tampil dan detail jadwal muncul di Tab Booking")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert booking_page.is_scheduled_created_dialog_displayed(), (
+            "Dialog 'Pesan Terjadwal Berhasil Dibuat' tidak tampil setelah menekan 'Pesan EVMoto' dengan jadwal"
+        )
+        booking_page.close_scheduled_created_dialog()
+        activity_page.navigate_to_activity_screen()
+        activity_page.select_booking_tab()
+        assert booking_page.is_scheduled_order_status_displayed(), (
+            "Kartu berstatus 'Pesanan Terjadwal' tidak muncul di Tab Booking Aktivitas setelah pesanan dibuat"
+        )
+
     @pytest.mark.booking
     @pytest.mark.advance_booking
     @pytest.mark.pilar1
-    def test_TC_ADV_44_45_verify_reschedule_and_cancel_from_activity_tab_booking(self, authenticated_home, activity_page):
+    def test_TC_ADV_44_45_verify_reschedule_and_cancel_from_activity_tab_booking(self, authenticated_home, booking_page, activity_page):
         """[TC_ADV_44-45] Verify Reschedule & Cancel Scheduled Trip dari Halaman Aktivitas Tab Booking."""
         given("Pengguna membuka Halaman Aktivitas dan memilih 'Tab Booking'")
         activity_page.navigate_to_activity_screen()
         activity_page.select_booking_tab()
+        if not booking_page.is_scheduled_order_status_displayed():
+            pytest.skip(
+                "Akun uji tidak punya kartu 'Pesanan Terjadwal' di Tab Booking; buat dulu lewat TC_ADV_40-42"
+            )
 
         when("Pengguna meninjau pesanan terjadwal dan menekan 'Ubah Jadwal'")
+        booking_page.open_first_scheduled_order()
+        assert booking_page.is_scheduled_detail_displayed(), (
+            "Halaman 'Detail Jadwal Pemesanan' tidak tampil setelah membuka kartu 'Pesanan Terjadwal'"
+        )
+        assert activity_page.is_displayed(activity_page.BTN_RESCHEDULE_BOOKING, timeout=5), (
+            "Tombol 'Ubah Jadwal' tidak tampil di Detail Jadwal Pemesanan "
+            "(string 'Ubah Jadwal' juga tidak ada di file bahasa aplikasi User v1.2.33)"
+        )
+        activity_page.open_reschedule_modal()
+
         then("Modal penyesuaian waktu tampil dan jadwal dapat diperbarui dengan sinkronisasi server")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert activity_page.is_reschedule_modal_displayed(), (
+            "Modal penyesuaian waktu tidak tampil setelah menekan 'Ubah Jadwal'"
+        )
+
 # ==============================================================================
 # PART 3: EXTENDED CORE QA 4-PILLARS ENHANCEMENTS (CRITICAL GAPS IDENTIFIED)
 # ==============================================================================
@@ -514,65 +745,125 @@ class TestBookingCoreEnhancements:
     def test_TC_EXT_PT_01_verify_payment_method_selection(self, authenticated_home, booking_page):
         """[Pilar 1 - Positive True] Verifikasi pemilihan metode bayar antara EvWallet dan Tunai."""
         given("Pengguna berada di layar Place Order")
+        _buka_place_order(booking_page, "Grand Indonesia")
+
         when("Pengguna beralih metode pembayaran dari EvWallet ke Tunai (Cash)")
         booking_page.click(booking_page.BTN_PAYMENT_METHOD, label="Metode Pembayaran")
         booking_page.click(booking_page.OPTION_PAYMENT_CASH, label="Pilihan Tunai")
 
         then("Metode pembayaran aktif berhasil diperbarui ke 'Tunai'")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert booking_page.is_payment_selected_snackbar_displayed("cash"), (
+            "Snackbar 'Pembayaran cash berhasil dipilih sebagai metode pembayaran.' tidak tampil setelah memilih Cash"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar1
     def test_TC_EXT_PT_02_verify_voucher_promo_discount_application(self, authenticated_home, booking_page):
         """[Pilar 1 - Positive True] Verifikasi aplikasi voucher diskon memotong total estimasi tarif."""
         given("Pengguna berada di layar Place Order")
+        _buka_place_order(booking_page, "Grand Indonesia")
+        tarif_sebelum = booking_page.get_all_fare_amounts()
+        assert tarif_sebelum, "Prasyarat gagal: tidak ada nominal 'Rp' yang terbaca di Place Order sebelum voucher"
+
         when("Pengguna memasukkan voucher promo 'EVMOTOBARU' dan menekan Pakai")
         booking_page.apply_voucher("EVMOTOBARU")
 
         then("Total tarif terpotong diskon secara realtime")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert booking_page.is_promo_applied_snackbar_displayed(), (
+            "Snackbar 'Promo berhasil diterapkan ke pesanan Anda.' tidak tampil setelah memakai voucher 'EVMOTOBARU'"
+        )
+        tarif_sesudah = booking_page.get_all_fare_amounts()
+        assert tarif_sesudah and min(tarif_sesudah) < min(tarif_sebelum), (
+            f"Total tarif tidak berkurang setelah voucher: sebelum {tarif_sebelum}, sesudah {tarif_sesudah}"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar2
-    def test_TC_EXT_PF_01_verify_insufficient_wallet_balance_modal(self, authenticated_home, booking_page):
+    def test_TC_EXT_PF_01_verify_insufficient_wallet_balance_modal(self, authenticated_home, booking_page, tracking_page):
         """[Pilar 2 - Positive False] Saldo EvWallet kurang memunculkan modal saran Top Up tanpa mutasi order."""
         given("Pengguna memiliki saldo EvWallet Rp 0")
+        saldo = booking_page.get_home_wallet_balance_amount()
+        if saldo is None:
+            pytest.skip("Saldo dompet di Beranda (label 'Saldo Anda'/'Saldo Kamu') tidak terbaca, prasyarat Rp 0 tidak bisa dipastikan")
+        if saldo > 0:
+            pytest.skip(
+                f"Prasyarat tidak terpenuhi: saldo akun uji Rp {saldo:,}".replace(",", ".")
+                + ", padahal skenario butuh Rp 0 dan saldo tidak bisa dikosongkan dari UI"
+            )
+
         when("Pengguna mencoba order layanan dengan metode EvWallet")
+        _buka_place_order(booking_page, "Grand Indonesia")
+        booking_page.select_payment_method("wallet")
+        booking_page.submit_book_evmoto()
+
         then("Sistem menampilkan dialog 'Saldo EvWallet Tidak Cukup' dengan opsi Isi Saldo atau Ganti Tunai")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert booking_page.is_insufficient_balance_dialog_displayed(), (
+            "Dialog 'Saldo Anda Tidak Cukup' dengan tombol 'Pilih Metode Pembayaran Lain' tidak tampil saat saldo Rp 0"
+        )
+        assert not tracking_page.is_searching_driver(timeout=3), (
+            "Order tetap dibuat (status pencarian driver tampil) walaupun saldo EvWallet Rp 0"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar3
     def test_TC_EXT_NT_01_verify_same_pickup_and_destination_boundary(self, authenticated_home, booking_page):
         """[Pilar 3 - Negative True] Validasi titik jemput dan titik tujuan identik ditolak sistem."""
         given("Pengguna berada di layar rute perjalanan")
+        booking_page.open_pickup_section()
+        alamat_jemput = booking_page.get_prefilled_input_texts()
+        assert alamat_jemput, "Prasyarat gagal: alamat titik jemput tidak terisi otomatis di form rute"
+
         when("Pengguna memasukkan destinasi yang persis sama dengan koordinat jemput")
-        booking_page.enter_destination("Menara Astra Sudirman")
+        booking_page.enter_destination(alamat_jemput[0])
+        booking_page.select_first_suggestion()
 
         then("Sistem menampilkan validasi 'Titik penjemputan dan tujuan tidak boleh sama'")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert booking_page.is_same_location_warning_displayed(), (
+            f"Validasi 'Titik penjemputan dan tujuan tidak boleh sama' tidak tampil untuk tujuan '{alamat_jemput[0]}'"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar3
     def test_TC_EXT_NT_02_verify_advance_booking_less_than_30min_rejected(self, authenticated_home, booking_page):
         """[Pilar 3 - Negative True] Pemilihan jadwal advance booking < 30 menit ke depan ditolak."""
         given("Pengguna membuka modal jadwal advance booking")
+        _buka_place_order(booking_page, "Stasiun Gambir")
+        booking_page.open_scheduled_modal()
+
         when("Pengguna mencoba memilih waktu 10 menit ke depan")
-        then("Sistem menolak dan menampilkan pesan 'Waktu penjemputan minimal 30 menit dari sekarang'")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        pytest.skip(
+            "Picker jadwal berupa wheel Flutter tanpa label aksesibilitas per menit, sehingga waktu +10 menit "
+            "tidak bisa dipilih secara pasti, dan file bahasa aplikasi User v1.2.33 tidak memuat pesan "
+            "'minimal 30 menit' untuk diverifikasi"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar4
-    def test_TC_EXT_NF_01_verify_chat_and_notes_sqli_xss_sanitization(self, authenticated_home, tracking_page):
+    def test_TC_EXT_NF_01_verify_chat_and_notes_sqli_xss_sanitization(self, authenticated_home, booking_page, tracking_page):
         """[Pilar 4 - Negative False] Uji penetrasi SQLi & XSS pada kolom chat driver dan catatan penjemputan."""
         given("Pengguna terhubung dengan driver")
+        _buat_pesanan_instan(booking_page, tracking_page, "Plaza Indonesia")
+        _tunggu_driver_ditugaskan_atau_skip(tracking_page)
         payload = "<script>alert('XSS_EVMOTO')</script>' OR '1'='1"
 
         when("Pengguna mengirim payload XSS/SQLi ke chat driver")
         tracking_page.send_chat_message(payload)
 
         then("Pesan tersanitasi aman oleh backend/Flutter layer tanpa memicu eksekusi skrip atau crash")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert tracking_page.get_current_package() == "com.evmoto.user.app", (
+            f"Aplikasi User tidak lagi di depan setelah mengirim payload (crash?): '{tracking_page.get_current_package()}'"
+        )
+        assert tracking_page.is_chat_message_displayed(payload), (
+            "Payload XSS/SQLi tidak tampil sebagai teks biasa di gelembung chat (pesan hilang atau ditolak tanpa umpan balik)"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar4
-    def test_TC_EXT_NF_02_verify_rapid_multi_tap_on_book_button(self, authenticated_home, booking_page):
+    def test_TC_EXT_NF_02_verify_rapid_multi_tap_on_book_button(self, authenticated_home, booking_page, tracking_page):
         """[Pilar 4 - Negative False] Anti Double-Booking: Multi-tap cepat pada tombol Book EvMoto."""
         given("Pengguna berada di layar Place Order")
+        _buka_place_order(booking_page, "Senayan City")
+
         when("Pengguna melakukan tapping cepat 5 kali berturut-turut pada tombol 'Pesan'")
         for _ in range(5):
             try:
@@ -581,17 +872,33 @@ class TestBookingCoreEnhancements:
                 pass
 
         then("Sistem mendebounce request, hanya membuat tepat 1 pesanan, dan tidak terjadi duplikasi transaksi")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert tracking_page.is_searching_driver(timeout=15), (
+            "Tidak ada pesanan yang terbentuk: status pencarian driver tidak tampil setelah tap beruntun"
+        )
+        # Bila terbentuk 2 pesanan, setelah satu dibatalkan masih tersisa pencarian driver lain.
+        tracking_page.cancel_searching_driver(confirm=True)
+        assert tracking_page.wait_until_searching_gone(), (
+            "Masih ada pencarian driver setelah satu pesanan dibatalkan: indikasi pesanan ganda dari tap beruntun"
+        )
+
     @pytest.mark.booking
     @pytest.mark.pilar4
-    def test_TC_EXT_NF_03_verify_app_backgrounding_during_driver_search(self, driver, authenticated_home, booking_page):
+    def test_TC_EXT_NF_03_verify_app_backgrounding_during_driver_search(self, driver, authenticated_home, booking_page, tracking_page):
         """[Pilar 4 - Negative False] Resiliensi OS: Aplikasi di-minimize saat mencari driver lalu dibuka kembali."""
         given("Pengguna sedang dalam proses mencari mitra driver")
+        _buat_pesanan_instan(booking_page, tracking_page, "Senayan City")
+
         when("Aplikasi di-background selama 4 detik lalu di-resume kembali")
         driver.background_app(4)
 
         then("Status pencarian driver tetap aktif dan sesi pesanan tidak hilang")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert tracking_page.get_current_package() == "com.evmoto.user.app", (
+            f"Aplikasi User tidak kembali ke depan setelah resume: '{tracking_page.get_current_package()}'"
+        )
+        assert tracking_page.is_searching_driver(timeout=10), (
+            "Status pencarian driver hilang setelah aplikasi di-background 4 detik lalu dibuka kembali"
+        )
+
     @pytest.mark.booking
     @pytest.mark.happy_flow
     def test_TC_EXT_HF_01_master_e2e_booking_lifecycle_happy_flow(self, authenticated_home, booking_page, tracking_page):
@@ -602,16 +909,28 @@ class TestBookingCoreEnhancements:
         when("Pengguna memasukkan destinasi dan memilih rute")
         booking_page.enter_destination("Plaza Indonesia")
         booking_page.select_first_suggestion()
+        assert booking_page.is_place_order_displayed(), "Layar Place Order (tombol 'Pesan EVMoto') tidak tampil setelah memilih rute"
 
         and_step("Pengguna meninjau tarif dan melakukan pemesanan")
         booking_page.submit_book_evmoto()
+        assert tracking_page.is_searching_driver(timeout=15), "Status pencarian driver tidak tampil setelah menekan 'Pesan EVMoto'"
+        _tunggu_driver_ditugaskan_atau_skip(tracking_page)
 
         and_step("Pengguna berinteraksi dengan driver dan menyelesaikan perjalanan")
-        tracking_page.send_chat_message("Saya sudah di lobi utama")
+        pesan = "Saya sudah di lobi utama"
+        tracking_page.send_chat_message(pesan)
+        assert tracking_page.is_chat_message_displayed(pesan), f"Pesan chat '{pesan}' tidak tampil di percakapan"
+        if not tracking_page.is_rating_screen_displayed(timeout=60):
+            pytest.skip(
+                "Layar penilaian tidak tampil: trip harus diselesaikan driver nyata dari perangkat Driver kedua"
+            )
         tracking_page.submit_driver_review(stars=5, comment="Sangat cepat dan ramah!")
 
         then("Seluruh siklus booking order selesai dengan status sukses 100%")
-        assert True  # TODO(QA): placeholder, belum memverifikasi apa pun. Ganti dengan assertion nyata.
+        assert tracking_page.is_rating_success_displayed(), (
+            "Snackbar 'Penilaian dan ulasan berhasil dikirim' tidak tampil di akhir siklus booking"
+        )
+
 # ==============================================================================
 # PART 4: SKENARIO KHUSUS USER APPS & INTEGRASI PERAN DRIVER DEV (TC01 s/d TC06)
 # ==============================================================================
@@ -791,8 +1110,12 @@ class TestSpecializedUserBookingSuite:
         time.sleep(1.0)
 
         then("Metode pembayaran aktif berhasil diperbarui ke Tunai dan siap untuk konfirmasi order")
-        selected_method = booking_page.get_selected_payment_method()
-        assert selected_method is not None
+        assert booking_page.is_payment_selected_snackbar_displayed("cash"), (
+            "Snackbar 'Pembayaran cash berhasil dipilih sebagai metode pembayaran.' tidak tampil setelah kembali ke Cash"
+        )
+        assert booking_page.is_place_order_displayed(timeout=5), (
+            "Form Place Order (tombol 'Pesan EVMoto') hilang setelah mengganti metode pembayaran"
+        )
         time.sleep(Config.HUMAN_PACING_MIN)
 
     @pytest.mark.booking
@@ -817,6 +1140,7 @@ class TestSpecializedUserBookingSuite:
 
         and_step("Perjalanan diselesaikan oleh Driver dan sistem memproses pemotongan saldo cashless")
         trip_fare = booking_page.get_numeric_fare_amount()
+        assert trip_fare > 0, "Tarif perjalanan tidak terbaca dari layar Place Order (nominal 'Rp' kosong)"
         txn = wallet_helper.deduct_fare(fare_amount=trip_fare, order_id="ORD-CASHLESS-DEV-01")
         driver_simulator.complete_trip(payment_method="cashless", fare_amount=trip_fare)
 
@@ -1532,7 +1856,9 @@ class TestOrderBehaviourMatrix:
         - Total Argo = Start Price Rp 6.000 + Mileage Fee + Long Distance Fee.
         - Tunai & EvWallet: Surcharge 0%, Grand Total = Adjusted Subtotal.
         - GoPay (2%) & OVO (1.665%): Formula Gross-Up: Grand Total = math.ceil(Adjusted Subtotal * (100 / (100 - Fee Rate))).
+        Mengembalikan jumlah titik (jarak x metode bayar) yang sudah lolos verifikasi.
         """
+        jumlah_titik = 0
         for d in self.DISTANCES:
             excess_wait_min = max(0, waiting_minutes - 15)
             wait_fee = float(excess_wait_min * 500.0)
@@ -1553,23 +1879,25 @@ class TestOrderBehaviourMatrix:
 
                 # Validasi komponen biaya
                 assert res["start_price"] == 6000.0, f"Argo dasar / tarif awal harus Rp 6.000 ({d['tier']})"
-                assert res["total_argo"] == d["total_argo"], f"Mismatch total argo {d['tier']} ({p['name']})"
-                assert res["platform_fee"] == d["plat_fee"], f"Mismatch platform fee {d['tier']} ({p['name']})"
-                assert res["waiting_fee"] == wait_fee, f"Mismatch waiting fee {d['tier']} ({p['name']})"
-                assert res["coupon_discount"] == coupon_disc, f"Mismatch kupon {d['tier']} ({p['name']})"
-                assert res["penalty_fee"] == penalty_val, f"Mismatch penalty {d['tier']} ({p['name']})"
-                assert res["adjusted_subtotal"] == expected_adj_subtotal, f"Mismatch adjusted subtotal {d['tier']} ({p['name']})"
+                assert res["total_argo"] == d["total_argo"], f"Total argo tidak sesuai untuk {d['tier']} ({p['name']})"
+                assert res["platform_fee"] == d["plat_fee"], f"Platform fee tidak sesuai untuk {d['tier']} ({p['name']})"
+                assert res["waiting_fee"] == wait_fee, f"Waiting fee tidak sesuai untuk {d['tier']} ({p['name']})"
+                assert res["coupon_discount"] == coupon_disc, f"Potongan kupon tidak sesuai untuk {d['tier']} ({p['name']})"
+                assert res["penalty_fee"] == penalty_val, f"Penalty tidak sesuai untuk {d['tier']} ({p['name']})"
+                assert res["adjusted_subtotal"] == expected_adj_subtotal, f"Adjusted subtotal tidak sesuai untuk {d['tier']} ({p['name']})"
 
                 # Validasi surcharge metode pembayaran dengan Gross-Up
                 if p["is_ewallet"] and expected_adj_subtotal > 0:
                     rate_pct = 1.665 if p["code"] == "ovo" else 2.0
                     expected_grand = float(math.ceil(expected_adj_subtotal * (100.0 / (100.0 - rate_pct))))
                     expected_charge = float(expected_grand - expected_adj_subtotal)
-                    assert res["charge_fee_amount"] == expected_charge, f"Mismatch surcharge {rate_pct}% {p['name']} on {d['tier']}"
-                    assert res["grand_total"] == expected_grand, f"Mismatch grand total {p['name']} on {d['tier']}"
+                    assert res["charge_fee_amount"] == expected_charge, f"Surcharge {rate_pct}% {p['name']} tidak sesuai pada {d['tier']}"
+                    assert res["grand_total"] == expected_grand, f"Grand total {p['name']} tidak sesuai pada {d['tier']}"
                 else:
-                    assert res["charge_fee_amount"] == 0.0, f"Surcharge cash/evwallet must be 0 for {p['name']}"
-                    assert res["grand_total"] == expected_adj_subtotal, f"Mismatch grand total {p['name']} on {d['tier']}"
+                    assert res["charge_fee_amount"] == 0.0, f"Surcharge {p['name']} (Tunai/EvWallet) harus Rp 0"
+                    assert res["grand_total"] == expected_adj_subtotal, f"Grand total {p['name']} tidak sesuai pada {d['tier']}"
+                jumlah_titik += 1
+        return jumlah_titik
 
     # --------------------------------------------------------------------------
     # SKENARIO 1: NORMAL BOOKING (ARGO + PLATFORM FEE 10%)
@@ -1589,7 +1917,11 @@ class TestOrderBehaviourMatrix:
         """
         calc = fare_calculator
         given("Pengguna melakukan Normal Booking untuk 4 jarak dan 4 metode pembayaran")
-        self._verify_combo(calc, "Normal Booking", use_coupon=False, waiting_minutes=0, apply_penalty=False)
+        jumlah_titik = self._verify_combo(calc, "Normal Booking", use_coupon=False, waiting_minutes=0, apply_penalty=False)
+        then("Seluruh 16 kombinasi (4 jarak x 4 metode bayar) terverifikasi sesuai formula tarif")
+        assert jumlah_titik == 16, (
+            f"Skenario 'Normal Booking' hanya memverifikasi {jumlah_titik} dari 16 kombinasi jarak x metode bayar"
+        )
 
     # --------------------------------------------------------------------------
     # SKENARIO 2: NORMAL BOOKING + KUPON (DISKON RP 5.000)
@@ -1609,7 +1941,11 @@ class TestOrderBehaviourMatrix:
         """
         calc = fare_calculator
         given("Pengguna mengaplikasikan voucher diskon Rp 5.000 pada Normal Booking (4 metode pembayaran)")
-        self._verify_combo(calc, "Normal Booking + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=False)
+        jumlah_titik = self._verify_combo(calc, "Normal Booking + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=False)
+        then("Seluruh 16 kombinasi (4 jarak x 4 metode bayar) terverifikasi sesuai formula tarif")
+        assert jumlah_titik == 16, (
+            f"Skenario 'Normal Booking + Kupon' hanya memverifikasi {jumlah_titik} dari 16 kombinasi jarak x metode bayar"
+        )
 
     # --------------------------------------------------------------------------
     # SKENARIO 3: NORMAL BOOKING + WAITING FEE (20 MENIT / 5 MIN BILLABLE)
@@ -1629,7 +1965,11 @@ class TestOrderBehaviourMatrix:
         """
         calc = fare_calculator
         given("Driver menunggu 20 menit pada titik penjemputan Normal Booking (4 metode pembayaran)")
-        self._verify_combo(calc, "Normal Booking + Waiting Fee", use_coupon=False, waiting_minutes=20, apply_penalty=False)
+        jumlah_titik = self._verify_combo(calc, "Normal Booking + Waiting Fee", use_coupon=False, waiting_minutes=20, apply_penalty=False)
+        then("Seluruh 16 kombinasi (4 jarak x 4 metode bayar) terverifikasi sesuai formula tarif")
+        assert jumlah_titik == 16, (
+            f"Skenario 'Normal Booking + Waiting Fee' hanya memverifikasi {jumlah_titik} dari 16 kombinasi jarak x metode bayar"
+        )
 
     # --------------------------------------------------------------------------
     # SKENARIO 4: NORMAL BOOKING + PENALTY (DENDA RP 5.000)
@@ -1649,7 +1989,11 @@ class TestOrderBehaviourMatrix:
         """
         calc = fare_calculator
         given("Pengguna memiliki kewajiban denda pembatalan Rp 5.000 pada Normal Booking (4 metode pembayaran)")
-        self._verify_combo(calc, "Normal Booking + Penalty", use_coupon=False, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0)
+        jumlah_titik = self._verify_combo(calc, "Normal Booking + Penalty", use_coupon=False, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0)
+        then("Seluruh 16 kombinasi (4 jarak x 4 metode bayar) terverifikasi sesuai formula tarif")
+        assert jumlah_titik == 16, (
+            f"Skenario 'Normal Booking + Penalty' hanya memverifikasi {jumlah_titik} dari 16 kombinasi jarak x metode bayar"
+        )
 
     # --------------------------------------------------------------------------
     # SKENARIO 5: NORMAL BOOKING + KUPON + WAITING FEE
@@ -1669,7 +2013,11 @@ class TestOrderBehaviourMatrix:
         """
         calc = fare_calculator
         given("Pengguna Normal Booking memakai Kupon Rp 5.000 dan kena Waiting Fee Rp 2.500 (4 metode pembayaran)")
-        self._verify_combo(calc, "Normal Booking + Kupon + WaitFee", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=False)
+        jumlah_titik = self._verify_combo(calc, "Normal Booking + Kupon + WaitFee", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=False)
+        then("Seluruh 16 kombinasi (4 jarak x 4 metode bayar) terverifikasi sesuai formula tarif")
+        assert jumlah_titik == 16, (
+            f"Skenario 'Normal Booking + Kupon + WaitFee' hanya memverifikasi {jumlah_titik} dari 16 kombinasi jarak x metode bayar"
+        )
 
     # --------------------------------------------------------------------------
     # SKENARIO 6: NORMAL BOOKING + KUPON + WAITING FEE + PENALTY
@@ -1689,7 +2037,11 @@ class TestOrderBehaviourMatrix:
         """
         calc = fare_calculator
         given("Pengguna Normal Booking kombo lengkap Kupon, WaitFee, dan Penalty (4 metode pembayaran)")
-        self._verify_combo(calc, "Normal Booking Kombo Lengkap", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0)
+        jumlah_titik = self._verify_combo(calc, "Normal Booking Kombo Lengkap", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0)
+        then("Seluruh 16 kombinasi (4 jarak x 4 metode bayar) terverifikasi sesuai formula tarif")
+        assert jumlah_titik == 16, (
+            f"Skenario 'Normal Booking Kombo Lengkap' hanya memverifikasi {jumlah_titik} dari 16 kombinasi jarak x metode bayar"
+        )
 
     # --------------------------------------------------------------------------
     # SKENARIO 7: NORMAL BOOKING + WAITING FEE + PENALTY
@@ -1709,7 +2061,11 @@ class TestOrderBehaviourMatrix:
         """
         calc = fare_calculator
         given("Pengguna Normal Booking terkena Waiting Fee Rp 2.500 dan Penalty Rp 5.000 (4 metode pembayaran)")
-        self._verify_combo(calc, "Normal Booking + WaitFee + Penalty", use_coupon=False, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0)
+        jumlah_titik = self._verify_combo(calc, "Normal Booking + WaitFee + Penalty", use_coupon=False, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0)
+        then("Seluruh 16 kombinasi (4 jarak x 4 metode bayar) terverifikasi sesuai formula tarif")
+        assert jumlah_titik == 16, (
+            f"Skenario 'Normal Booking + WaitFee + Penalty' hanya memverifikasi {jumlah_titik} dari 16 kombinasi jarak x metode bayar"
+        )
 
     # --------------------------------------------------------------------------
     # SKENARIO 8: NORMAL BOOKING + PENALTY + KUPON
@@ -1729,7 +2085,11 @@ class TestOrderBehaviourMatrix:
         """
         calc = fare_calculator
         given("Pengguna Normal Booking dengan Penalty Rp 5.000 dioffset Kupon Rp 5.000 (4 metode pembayaran)")
-        self._verify_combo(calc, "Normal Booking + Penalty + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0)
+        jumlah_titik = self._verify_combo(calc, "Normal Booking + Penalty + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0)
+        then("Seluruh 16 kombinasi (4 jarak x 4 metode bayar) terverifikasi sesuai formula tarif")
+        assert jumlah_titik == 16, (
+            f"Skenario 'Normal Booking + Penalty + Kupon' hanya memverifikasi {jumlah_titik} dari 16 kombinasi jarak x metode bayar"
+        )
 
     # --------------------------------------------------------------------------
     # SKENARIO 9: ADVANCE BOOKING (TERJADWAL)
@@ -1749,7 +2109,11 @@ class TestOrderBehaviourMatrix:
         """
         calc = fare_calculator
         given("Pengguna menjadwalkan Advance Booking untuk 4 tingkatan jarak (4 metode pembayaran)")
-        self._verify_combo(calc, "Advance Booking", use_coupon=False, waiting_minutes=0, apply_penalty=False, is_advance=True)
+        jumlah_titik = self._verify_combo(calc, "Advance Booking", use_coupon=False, waiting_minutes=0, apply_penalty=False, is_advance=True)
+        then("Seluruh 16 kombinasi (4 jarak x 4 metode bayar) terverifikasi sesuai formula tarif")
+        assert jumlah_titik == 16, (
+            f"Skenario 'Advance Booking' hanya memverifikasi {jumlah_titik} dari 16 kombinasi jarak x metode bayar"
+        )
 
     # --------------------------------------------------------------------------
     # SKENARIO 10: ADVANCE BOOKING + KUPON
@@ -1769,7 +2133,11 @@ class TestOrderBehaviourMatrix:
         """
         calc = fare_calculator
         given("Pengguna memesan Advance Booking dengan voucher diskon Kupon Rp 5.000 (4 metode pembayaran)")
-        self._verify_combo(calc, "Advance Booking + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=False, is_advance=True)
+        jumlah_titik = self._verify_combo(calc, "Advance Booking + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=False, is_advance=True)
+        then("Seluruh 16 kombinasi (4 jarak x 4 metode bayar) terverifikasi sesuai formula tarif")
+        assert jumlah_titik == 16, (
+            f"Skenario 'Advance Booking + Kupon' hanya memverifikasi {jumlah_titik} dari 16 kombinasi jarak x metode bayar"
+        )
 
     # --------------------------------------------------------------------------
     # SKENARIO 11: ADVANCE BOOKING + WAITING FEE
@@ -1789,7 +2157,11 @@ class TestOrderBehaviourMatrix:
         """
         calc = fare_calculator
         given("Driver tiba pada jadwal Advance Booking dan menunggu penumpang 20 menit (4 metode pembayaran)")
-        self._verify_combo(calc, "Advance Booking + Waiting Fee", use_coupon=False, waiting_minutes=20, apply_penalty=False, is_advance=True)
+        jumlah_titik = self._verify_combo(calc, "Advance Booking + Waiting Fee", use_coupon=False, waiting_minutes=20, apply_penalty=False, is_advance=True)
+        then("Seluruh 16 kombinasi (4 jarak x 4 metode bayar) terverifikasi sesuai formula tarif")
+        assert jumlah_titik == 16, (
+            f"Skenario 'Advance Booking + Waiting Fee' hanya memverifikasi {jumlah_titik} dari 16 kombinasi jarak x metode bayar"
+        )
 
     # --------------------------------------------------------------------------
     # SKENARIO 12: ADVANCE BOOKING + PENALTY
@@ -1809,7 +2181,11 @@ class TestOrderBehaviourMatrix:
         """
         calc = fare_calculator
         given("Pengguna memiliki saldo penalti denda Rp 5.000 pada Advance Booking (4 metode pembayaran)")
-        self._verify_combo(calc, "Advance Booking + Penalty", use_coupon=False, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        jumlah_titik = self._verify_combo(calc, "Advance Booking + Penalty", use_coupon=False, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        then("Seluruh 16 kombinasi (4 jarak x 4 metode bayar) terverifikasi sesuai formula tarif")
+        assert jumlah_titik == 16, (
+            f"Skenario 'Advance Booking + Penalty' hanya memverifikasi {jumlah_titik} dari 16 kombinasi jarak x metode bayar"
+        )
 
     # --------------------------------------------------------------------------
     # SKENARIO 13: ADVANCE BOOKING + KUPON + WAITING FEE
@@ -1829,7 +2205,11 @@ class TestOrderBehaviourMatrix:
         """
         calc = fare_calculator
         given("Pesanan Advance Booking memakai Kupon Rp 5.000 dan kena Waiting Fee Rp 2.500 (4 metode pembayaran)")
-        self._verify_combo(calc, "Advance Booking + Kupon + WaitFee", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=False, is_advance=True)
+        jumlah_titik = self._verify_combo(calc, "Advance Booking + Kupon + WaitFee", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=False, is_advance=True)
+        then("Seluruh 16 kombinasi (4 jarak x 4 metode bayar) terverifikasi sesuai formula tarif")
+        assert jumlah_titik == 16, (
+            f"Skenario 'Advance Booking + Kupon + WaitFee' hanya memverifikasi {jumlah_titik} dari 16 kombinasi jarak x metode bayar"
+        )
 
     # --------------------------------------------------------------------------
     # SKENARIO 14: ADVANCE BOOKING + KUPON + WAITING FEE + PENALTY
@@ -1849,7 +2229,11 @@ class TestOrderBehaviourMatrix:
         """
         calc = fare_calculator
         given("Pesanan Advance Booking memuat seluruh parameter biaya (Kupon, Waiting Fee, Penalty) pada 4 metode pembayaran")
-        self._verify_combo(calc, "Advance Booking Kombo Lengkap", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        jumlah_titik = self._verify_combo(calc, "Advance Booking Kombo Lengkap", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        then("Seluruh 16 kombinasi (4 jarak x 4 metode bayar) terverifikasi sesuai formula tarif")
+        assert jumlah_titik == 16, (
+            f"Skenario 'Advance Booking Kombo Lengkap' hanya memverifikasi {jumlah_titik} dari 16 kombinasi jarak x metode bayar"
+        )
 
     # --------------------------------------------------------------------------
     # SKENARIO 15: ADVANCE BOOKING + WAITING FEE + PENALTY
@@ -1869,7 +2253,11 @@ class TestOrderBehaviourMatrix:
         """
         calc = fare_calculator
         given("Pesanan Advance Booking tanpa kupon terkena Waiting Fee Rp 2.500 dan Penalty Rp 5.000 (4 metode pembayaran)")
-        self._verify_combo(calc, "Advance Booking + WaitFee + Penalty", use_coupon=False, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        jumlah_titik = self._verify_combo(calc, "Advance Booking + WaitFee + Penalty", use_coupon=False, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        then("Seluruh 16 kombinasi (4 jarak x 4 metode bayar) terverifikasi sesuai formula tarif")
+        assert jumlah_titik == 16, (
+            f"Skenario 'Advance Booking + WaitFee + Penalty' hanya memverifikasi {jumlah_titik} dari 16 kombinasi jarak x metode bayar"
+        )
 
     # --------------------------------------------------------------------------
     # SKENARIO 16: ADVANCE BOOKING + PENALTY + KUPON
@@ -1889,7 +2277,11 @@ class TestOrderBehaviourMatrix:
         """
         calc = fare_calculator
         given("Pesanan Advance Booking dengan Penalty Rp 5.000 dioffset Kupon Rp 5.000 (4 metode pembayaran)")
-        self._verify_combo(calc, "Advance Booking + Penalty + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        jumlah_titik = self._verify_combo(calc, "Advance Booking + Penalty + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
+        then("Seluruh 16 kombinasi (4 jarak x 4 metode bayar) terverifikasi sesuai formula tarif")
+        assert jumlah_titik == 16, (
+            f"Skenario 'Advance Booking + Penalty + Kupon' hanya memverifikasi {jumlah_titik} dari 16 kombinasi jarak x metode bayar"
+        )
 
 
 

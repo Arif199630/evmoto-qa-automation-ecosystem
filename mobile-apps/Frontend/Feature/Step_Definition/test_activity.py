@@ -256,10 +256,14 @@ class TestActivity:
         then("Memverifikasi layar Pusat Bantuan ditampilkan")
         has_help = self.activity_page.is_help_center_displayed(timeout=5)
         print(f"  [PT-05] Help Center Tampil: {has_help}")
+        assert has_help, "[PT-05] Layar Pusat Bantuan tidak tampil setelah ikon bantuan di header Aktivitas diketuk!"
 
         and_step("Menutup layar Pusat Bantuan kembali ke Aktivitas")
         self.activity_page.close_help_center()
         time.sleep(1.5)
+        assert not self.activity_page.is_help_center_displayed(timeout=3), (
+            "[PT-05] Layar Pusat Bantuan masih tampil setelah tombol tutup/kembali ditekan!"
+        )
 
     @pytest.mark.positive_true
     def test_TC_ACT_PT_06_penyaringan_layanan_pada_tab_regular(self, driver):
@@ -271,14 +275,26 @@ class TestActivity:
         when("Mengetuk chip filter 'EvRide'")
         self.activity_page.filter_by_evride()
         time.sleep(1.5)
+        assert self.activity_page.is_service_filter_selected(self.activity_page.CHIP_FILTER_EVRIDE), (
+            "[PT-06] Chip filter 'EvRide' tidak berstatus terpilih setelah diketuk!"
+        )
 
         and_step("Mengetuk chip filter 'EvSend'")
         self.activity_page.filter_by_evsend()
         time.sleep(1.5)
+        assert self.activity_page.is_service_filter_selected(self.activity_page.CHIP_FILTER_EVSEND), (
+            "[PT-06] Chip filter 'EvSend' tidak berstatus terpilih setelah diketuk!"
+        )
+        assert not self.activity_page.is_service_filter_selected(self.activity_page.CHIP_FILTER_EVRIDE), (
+            "[PT-06] Chip 'EvRide' masih terpilih padahal filter sudah dipindah ke 'EvSend'!"
+        )
 
         then("Mengembalikan filter ke 'Semua Layanan'")
         self.activity_page.filter_by_all_services()
         time.sleep(1.5)
+        assert self.activity_page.is_service_filter_selected(self.activity_page.CHIP_FILTER_ALL), (
+            "[PT-06] Chip 'Semua' tidak berstatus terpilih setelah filter dikembalikan!"
+        )
 
     @pytest.mark.positive_true
     def test_TC_ACT_PT_07_penerapan_filter_rentang_tanggal_7_hari_terakhir(self, driver):
@@ -307,32 +323,38 @@ class TestActivity:
         time.sleep(1.0)
 
         when("Mengetuk kartu pesanan pertama")
-        self.activity_page.click_first_order_card()
-        time.sleep(2.0)
-
         then("Layar Rincian Pesanan memuat ID pesanan dan total pembayaran")
-        is_detail = self.activity_page.is_order_detail_displayed(timeout=6)
-        print(f"  [PT-08] Layar Detail Pesanan Tampil: {is_detail}")
+        self._open_first_order_detail_or_skip("PT-08")
 
         and_step("Kembali ke daftar Aktivitas")
         self.activity_page.back_to_activity_list()
         time.sleep(1.5)
+        assert not self.activity_page.is_order_id_displayed(timeout=3), (
+            "[PT-08] Layar Rincian Pesanan masih tampil setelah tombol kembali ditekan!"
+        )
+        assert self.activity_page.has_order_cards(timeout=5), (
+            "[PT-08] Daftar kartu pesanan tidak tampil lagi setelah kembali dari Rincian Pesanan!"
+        )
 
     @pytest.mark.positive_true
     def test_TC_ACT_PT_09_pengiriman_e_receipt_ke_alamat_email_valid(self, driver):
         """[PT-09] Membuka modal email receipt dan menginput email sah."""
         given("Pengguna berada di Layar Detail Pesanan")
-        self.activity_page.click_first_order_card()
-        time.sleep(2.0)
+        self._open_first_order_detail_or_skip("PT-09")
 
         when("Mengetuk tombol Kirim ke Email")
         self.activity_page.open_email_receipt_modal()
         time.sleep(1.5)
+        assert self.activity_page.is_email_receipt_modal_displayed(timeout=4), (
+            "[PT-09] Modal kirim E-Receipt ke email tidak terbuka!"
+        )
 
-        if self.activity_page.is_email_receipt_modal_displayed(timeout=4):
-            and_step("Mengisi alamat email valid dan mengirim")
-            self.activity_page.submit_email_receipt(ACTIVITY_PILAR_1_POSITIVE["email_receipt"]["email"])
-            time.sleep(2.0)
+        and_step("Mengisi alamat email valid dan mengirim")
+        email = ACTIVITY_PILAR_1_POSITIVE["email_receipt"]["email"]
+        self.activity_page.submit_email_receipt(email)
+        assert self.activity_page.is_receipt_success_snackbar_displayed(timeout=6), (
+            f"[PT-09] Notifikasi E-Receipt berhasil dikirim tidak muncul untuk email valid '{email}'!"
+        )
 
         then("Kembali ke daftar Aktivitas")
         self.activity_page.back_to_activity_list()
@@ -366,12 +388,18 @@ class TestActivity:
         given("Pengguna berada pada kartu riwayat pesanan selesai di Tab Regular")
         self.activity_page.select_regular_tab()
         time.sleep(1.0)
+        if not self.activity_page.is_reorder_button_displayed(timeout=4):
+            pytest.skip("[PT-11] Tidak ada tombol 'Pesan Lagi' (akun uji belum punya riwayat pesanan selesai).")
 
         when("Mengetuk tombol 'Pesan Lagi' (Reorder)")
         self.activity_page.click_reorder_first_item()
         time.sleep(2.0)
 
         then("Sistem mengarahkan ke peninjauan rute yang sama secara instan")
+        assert self.activity_page.is_order_booking_screen_displayed(timeout=10), (
+            "[PT-11] Layar pemesanan dengan tombol 'Pesan EVMoto' tidak terbuka setelah 'Pesan Lagi' ditekan!"
+        )
+        # Kembali ke Aktivitas tanpa membuat pesanan baru
         self.activity_page.navigate_to_activity_screen()
         time.sleep(1.5)
 
@@ -381,16 +409,22 @@ class TestActivity:
         given("Pengguna berada pada Tab Booking")
         self.activity_page.select_booking_tab()
         time.sleep(1.5)
+        if not self.activity_page.has_advance_booking_cards(timeout=4):
+            pytest.skip("[PT-12] Tidak ada pesanan Advance Booking terjadwal di akun uji, fitur Ubah Jadwal tidak bisa diuji.")
 
-        if self.activity_page.has_advance_booking_cards(timeout=4):
-            when("Mengetuk tombol Ubah Jadwal pada pesanan Advance Booking")
-            self.activity_page.open_reschedule_modal()
-            time.sleep(1.5)
+        when("Mengetuk tombol Ubah Jadwal pada pesanan Advance Booking")
+        self.activity_page.open_reschedule_modal()
+        time.sleep(1.5)
 
-            if self.activity_page.is_reschedule_modal_displayed(timeout=4):
-                then("Modal atur ulang waktu tampil dengan opsi tanggal dan jam baru")
-                self.activity_page.cancel_reschedule_modal()
-                time.sleep(1.0)
+        then("Modal atur ulang waktu tampil dengan opsi tanggal dan jam baru")
+        assert self.activity_page.is_reschedule_modal_displayed(timeout=4), (
+            "[PT-12] Modal Ubah Jadwal (Reschedule) tidak terbuka setelah tombol Ubah Jadwal ditekan!"
+        )
+        self.activity_page.cancel_reschedule_modal()
+        time.sleep(1.0)
+        assert not self.activity_page.is_reschedule_modal_displayed(timeout=3), (
+            "[PT-12] Modal Ubah Jadwal tidak tertutup setelah tombol Batal ditekan!"
+        )
 
     @pytest.mark.positive_true
     def test_TC_ACT_PT_13_gestur_pull_to_refresh_memuat_ulang_daftar_aktivitas(self, driver):
@@ -429,17 +463,27 @@ class TestActivity:
     def test_TC_ACT_PF_02_pembatalan_modal_kirim_e_receipt_ke_email(self, driver):
         """[PF-02] Membuka dialog kirim email bukti transaksi lalu menekan tombol Batal."""
         given("Pengguna membuka Layar Detail Pesanan")
-        self.activity_page.click_first_order_card()
-        time.sleep(2.0)
+        self._open_first_order_detail_or_skip("PF-02")
 
         when("Membuka modal kirim E-Receipt ke email lalu menekan Batal")
         self.activity_page.open_email_receipt_modal()
         time.sleep(1.5)
-        if self.activity_page.is_email_receipt_modal_displayed(timeout=4):
-            self.activity_page.cancel_email_receipt_modal()
-            time.sleep(1.0)
+        assert self.activity_page.is_email_receipt_modal_displayed(timeout=4), (
+            "[PF-02] Modal kirim E-Receipt ke email tidak terbuka!"
+        )
+        self.activity_page.cancel_email_receipt_modal()
+        time.sleep(1.0)
 
         then("Modal tertutup dan pengguna kembali ke Detail Pesanan")
+        assert not self.activity_page.is_email_receipt_modal_displayed(timeout=3), (
+            "[PF-02] Modal kirim E-Receipt masih terbuka setelah tombol Batal ditekan!"
+        )
+        assert not self.activity_page.is_receipt_success_snackbar_displayed(timeout=2), (
+            "[PF-02] E-Receipt tetap terkirim padahal pengiriman dibatalkan!"
+        )
+        assert self.activity_page.is_order_id_displayed(timeout=4), (
+            "[PF-02] Pengguna tidak kembali ke Rincian Pesanan setelah membatalkan modal email!"
+        )
         self.activity_page.back_to_activity_list()
         time.sleep(1.5)
 
@@ -447,17 +491,27 @@ class TestActivity:
     def test_TC_ACT_PF_03_pembatalan_pelaporan_kendala_pesanan(self, driver):
         """[PF-03] Membuka opsi laporkan masalah perjalanan lalu membatalkannya."""
         given("Pengguna membuka Layar Detail Pesanan")
-        self.activity_page.click_first_order_card()
-        time.sleep(2.0)
+        self._open_first_order_detail_or_skip("PF-03")
 
         when("Membuka menu Laporkan Masalah lalu membatalkannya")
         self.activity_page.open_report_order_issue()
         time.sleep(1.5)
-        if self.activity_page.is_report_issue_modal_displayed(timeout=4):
-            self.activity_page.cancel_issue_report()
-            time.sleep(1.0)
+        assert self.activity_page.is_report_issue_modal_displayed(timeout=4), (
+            "[PF-03] Modal pilihan kendala tidak terbuka setelah 'Laporkan Masalah' ditekan!"
+        )
+        self.activity_page.cancel_issue_report()
+        time.sleep(1.0)
 
         then("Pengguna kembali ke tampilan detail pesanan secara aman")
+        assert not self.activity_page.is_report_issue_modal_displayed(timeout=3), (
+            "[PF-03] Modal pelaporan kendala masih terbuka setelah dibatalkan!"
+        )
+        assert not self.activity_page.is_issue_submitted_dialog_displayed(timeout=2), (
+            "[PF-03] Laporan kendala tetap terkirim padahal pelaporan dibatalkan!"
+        )
+        assert self.activity_page.is_order_id_displayed(timeout=4), (
+            "[PF-03] Pengguna tidak kembali ke Rincian Pesanan setelah membatalkan pelaporan!"
+        )
         self.activity_page.back_to_activity_list()
         time.sleep(1.5)
 
@@ -485,15 +539,25 @@ class TestActivity:
         given("Pengguna berada pada tab 'Dalam Proses'")
         self.activity_page.select_in_progress_tab()
         time.sleep(1.5)
+        if not self.activity_page.is_cancel_active_order_button_displayed(timeout=4):
+            pytest.skip("[PF-05] Tidak ada pesanan aktif yang bisa dibatalkan di akun uji.")
 
         when("Mengetuk tombol batalkan pesanan lalu membatalkan dialog konfirmasi")
         self.activity_page.click_cancel_active_order()
         time.sleep(1.5)
-        if self.activity_page.is_cancel_order_dialog_displayed(timeout=4):
-            self.activity_page.abort_cancel_order()
-            time.sleep(1.0)
+        assert self.activity_page.is_cancel_order_dialog_displayed(timeout=4), (
+            "[PF-05] Dialog konfirmasi pembatalan pesanan tidak muncul!"
+        )
+        self.activity_page.abort_cancel_order()
+        time.sleep(1.0)
 
         then("Pesanan aktif tidak dibatalkan dan perjalanan tetap berjalan")
+        assert not self.activity_page.is_cancel_order_dialog_displayed(timeout=3), (
+            "[PF-05] Dialog konfirmasi pembatalan masih terbuka setelah memilih tidak jadi membatalkan!"
+        )
+        assert self.activity_page.is_cancel_active_order_button_displayed(timeout=5), (
+            "[PF-05] Pesanan aktif hilang dari tab 'Dalam Proses' padahal pembatalan tidak dikonfirmasi!"
+        )
         self.activity_page.select_history_tab()
         time.sleep(1.0)
 
@@ -548,10 +612,15 @@ class TestActivity:
         given("Pengguna membuka Tab Booking")
         self.activity_page.select_booking_tab()
         time.sleep(1.5)
+        if self.activity_page.has_advance_booking_cards(timeout=3):
+            pytest.skip("[NT-02] Akun uji memiliki pesanan Advance Booking, empty state Tab Booking tidak bisa diuji.")
 
         then("Jika tidak ada jadwal booking masa depan, sistem menampilkan empty state khusus")
-        has_empty_booking = self.activity_page.is_empty_booking_state_displayed(timeout=3)
+        has_empty_booking = self.activity_page.is_empty_booking_state_displayed(timeout=4)
         print(f"  [NT-02] Placeholder Empty State Booking: {has_empty_booking}")
+        assert has_empty_booking, (
+            "[NT-02] Tab Booking tanpa pesanan terjadwal tidak menampilkan empty state 'Rencanakan Perjalanan Anda'!"
+        )
         # Beralih kembali ke Regular
         self.activity_page.select_regular_tab()
         time.sleep(1.0)
@@ -566,50 +635,72 @@ class TestActivity:
         when("Memilih filter layanan tanpa transaksi")
         self.activity_page.filter_by_evrent()
         time.sleep(1.5)
+        if self.activity_page.has_order_cards(timeout=3):
+            pytest.skip("[NT-03] Akun uji memiliki pesanan EvRent, hasil filter kosong tidak bisa diuji.")
 
         then("Jika tidak ada data, sistem menampilkan pesan 'Tidak ada pesanan yang sesuai'")
-        if self.activity_page.is_empty_filter_result_displayed(timeout=3):
-            self.activity_page.reset_empty_filter()
-            time.sleep(1.0)
+        assert self.activity_page.is_empty_filter_result_displayed(timeout=4), (
+            "[NT-03] Filter tanpa hasil tidak menampilkan pesan 'Tidak ada pesanan yang sesuai'!"
+        )
+        self.activity_page.reset_empty_filter()
+        time.sleep(1.0)
         self.activity_page.filter_by_all_services()
 
     @pytest.mark.negative_true
     def test_TC_ACT_NT_04_validasi_penolakan_submit_rating_0_bintang(self, driver):
         """[NT-04] Menekan kirim ulasan tanpa memilih bintang (dicegah & muncul peringatan)."""
         given("Pengguna membuka modal ulasan driver")
+        if not self.activity_page.is_rate_driver_button_displayed(timeout=4):
+            pytest.skip("[NT-04] Tidak ada tombol beri nilai driver (akun uji belum punya pesanan selesai yang bisa dinilai).")
         self.activity_page.click_rate_driver_on_card()
         time.sleep(1.5)
+        assert self.activity_page.is_rating_modal_displayed(timeout=4), (
+            "[NT-04] Modal penilaian driver tidak terbuka!"
+        )
 
-        if self.activity_page.is_rating_modal_displayed(timeout=4):
-            when("Langsung menekan tombol 'Kirim Penilaian' tanpa memilih bintang")
-            self.activity_page.submit_rating()
-            time.sleep(1.0)
+        when("Langsung menekan tombol 'Kirim Penilaian' tanpa memilih bintang")
+        self.activity_page.submit_rating()
+        time.sleep(1.0)
 
-            then("Sistem memunculkan peringatan wajib memilih minimal 1 bintang")
-            has_warning = self.activity_page.is_zero_star_warning_displayed(timeout=3)
-            print(f"  [NT-04] Peringatan Rating 0 Bintang: {has_warning}")
+        then("Sistem memunculkan peringatan wajib memilih minimal 1 bintang")
+        has_warning = self.activity_page.is_zero_star_warning_displayed(timeout=3)
+        print(f"  [NT-04] Peringatan Rating 0 Bintang: {has_warning}")
+        assert has_warning, "[NT-04] Peringatan 'Silakan ketuk bintang untuk memberi rating' tidak muncul!"
+        assert not self.activity_page.is_rating_success_snackbar_displayed(timeout=2), (
+            "[NT-04] Penilaian 0 bintang justru berhasil dikirim!"
+        )
+        assert self.activity_page.is_rating_modal_displayed(timeout=3), (
+            "[NT-04] Modal penilaian tertutup padahal penilaian 0 bintang seharusnya ditolak!"
+        )
 
-            self.activity_page.dismiss_rating_modal()
-            time.sleep(1.0)
+        self.activity_page.dismiss_rating_modal()
+        time.sleep(1.0)
 
     @pytest.mark.negative_true
     def test_TC_ACT_NT_05_validasi_deskripsi_laporan_masalah_dikosongkan(self, driver):
         """[NT-05] Mencoba submit laporan kendala dengan field teks dibiarkan kosong."""
         given("Pengguna membuka form pelaporan masalah")
-        self.activity_page.click_first_order_card()
-        time.sleep(2.0)
+        self._open_first_order_detail_or_skip("NT-05")
         self.activity_page.open_report_order_issue()
         time.sleep(1.5)
+        assert self.activity_page.is_report_issue_modal_displayed(timeout=4), (
+            "[NT-05] Modal pilihan kendala tidak terbuka setelah 'Laporkan Masalah' ditekan!"
+        )
 
-        if self.activity_page.is_report_issue_modal_displayed(timeout=4):
-            when("Memilih opsi masalah namun membiarkan deskripsi kosong lalu submit")
-            self.activity_page.select_lost_item_issue()
-            self.activity_page.submit_issue_report()
-            time.sleep(1.0)
+        when("Memilih opsi masalah namun membiarkan deskripsi kosong lalu submit")
+        self.activity_page.select_lost_item_issue()
+        self.activity_page.submit_issue_report()
+        time.sleep(1.0)
 
-            then("Sistem menampilkan peringatan 'Deskripsi kendala wajib diisi'")
-            self.activity_page.cancel_issue_report()
-            time.sleep(1.0)
+        then("Sistem menampilkan peringatan 'Deskripsi kendala wajib diisi'")
+        assert self.activity_page.is_empty_issue_warning_displayed(timeout=4), (
+            "[NT-05] Peringatan 'Deskripsi kendala wajib diisi' tidak muncul saat deskripsi kosong!"
+        )
+        assert not self.activity_page.is_issue_submitted_dialog_displayed(timeout=2), (
+            "[NT-05] Laporan kendala tanpa deskripsi justru berhasil dikirim!"
+        )
+        self.activity_page.cancel_issue_report()
+        time.sleep(1.0)
 
         self.activity_page.back_to_activity_list()
         time.sleep(1.5)
@@ -618,19 +709,27 @@ class TestActivity:
     def test_TC_ACT_NT_06_validasi_format_email_tidak_valid_pada_e_receipt(self, driver):
         """[NT-06] Menginput email tanpa simbol '@' atau format tidak valid pada kirim e-receipt."""
         given("Pengguna membuka modal kirim E-Receipt ke email")
-        self.activity_page.click_first_order_card()
-        time.sleep(2.0)
+        self._open_first_order_detail_or_skip("NT-06")
         self.activity_page.open_email_receipt_modal()
         time.sleep(1.5)
+        assert self.activity_page.is_email_receipt_modal_displayed(timeout=4), (
+            "[NT-06] Modal kirim E-Receipt ke email tidak terbuka!"
+        )
 
-        if self.activity_page.is_email_receipt_modal_displayed(timeout=4):
-            when("Mengisi email invalid: 'email_tanpa_domain' lalu menekan kirim")
-            self.activity_page.submit_email_receipt(ACTIVITY_PILAR_3_BOUNDARY["invalid_email_receipt"]["email"])
-            time.sleep(1.0)
+        invalid_email = ACTIVITY_PILAR_3_BOUNDARY["invalid_email_receipt"]["email"]
+        when(f"Mengisi email invalid: '{invalid_email}' lalu menekan kirim")
+        self.activity_page.submit_email_receipt(invalid_email)
+        time.sleep(1.0)
 
-            then("Sistem menolak format email yang tidak valid")
-            self.activity_page.cancel_email_receipt_modal()
-            time.sleep(1.0)
+        then("Sistem menolak format email yang tidak valid")
+        assert not self.activity_page.is_receipt_success_snackbar_displayed(timeout=3), (
+            f"[NT-06] E-Receipt tetap terkirim ke email tidak valid '{invalid_email}'!"
+        )
+        assert self.activity_page.is_email_receipt_modal_displayed(timeout=3), (
+            "[NT-06] Modal email tertutup padahal format email tidak valid seharusnya ditolak!"
+        )
+        self.activity_page.cancel_email_receipt_modal()
+        time.sleep(1.0)
 
         self.activity_page.back_to_activity_list()
         time.sleep(1.5)
@@ -639,12 +738,28 @@ class TestActivity:
     def test_TC_ACT_NT_07_penanganan_koneksi_internet_terputus_di_halaman_aktivitas(self, driver):
         """[NT-07] Menguji deteksi ketiadaan internet saat memuat riwayat & tombol Coba Lagi."""
         given("Pengguna berada di Halaman Aktivitas")
-        when("Memverifikasi penanganan jika terjadi kehilangan koneksi internet")
-        has_offline = self.activity_page.is_offline_snackbar_displayed(timeout=3)
-        print(f"  [NT-07] Snackbar Offline Terdeteksi: {has_offline}")
+        when("Koneksi internet perangkat diputus lalu daftar aktivitas dimuat ulang")
+        if not self.activity_page.set_device_network(enabled=False):
+            pytest.skip("[NT-07] Appium menolak 'mobile: shell' (jalankan server dengan --allow-insecure=adb_shell), "
+                        "jaringan perangkat tidak bisa diputus.")
+        try:
+            self.activity_page.pull_to_refresh_activity()
+            has_offline = self.activity_page.is_offline_snackbar_displayed(timeout=8)
+            print(f"  [NT-07] Snackbar Offline Terdeteksi: {has_offline}")
 
-        then("Jika snackbar offline muncul, tombol 'Coba Lagi' dapat ditekan")
-        if has_offline:
+            then("Aplikasi menampilkan pesan jaringan terputus dan tidak crash")
+            assert has_offline, (
+                "[NT-07] Pesan jaringan terputus tidak muncul saat memuat Halaman Aktivitas tanpa internet!"
+            )
+            assert self.activity_page.is_app_in_foreground(), (
+                "[NT-07] Aplikasi tidak lagi di layar depan (crash/force close) saat internet terputus!"
+            )
+        finally:
+            # Jaringan selalu dipulihkan agar test berikutnya tidak ikut offline
+            self.activity_page.set_device_network(enabled=True)
+
+        and_step("Jika tombol 'Coba Lagi' tersedia, muat ulang setelah koneksi pulih")
+        if self.activity_page.is_displayed(self.activity_page.BTN_RETRY_ACTIVITY, timeout=3):
             self.activity_page.click_retry_activity()
             time.sleep(1.5)
 
@@ -676,20 +791,30 @@ class TestActivity:
     def test_TC_ACT_NF_02_sanitasi_xss_pada_form_pelaporan_kendala(self, driver):
         """[NF-02] Menguji payload Cross-Site Scripting (<script>) pada deskripsi komplain perjalanan."""
         given("Pengguna berada di form pelaporan masalah pesanan")
-        self.activity_page.click_first_order_card()
-        time.sleep(2.0)
+        self._open_first_order_detail_or_skip("NF-02")
         self.activity_page.open_report_order_issue()
         time.sleep(1.5)
+        assert self.activity_page.is_report_issue_modal_displayed(timeout=4), (
+            "[NF-02] Modal pilihan kendala tidak terbuka setelah 'Laporkan Masalah' ditekan!"
+        )
 
-        if self.activity_page.is_report_issue_modal_displayed(timeout=4):
-            when("Menginput payload XSS script pada deskripsi kendala")
-            xss_payload = ACTIVITY_PILAR_4_SECURITY["xss_issue_description"]["payload"]
-            self.activity_page.select_lost_item_issue()
-            self.activity_page.type_issue_description(xss_payload)
-            self.activity_page.submit_issue_report()
-            time.sleep(2.0)
+        when("Menginput payload XSS script pada deskripsi kendala")
+        xss_payload = ACTIVITY_PILAR_4_SECURITY["xss_issue_description"]["payload"]
+        self.activity_page.select_lost_item_issue()
+        self.activity_page.type_issue_description(xss_payload)
+        self.activity_page.submit_issue_report()
+        time.sleep(2.0)
 
         then("Payload script HTML/JS tidak dieksekusi oleh WebView dan diproses aman")
+        assert self.activity_page.is_app_in_foreground(), (
+            "[NF-02] Aplikasi tidak lagi di layar depan (crash/force close) setelah payload XSS dikirim!"
+        )
+        assert self.activity_page.is_issue_submitted_dialog_displayed(timeout=6), (
+            "[NF-02] Laporan berisi payload XSS tidak diproses sebagai teks biasa "
+            "(dialog 'Laporan Anda Diterima' tidak muncul)!"
+        )
+        self.activity_page.close_issue_submitted_dialog()
+        time.sleep(1.0)
         self.activity_page.back_to_activity_list()
         time.sleep(1.5)
 
@@ -771,4 +896,18 @@ class TestActivity:
         then("Aplikasi berhasil di-resume dan antarmuka Halaman Aktivitas tetap utuh")
         assert self.activity_page.is_activity_screen_displayed(timeout=8), (
             "[NF-07] State Halaman Aktivitas hilang setelah resume dari background!"
+        )
+
+    # ==========================================================================
+    # HELPER KHUSUS SUITE AKTIVITAS (bukan test case)
+    # ==========================================================================
+
+    def _open_first_order_detail_or_skip(self, tc_id: str):
+        """Membuka Rincian Pesanan dari kartu pertama; skip bila akun uji belum punya riwayat pesanan."""
+        if not self.activity_page.has_order_cards(timeout=5):
+            pytest.skip(f"[{tc_id}] Akun uji belum memiliki kartu riwayat pesanan di Halaman Aktivitas.")
+        self.activity_page.click_first_order_card()
+        time.sleep(2.0)
+        assert self.activity_page.is_order_id_displayed(timeout=6), (
+            f"[{tc_id}] Layar Rincian Pesanan ('ID Pesanan') tidak terbuka setelah kartu pesanan diketuk!"
         )

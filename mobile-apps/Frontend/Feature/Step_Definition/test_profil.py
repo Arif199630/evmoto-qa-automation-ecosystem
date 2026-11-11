@@ -237,7 +237,7 @@ class TestProfil:
         # ----------------------------------------------------------------------
         then("Membuka dialog Logout di paling bawah, uji tombol Batal, lalu konfirmasi Keluar")
         self.profil_page.open_logout_dialog()
-        assert self.profil_page.is_logout_dialog_displayed(timeout=5)
+        assert self.profil_page.is_logout_dialog_displayed(timeout=5), "[GAGAL NF-03] Dialog Logout harus terbuka"
         # Uji tombol Batal
         self.profil_page.cancel_logout()
         time.sleep(1.5)
@@ -298,16 +298,19 @@ class TestProfil:
         data = PROFILE_PILAR_1_POSITIVE["valid_emergency_contact"]
 
         when("Membuka Kontak Darurat dan menekan '+ Tambah Kontak Darurat'")
-        self.profil_page.navigate_to_emergency_contacts()
+        self._open_emergency_contact_form_or_skip("PT-03")
+        self.profil_page.input_emergency_contact_form(data["name"], data["phone"])
+        self.profil_page.save_emergency_contact()
         time.sleep(2)
 
-        if self.profil_page.is_displayed(self.profil_page.BTN_ADD_EMERGENCY_CONTACT, timeout=4):
-            self.profil_page.click_add_emergency_contact()
-            time.sleep(1.5)
-            self.profil_page.input_emergency_contact_form(data["name"], data["phone"])
-            self.profil_page.save_emergency_contact()
-            time.sleep(2)
-            print(f"  -> Kontak darurat '{data['name']}' ({data['phone']}) berhasil disimpan.")
+        then("Form tertutup dan kontak baru tampil di daftar Kontak Darurat")
+        assert not self.profil_page.is_emergency_contact_form_displayed(timeout=3), (
+            "[GAGAL PT-03] Form 'Tambah Kontak Darurat' masih terbuka, kontak valid tidak tersimpan!"
+        )
+        assert self.profil_page.is_text_shown_literally(data["name"], timeout=5), (
+            f"[GAGAL PT-03] Kontak '{data['name']}' tidak muncul di daftar Kontak Darurat setelah disimpan!"
+        )
+        print(f"  -> Kontak darurat '{data['name']}' ({data['phone']}) berhasil disimpan.")
 
         self.profil_page.press_back_key()
 
@@ -323,6 +326,8 @@ class TestProfil:
         has_home = self.profil_page.is_add_home_address_button_displayed(timeout=4)
         has_office = self.profil_page.is_add_office_address_button_displayed(timeout=4)
         print(f"  -> Tombol Tambah Rumah: {has_home}, Kantor: {has_office}")
+        assert has_home, "[GAGAL PT-04] Tombol alamat 'Rumah' tidak tampil di menu Alamat Favorit!"
+        assert has_office, "[GAGAL PT-04] Tombol alamat 'Kantor' tidak tampil di menu Alamat Favorit!"
         self.profil_page.press_back_key()
 
     @pytest.mark.pilar1_positive
@@ -334,12 +339,19 @@ class TestProfil:
         time.sleep(1)
         has_sb_en = self.profil_page.is_language_snackbar_displayed(timeout=3)
         print(f"  -> Snackbar pergantian bahasa English terdeteksi: {has_sb_en}")
+        # Snackbar hanya tampil sebentar; bukti yang stabil adalah label antarmuka ikut berganti bahasa
+        assert self.profil_page.is_ui_in_english(timeout=5), (
+            "[GAGAL PT-05] Antarmuka tidak berganti ke English (label 'Language' tidak tampil) setelah memilih English!"
+        )
 
         then("Mengembalikan bahasa ke Bahasa Indonesia")
         self.profil_page.select_language("id")
         time.sleep(1)
         has_sb_id = self.profil_page.is_language_snackbar_displayed(timeout=3)
         print(f"  -> Snackbar pergantian bahasa Indonesia terdeteksi: {has_sb_id}")
+        assert not self.profil_page.is_ui_in_english(timeout=3), (
+            "[GAGAL PT-05] Antarmuka masih berbahasa Inggris (label 'Language' masih tampil) setelah kembali ke Bahasa Indonesia!"
+        )
 
     @pytest.mark.pilar1_positive
     def test_TC_PROF_PT_06_video_panduan_tutorial_faq_berfungsi_tanpa_error(self, driver):
@@ -366,6 +378,7 @@ class TestProfil:
         when("Meninjau banner Customer Service pada halaman profil / bantuan")
         has_banner = self.profil_page.verify_cs_banner_and_popup(timeout=5)
         print(f"  -> Banner CS Bantuan terverifikasi aktif: {has_banner}")
+        assert has_banner, "[GAGAL PT-07] Banner Customer Service ('Kami Siap Membantu Anda') tidak tampil di halaman Profil!"
 
     @pytest.mark.pilar1_positive
     def test_TC_PROF_PT_08_verifikasi_dokumen_syarat_ketentuan_dan_kebijakan_privasi(self, driver):
@@ -374,13 +387,27 @@ class TestProfil:
         when("Membuka Syarat & Ketentuan")
         self.profil_page.navigate_to_terms()
         time.sleep(2)
+        # Halaman dokumen terbuka = menu utama Profil tidak lagi tampil di layar
+        assert not self.profil_page.is_profile_screen_displayed(timeout=3), (
+            "[GAGAL PT-08] Halaman 'Syarat dan Ketentuan' tidak terbuka, layar masih menampilkan menu Profil!"
+        )
         self.profil_page.press_back_key()
         time.sleep(1)
+        assert self.profil_page.is_profile_screen_displayed(timeout=5), (
+            "[GAGAL PT-08] Tidak kembali ke layar Profil setelah menutup 'Syarat dan Ketentuan'!"
+        )
 
         when("Membuka Kebijakan Privasi")
         self.profil_page.navigate_to_privacy()
         time.sleep(2)
+        assert not self.profil_page.is_profile_screen_displayed(timeout=3), (
+            "[GAGAL PT-08] Halaman 'Kebijakan Privasi' tidak terbuka, layar masih menampilkan menu Profil!"
+        )
         self.profil_page.press_back_key()
+        time.sleep(1)
+        assert self.profil_page.is_profile_screen_displayed(timeout=5), (
+            "[GAGAL PT-08] Tidak kembali ke layar Profil setelah menutup 'Kebijakan Privasi'!"
+        )
         print("  -> Halaman Terms dan Privacy Policy berhasil dibuka dan ditutup dengan mulus.")
 
     @pytest.mark.pilar1_positive
@@ -513,12 +540,26 @@ class TestProfil:
         self.profil_page.navigate_to_emergency_contacts()
         time.sleep(2)
 
-        if self.profil_page.is_displayed(self.profil_page.BTN_DELETE_EMERGENCY_CONTACT, timeout=3):
-            self.profil_page.open_delete_emergency_contact_dialog()
-            time.sleep(1.5)
-            then("Membatalkan dialog konfirmasi hapus kontak")
-            self.profil_page.press_back_key()
-            print("  -> Kontak darurat terlindungi dan batal dihapus.")
+        if not self.profil_page.is_displayed(self.profil_page.BTN_DELETE_EMERGENCY_CONTACT, timeout=3):
+            pytest.skip("[PF-01] Tidak ada tombol 'Hapus' di layar Kontak Darurat (akun uji belum punya kontak tersimpan), "
+                        "pembatalan hapus tidak bisa diuji.")
+
+        self.profil_page.open_delete_emergency_contact_dialog()
+        time.sleep(1.5)
+        assert self.profil_page.is_delete_emergency_contact_dialog_displayed(timeout=5), (
+            "[GAGAL PF-01] Dialog konfirmasi 'Ingin Hapus Kontak' tidak muncul setelah tombol Hapus ditekan!"
+        )
+
+        then("Membatalkan dialog konfirmasi hapus kontak")
+        self.profil_page.press_back_key()
+        time.sleep(1)
+        assert not self.profil_page.is_delete_emergency_contact_dialog_displayed(timeout=3), (
+            "[GAGAL PF-01] Dialog konfirmasi hapus kontak tidak tertutup setelah dibatalkan!"
+        )
+        assert self.profil_page.is_displayed(self.profil_page.BTN_DELETE_EMERGENCY_CONTACT, timeout=5), (
+            "[GAGAL PF-01] Kontak darurat hilang dari layar padahal penghapusan dibatalkan!"
+        )
+        print("  -> Kontak darurat terlindungi dan batal dihapus.")
 
         self.profil_page.press_back_key()
 
@@ -638,18 +679,21 @@ class TestProfil:
         data = PROFILE_PILAR_2_NEGATIVE["empty_name_contact"]
 
         when("Membuka formulir kontak darurat dan submit dengan nama kosong")
-        self.profil_page.navigate_to_emergency_contacts()
+        self._open_emergency_contact_form_or_skip("NT-01")
+        self.profil_page.input_emergency_contact_form(data["name"], data["phone"])
+        self.profil_page.save_emergency_contact()
         time.sleep(2)
 
-        if self.profil_page.is_displayed(self.profil_page.BTN_ADD_EMERGENCY_CONTACT, timeout=4):
-            self.profil_page.click_add_emergency_contact()
-            time.sleep(1.5)
-            self.profil_page.input_emergency_contact_form(data["name"], data["phone"])
-            self.profil_page.save_emergency_contact()
-            time.sleep(2)
-            then("Sistem menolak submit atau tombol simpan tidak memproses data kosong")
-            print("  -> Validasi nama wajib isi berhasil mencegah penyimpanan data kosong.")
-            self.profil_page.press_back_key()
+        then("Sistem menolak submit atau tombol simpan tidak memproses data kosong")
+        assert not self.profil_page.is_emergency_contact_added_snackbar_displayed(timeout=3), (
+            "[GAGAL NT-01] Kontak darurat dengan nama kosong justru berhasil disimpan "
+            "(snackbar 'Kontak darurat berhasil ditambah' muncul)!"
+        )
+        assert self.profil_page.is_emergency_contact_form_displayed(timeout=3), (
+            "[GAGAL NT-01] Form 'Tambah Kontak Darurat' tertutup, data dengan nama kosong kemungkinan tersimpan!"
+        )
+        print("  -> Validasi nama wajib isi berhasil mencegah penyimpanan data kosong.")
+        self.profil_page.press_back_key()
 
         self.profil_page.press_back_key()
 
@@ -660,17 +704,20 @@ class TestProfil:
         data = PROFILE_PILAR_2_NEGATIVE["invalid_phone_alphabetic"]
 
         when("Membuka formulir kontak darurat dan menginput nomor telepon huruf")
-        self.profil_page.navigate_to_emergency_contacts()
+        self._open_emergency_contact_form_or_skip("NT-02")
+        self.profil_page.input_emergency_contact_form(data["name"], data["phone"])
+        self.profil_page.save_emergency_contact()
         time.sleep(2)
 
-        if self.profil_page.is_displayed(self.profil_page.BTN_ADD_EMERGENCY_CONTACT, timeout=4):
-            self.profil_page.click_add_emergency_contact()
-            time.sleep(1.5)
-            self.profil_page.input_emergency_contact_form(data["name"], data["phone"])
-            self.profil_page.save_emergency_contact()
-            time.sleep(2)
-            then("Formulir menolak format nomor telepon alfabetis")
-            self.profil_page.press_back_key()
+        then("Formulir menolak format nomor telepon alfabetis")
+        assert not self.profil_page.is_emergency_contact_added_snackbar_displayed(timeout=3), (
+            f"[GAGAL NT-02] Kontak darurat dengan nomor telepon alfabetis '{data['phone']}' justru berhasil disimpan "
+            "(snackbar 'Kontak darurat berhasil ditambah' muncul)!"
+        )
+        assert self.profil_page.is_emergency_contact_form_displayed(timeout=3), (
+            f"[GAGAL NT-02] Form 'Tambah Kontak Darurat' tertutup, data dengan nomor telepon alfabetis '{data['phone']}' kemungkinan tersimpan!"
+        )
+        self.profil_page.press_back_key()
 
         self.profil_page.press_back_key()
 
@@ -681,16 +728,20 @@ class TestProfil:
         invalid_min = PROFILE_PILAR_3_BOUNDARY["name_below_min_1_char"]
 
         when("Membuka formulir kontak darurat dan menginput nama 1 karakter")
-        self.profil_page.navigate_to_emergency_contacts()
-        time.sleep(2)
+        self._open_emergency_contact_form_or_skip("NT-03")
+        self.profil_page.input_emergency_contact_form(invalid_min["name"], invalid_min["phone"])
+        self.profil_page.save_emergency_contact()
+        time.sleep(1.5)
 
-        if self.profil_page.is_displayed(self.profil_page.BTN_ADD_EMERGENCY_CONTACT, timeout=4):
-            self.profil_page.click_add_emergency_contact()
-            time.sleep(1.5)
-            self.profil_page.input_emergency_contact_form(invalid_min["name"], invalid_min["phone"])
-            self.profil_page.save_emergency_contact()
-            time.sleep(1.5)
-            self.profil_page.press_back_key()
+        then("Nama 1 karakter (di bawah batas minimum) ditolak dan form tidak tersimpan")
+        assert not self.profil_page.is_emergency_contact_added_snackbar_displayed(timeout=3), (
+            f"[GAGAL NT-03] Kontak darurat dengan nama 1 karakter '{invalid_min['name']}' justru berhasil disimpan "
+            "(snackbar 'Kontak darurat berhasil ditambah' muncul)!"
+        )
+        assert self.profil_page.is_emergency_contact_form_displayed(timeout=3), (
+            f"[GAGAL NT-03] Form 'Tambah Kontak Darurat' tertutup, data dengan nama 1 karakter '{invalid_min['name']}' kemungkinan tersimpan!"
+        )
+        self.profil_page.press_back_key()
 
         self.profil_page.press_back_key()
         print("  -> BVA batas nama di bawah minimum berhasil diuji.")
@@ -704,6 +755,12 @@ class TestProfil:
         time.sleep(2)
         is_addr_empty = self.profil_page.is_saved_address_empty_state_displayed(timeout=4)
         print(f"  -> Empty state alamat tersimpan: {is_addr_empty}")
+        if is_addr_empty:
+            # Empty state lengkap = judul + deskripsi ajakan menambah alamat
+            assert self.profil_page.is_saved_address_empty_description_displayed(timeout=3), (
+                "[GAGAL NT-04] Empty state Alamat Favorit tidak lengkap: deskripsi "
+                "'Tambahkan alamat favorit untuk pemesanan lebih cepat' tidak tampil!"
+            )
         self.profil_page.press_back_key()
 
         when("Membuka menu Kontak Darurat")
@@ -711,7 +768,16 @@ class TestProfil:
         time.sleep(2)
         is_contact_empty = self.profil_page.is_emergency_contacts_empty_state_displayed(timeout=4)
         print(f"  -> Empty state kontak darurat: {is_contact_empty}")
+        if is_contact_empty:
+            assert self.profil_page.is_emergency_contact_empty_description_displayed(timeout=3), (
+                "[GAGAL NT-04] Empty state Kontak Darurat tidak lengkap: deskripsi "
+                "'Tambahkan kontak untuk akses cepat saat keadaan darurat.' tidak tampil!"
+            )
         self.profil_page.press_back_key()
+
+        if not is_addr_empty and not is_contact_empty:
+            pytest.skip("[NT-04] Akun uji sudah memiliki alamat favorit dan kontak darurat, "
+                        "sehingga empty state tidak bisa diuji pada akun ini.")
 
     @pytest.mark.pilar3_boundary
     def test_TC_PROF_NT_05_submit_tiket_cs_deskripsi_kendala_kosong(self, driver):
@@ -764,16 +830,22 @@ class TestProfil:
         data = PROFILE_PILAR_4_SECURITY["sqli_contact_name"]
 
         when("Membuka formulir kontak dan menginput payload SQLi")
-        self.profil_page.navigate_to_emergency_contacts()
+        self._open_emergency_contact_form_or_skip("NF-01")
+        self.profil_page.input_emergency_contact_form(data["name"], data["phone"])
+        self.profil_page.save_emergency_contact()
         time.sleep(2)
-        if self.profil_page.is_displayed(self.profil_page.BTN_ADD_EMERGENCY_CONTACT, timeout=4):
-            self.profil_page.click_add_emergency_contact()
-            time.sleep(1.5)
-            self.profil_page.input_emergency_contact_form(data["name"], data["phone"])
-            self.profil_page.save_emergency_contact()
-            time.sleep(2)
-            then("Aplikasi tetap stabil, tidak crash, dan memperlakukan payload sebagai string biasa")
-            self.profil_page.press_back_key()
+
+        then("Aplikasi tetap stabil, tidak crash, dan memperlakukan payload sebagai string biasa")
+        assert self.profil_page.is_app_in_foreground(), (
+            "[GAGAL NF-01] Aplikasi EvMoto tidak lagi di layar depan (crash/force close) setelah payload disimpan!"
+        )
+        assert not self.profil_page.is_emergency_contact_form_displayed(timeout=3), (
+            "[GAGAL NF-01] Form 'Tambah Kontak Darurat' masih terbuka, payload tidak diproses sebagai teks biasa!"
+        )
+        assert self.profil_page.is_text_shown_literally(data["name"], timeout=5), (
+            f"[GAGAL NF-01] Payload '{data['name']}' tidak tampil apa adanya di daftar Kontak Darurat!"
+        )
+        self.profil_page.press_back_key()
 
         self.profil_page.press_back_key()
         print("  -> Proteksi sanitasi SQL Injection terverifikasi aman!")
@@ -785,19 +857,27 @@ class TestProfil:
         data = PROFILE_PILAR_4_SECURITY["xss_contact_name"]
 
         when("Menginput payload tag skrip XSS pada form profil")
-        self.profil_page.navigate_to_emergency_contacts()
+        self._open_emergency_contact_form_or_skip("NF-02")
+        self.profil_page.input_emergency_contact_form(data["name"], data["phone"])
+        self.profil_page.save_emergency_contact()
         time.sleep(2)
-        if self.profil_page.is_displayed(self.profil_page.BTN_ADD_EMERGENCY_CONTACT, timeout=4):
-            self.profil_page.click_add_emergency_contact()
-            time.sleep(1.5)
-            self.profil_page.input_emergency_contact_form(data["name"], data["phone"])
-            self.profil_page.save_emergency_contact()
-            time.sleep(2)
-            then("Skrip XSS tidak dieksekusi oleh WebView atau UI Flutter")
-            self.profil_page.press_back_key()
+
+        then("Skrip XSS tidak dieksekusi oleh WebView atau UI Flutter")
+        # Tag <script> yang tampil apa adanya sebagai teks berarti tidak dirender/dieksekusi
+        assert self.profil_page.is_app_in_foreground(), (
+            "[GAGAL NF-02] Aplikasi EvMoto tidak lagi di layar depan (crash/force close) setelah payload disimpan!"
+        )
+        assert not self.profil_page.is_emergency_contact_form_displayed(timeout=3), (
+            "[GAGAL NF-02] Form 'Tambah Kontak Darurat' masih terbuka, payload tidak diproses sebagai teks biasa!"
+        )
+        assert self.profil_page.is_text_shown_literally(data["name"], timeout=5), (
+            f"[GAGAL NF-02] Payload '{data['name']}' tidak tampil apa adanya di daftar Kontak Darurat!"
+        )
+        self.profil_page.press_back_key()
 
         self.profil_page.press_back_key()
         print("  -> Sanitasi XSS berhasil: Skrip tidak tereksekusi pada antarmuka pengguna!")
+
 
     @pytest.mark.pilar4_security
     def test_TC_PROF_NF_03_resiliensi_popup_dan_modal_terhadap_android_hardware_back(self, driver):
@@ -858,3 +938,19 @@ class TestProfil:
         time.sleep(1.5)
         assert self.profil_page.is_profile_screen_displayed(timeout=5)
 
+    # --------------------------------------------------------------------------
+    # HELPER KHUSUS SUITE PROFIL (bukan test case)
+    # --------------------------------------------------------------------------
+
+    def _open_emergency_contact_form_or_skip(self, tc_id: str):
+        """Membuka form 'Tambah Kontak Darurat'; skip bila tombol tambah tidak tersedia di akun uji."""
+        self.profil_page.navigate_to_emergency_contacts()
+        time.sleep(2)
+        if not self.profil_page.is_displayed(self.profil_page.BTN_ADD_EMERGENCY_CONTACT, timeout=4):
+            pytest.skip(f"[{tc_id}] Tombol '+ Tambah Kontak Darurat' tidak tersedia "
+                        "(kemungkinan kuota kontak darurat akun uji sudah penuh).")
+        self.profil_page.click_add_emergency_contact()
+        time.sleep(1.5)
+        assert self.profil_page.is_emergency_contact_form_displayed(timeout=5), (
+            f"[GAGAL {tc_id}] Form 'Tambah Kontak Darurat' tidak terbuka setelah tombol tambah ditekan!"
+        )
