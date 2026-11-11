@@ -11,7 +11,7 @@ on:
         description: "Suite yang dijalankan (all / admin / api / mobile)"
         default: all
       file_filter:
-        description: "Regex nama file test yang dijalankan (mis. ^test_(login|drv_login)\.py). Kosongkan untuk semua."
+        description: "Regex nama file test yang dijalankan, mis. ^test_(login|drv_login)[.]py - kosongkan untuk semua"
         default: ""
       lanjutkan_dari:
         description: "Nomor run yang di-pause untuk dilanjutkan (file test yang sudah selesai di sana tidak diulang). Kosongkan untuk run baru."
