@@ -150,6 +150,25 @@ class LoginPage(BasePage):
             self.driver.press_keycode(66)  # KEYCODE_ENTER
         except Exception:
             pass
+        self.complete_first_login_name()
+
+    # Layar onboarding akun baru: muncul sekali setelah OTP pertama (peta layar CI 11 Nov 2026)
+    TITLE_FIRST_LOGIN_NAME = (AppiumBy.XPATH, "//*[@content-desc='Masukkan nama pengguna' or @text='Masukkan nama pengguna']")
+    FIELD_FIRST_LOGIN_NAME = (AppiumBy.XPATH, "//android.widget.EditText")
+    BTN_FIRST_LOGIN_SIMPAN = (AppiumBy.XPATH, "//android.widget.Button[@content-desc='Simpan' or @text='Simpan']")
+
+    def complete_first_login_name(self, name: str = "QA Auto"):
+        """Isi nama pengguna bila layar onboarding akun baru muncul setelah OTP (akun QA Auto staging)."""
+        if not self.is_displayed(self.TITLE_FIRST_LOGIN_NAME, timeout=4):
+            return False
+        logger.info("Layar 'Masukkan nama pengguna' muncul (akun baru): mengisi nama lalu Simpan")
+        field = self.find(self.FIELD_FIRST_LOGIN_NAME)
+        field.click()
+        field.send_keys(name)
+        time.sleep(0.5)
+        self.find(self.BTN_FIRST_LOGIN_SIMPAN).click()
+        time.sleep(1.5)
+        return True
 
     def disable_device_location(self):
         """
