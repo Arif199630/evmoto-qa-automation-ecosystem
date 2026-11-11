@@ -22,9 +22,10 @@ on:
   schedule:
     - cron: "0 1 * * 1-5"   # 08:00 WIB, Senin-Jumat
 
+# Run sebagian (file_filter) tidak membatalkan run penuh yang sedang berjalan; push baru membatalkan push lama.
 concurrency:
-  group: regression-${{ github.ref }}
-  cancel-in-progress: true
+  group: regression-${{ github.ref }}-${{ inputs.file_filter || 'penuh' }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 env:
   ENVIRONMENT: dev
