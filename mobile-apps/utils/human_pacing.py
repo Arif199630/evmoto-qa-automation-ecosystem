@@ -40,10 +40,13 @@ def human_pause(min_sec: float = 3.0, max_sec: float = 3.0, message: str = ""):
 def human_click(driver, element, label: str = ""):
     """Menyimulasikan ketukan jari manusia dengan jeda natural sebelum dan sesudah sentuhan."""
     if _is_fast_mode(driver):
+        # Mode cepat tetap memberi jeda pendek: Flutter butuh waktu memvalidasi input dan mengaktifkan tombol
+        # (bukti CI: ketukan 0,05 detik setelah mengetik nomor diabaikan karena tombol 'Masuk' belum aktif).
+        time.sleep(0.3)
         if label:
             logger.info(f"[Touch Action] Menyentuh '{label}'...")
         element.click()
-        time.sleep(0.05)
+        time.sleep(0.5)
         return
 
     pre_delay = round(random.uniform(0.6, 1.2), 2)
@@ -72,7 +75,7 @@ def human_type(driver, element, text: str, label: str = "", clear_first: bool = 
         if label:
             logger.info(f"[Input Text] Mengetik teks pada '{label}'...")
         element.send_keys(text)
-        time.sleep(0.05)
+        time.sleep(0.3)
         return
 
     # 1. Sentuh field input terlebih dahulu untuk mengaktifkan fokus, kursor, keyboard, dan visual touch ripple

@@ -164,6 +164,9 @@ class DrvLoginPage(BasePage):
         (nomor kosong/tidak valid) lalu memeriksa bahwa aplikasi tidak lanjut ke OTP.
         """
         logger.info("Klik: Tombol Join Sekarang")
+        deadline = time.time() + 5  # tunggu tombol aktif bila nomor valid; tetap mengetuk bila tetap disabled
+        while time.time() < deadline and self.find(self.BTN_JOIN_SEKARANG).get_attribute("enabled") != "true":
+            time.sleep(0.3)
         self.find(self.BTN_JOIN_SEKARANG).click()
 
     def is_join_button_enabled(self) -> bool:

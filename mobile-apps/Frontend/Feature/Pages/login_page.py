@@ -110,7 +110,13 @@ class LoginPage(BasePage):
         time.sleep(1)
 
     def click_submit_login(self):
-        """Menekan tombol Log In / Masuk."""
+        """Menekan tombol Log In / Masuk setelah tombolnya aktif (validasi nomor di Flutter butuh waktu)."""
+        deadline = time.time() + 5
+        while time.time() < deadline:
+            buttons = self.driver.find_elements(*self.BTN_SUBMIT_LOGIN)
+            if buttons and buttons[0].get_attribute("enabled") == "true":
+                break
+            time.sleep(0.3)
         self.click(self.BTN_SUBMIT_LOGIN, label="Tombol 'Log In'")
 
     def is_otp_screen_displayed(self, timeout: int = 15) -> bool:
