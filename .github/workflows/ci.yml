@@ -36,8 +36,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - name: Quality gate (method hilang, assertion palsu, domain production, file ganda)
+      - name: Quality gate (method hilang, nama tak terdefinisi, assertion palsu, domain production, file ganda)
         run: |
+          pip install pyflakes
           python qa-tools/quality_gate.py admin
           python qa-tools/quality_gate.py mobile
 
@@ -149,6 +150,13 @@ jobs:
             adb shell 'while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done; getprop persist.sys.locale'
             adb install -r -g apk/evmoto-user.apk
             adb install -r -g apk/evmoto-driver.apk
+            mkdir -p bukti
+            echo "== Cek jaringan dari dalam emulator ke backend staging ==" | tee bukti/cek_jaringan.txt
+            adb shell "ping -c 3 -W 3 evmotodev.justkidding.app" >> bukti/cek_jaringan.txt 2>&1 || echo "ping gagal" >> bukti/cek_jaringan.txt
+            adb shell "getprop net.dns1; getprop persist.sys.locale" >> bukti/cek_jaringan.txt 2>&1 || true
+            cat bukti/cek_jaringan.txt
+            adb logcat -c || true
+            nohup adb logcat -v time > bukti/logcat.txt 2>&1 &
             nohup appium --address 127.0.0.1 --port 4723 --log-level warn > appium.log 2>&1 &
             sleep 15
             python qa-tools/run_all.py --suite mobile cross

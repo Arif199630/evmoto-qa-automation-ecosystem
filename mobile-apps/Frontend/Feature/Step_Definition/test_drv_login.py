@@ -16,6 +16,8 @@ import pytest
 from Pages.drv_login_page import DrvLoginPage
 from Pages.drv_home_page import DrvHomePage
 from Data.drv_data import (
+    DRIVER_ACTIVE_PHONE,
+    DRIVER_ACTIVE_PIN,
     DRV_LOG_DATA_POSITIVE_TRUE,
     DRV_LOG_DATA_POSITIVE_FALSE,
     DRV_LOG_DATA_NEGATIVE_TRUE,
@@ -124,7 +126,7 @@ class TestDrvLogin:
         login_pg.click_join_sekarang()
 
         then("Sistem merespons dan menampilkan verifikasi OTP")
-        assert login_pg.is_otp_screen_displayed() or login_pg.is_login_screen_displayed()
+        assert login_pg.is_otp_screen_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Penanganan format internasional +62 berhasil.")
 
     @pytest.mark.positive_true
@@ -167,7 +169,7 @@ class TestDrvLogin:
             login_pg.click_resend_otp()
 
         then("Layar verifikasi kode OTP tetap aktif menerima input")
-        assert login_pg.is_otp_screen_displayed() or login_pg.is_login_screen_displayed()
+        assert login_pg.is_otp_screen_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Fitur Resend OTP driver terverifikasi.")
 
     @pytest.mark.positive_true
@@ -223,7 +225,7 @@ class TestDrvLogin:
         login_pg.click_join_sekarang()
 
         then("Sistem menampilkan pesan 'Nomor driver belum terdaftar'")
-        assert login_pg.is_driver_not_registered_displayed() or login_pg.is_login_screen_displayed()
+        assert login_pg.is_driver_not_registered_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Validasi nomor driver belum terdaftar terverifikasi.")
 
     @pytest.mark.positive_false
@@ -243,7 +245,7 @@ class TestDrvLogin:
             login_pg.click_join_sekarang()
 
         then("Sistem menangani sesi login multi-device dengan aman")
-        assert login_pg.is_logged_in_other_device_displayed() or login_pg.is_otp_screen_displayed() or login_pg.is_login_screen_displayed()
+        assert login_pg.is_logged_in_other_device_displayed() or login_pg.is_otp_screen_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Peringatan multiple device login terverifikasi.")
 
     @pytest.mark.positive_false
@@ -284,7 +286,7 @@ class TestDrvLogin:
             login_pg.click_join_sekarang()
 
         then("Timer countdown menjaga stabilitas pengiriman OTP")
-        assert login_pg.is_otp_screen_displayed() or login_pg.is_login_screen_displayed()
+        assert login_pg.is_otp_screen_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Proteksi countdown timer resend terverifikasi.")
 
     @pytest.mark.positive_false
@@ -309,7 +311,7 @@ class TestDrvLogin:
                 time.sleep(1)
 
         then("Sistem menjaga keamanan akun dari percobaan tebak OTP")
-        assert login_pg.is_otp_screen_displayed() or login_pg.is_login_screen_displayed()
+        assert login_pg.is_otp_screen_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Rate limiting OTP salah terverifikasi.")
 
     # ==========================================================================
@@ -360,7 +362,7 @@ class TestDrvLogin:
             login_pg.enter_otp("12")
 
         then("Sistem tetap menunggu pengisian 4 digit lengkap")
-        assert login_pg.is_otp_screen_displayed() or login_pg.is_login_screen_displayed()
+        assert login_pg.is_otp_screen_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Validasi 4 digit OTP incomplete berhasil.")
 
     @pytest.mark.negative_true
@@ -589,7 +591,7 @@ class TestDrvLogin:
                 pass
 
         then("Aplikasi tetap responsif dan berpindah ke layar OTP secara stabil")
-        assert login_pg.is_otp_screen_displayed() or login_pg.is_login_screen_displayed()
+        assert login_pg.is_otp_screen_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Uji ketahanan anti-race spamming click terverifikasi.")
 
     @pytest.mark.positive_true
@@ -608,7 +610,7 @@ class TestDrvLogin:
 
         when("Layar OTP terbuka")
         then("Timer hitung mundur resend OTP aktif")
-        assert login_pg.is_otp_screen_displayed() or login_pg.is_login_screen_displayed()
+        assert login_pg.is_otp_screen_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
 
     @pytest.mark.positive_true
     def test_TC_DRV_LOG_PT_09_verifikasi_tautan_cs_saat_nomor_bermasalah(self, driver_app):

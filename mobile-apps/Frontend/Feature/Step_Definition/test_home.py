@@ -217,7 +217,7 @@ class TestHome:
         then("Header menampilkan sapaan ramah dan koordinat/nama jalan lokasi pengguna")
         print(f"  -> Teks Sapaan: '{greeting}'")
         print(f"  -> Lokasi Penjemputan Terdeteksi: '{location_text}'")
-        assert len(greeting) > 0 or len(location_text) > 0 or self.home_page.is_home_screen_displayed(timeout=5)
+        assert len(greeting) > 0 or len(location_text) > 0, "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         print("  -> Fungsionalitas header penjemputan terverifikasi valid!")
 
     @pytest.mark.pilar1_positive

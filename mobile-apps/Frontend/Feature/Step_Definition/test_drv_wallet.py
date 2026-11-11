@@ -70,7 +70,7 @@ class TestDrvWallet:
 
         given("Mitra pengemudi berada di modul keuangan driver")
         then("Kartu 'Saldo EVMoto' dan 'Saldo ECGO' ditampilkan")
-        assert wallet_pg.is_displayed(wallet_pg.CARD_SALDO_EVMOTO, timeout=4) or wallet_pg.is_wallet_screen_displayed()
+        assert wallet_pg.is_displayed(wallet_pg.CARD_SALDO_EVMOTO, timeout=4), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Kartu Saldo EVMoto dan ECGO terverifikasi.")
 
     @pytest.mark.positive_true

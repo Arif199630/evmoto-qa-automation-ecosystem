@@ -227,7 +227,7 @@ class TestActivity:
         has_advance = self.activity_page.has_advance_booking_cards(timeout=4)
         has_empty = self.activity_page.is_empty_booking_state_displayed(timeout=3)
         print(f"  [PT-03] Advance Booking Ada: {has_advance} | Empty Booking: {has_empty}")
-        assert has_advance or has_empty or self.activity_page.is_activity_screen_displayed(timeout=5)
+        assert has_advance or has_empty, "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
 
     @pytest.mark.positive_true
     def test_TC_ACT_PT_04_beralih_mulus_antara_tab_regular_dan_tab_booking(self, driver):

@@ -72,7 +72,7 @@ class TestDrvHome:
         assert home_pg.is_total_earnings_displayed() or home_pg.is_saldo_card_displayed()
 
         and_step("Komponen metrik performa (Pesanan Hari Ini, Pesanan Bulan Ini, Rating) aktif")
-        assert home_pg.is_performance_metrics_displayed() or home_pg.is_home_screen_displayed()
+        assert home_pg.is_performance_metrics_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Komponen Beranda dan Kartu Saldo terverifikasi.")
 
     @pytest.mark.positive_true
@@ -92,7 +92,7 @@ class TestDrvHome:
         home_pg.toggle_online_offline_status()
 
         then("Status kerja mitra beralih menjadi 'Online'")
-        assert home_pg.is_online_status_active() or home_pg.is_home_screen_displayed()
+        assert home_pg.is_online_status_active(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Pengubahan status kerja ke Online terverifikasi.")
 
     @pytest.mark.positive_true
@@ -112,7 +112,7 @@ class TestDrvHome:
         home_pg.toggle_online_offline_status()
 
         then("Status kerja mitra kembali menjadi 'Offline'")
-        assert home_pg.is_offline_status_active() or home_pg.is_home_screen_displayed()
+        assert home_pg.is_offline_status_active(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Pengubahan status kerja ke Offline terverifikasi.")
 
     @pytest.mark.positive_true
@@ -181,7 +181,7 @@ class TestDrvHome:
         self._ensure_driver_logged_in(driver_app)
 
         then("Metrik Pesanan Hari Ini tampil secara informatif")
-        assert home_pg.is_performance_metrics_displayed() or home_pg.is_home_screen_displayed()
+        assert home_pg.is_performance_metrics_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Metrik Pesanan Hari Ini terverifikasi.")
 
     @pytest.mark.positive_true
@@ -195,7 +195,7 @@ class TestDrvHome:
         self._ensure_driver_logged_in(driver_app)
 
         then("Metrik Pesanan Bulan Ini tampil di Beranda")
-        assert home_pg.is_performance_metrics_displayed() or home_pg.is_home_screen_displayed()
+        assert home_pg.is_performance_metrics_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Metrik Pesanan Bulan Ini terverifikasi.")
 
     @pytest.mark.positive_true
@@ -209,7 +209,7 @@ class TestDrvHome:
         self._ensure_driver_logged_in(driver_app)
 
         then("Komponen Rating Saya tampil di kartu performa")
-        assert home_pg.is_performance_metrics_displayed() or home_pg.is_home_screen_displayed()
+        assert home_pg.is_performance_metrics_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Metrik Rating Saya terverifikasi.")
 
     @pytest.mark.positive_true
@@ -341,7 +341,7 @@ class TestDrvHome:
         assert home_pg.is_home_screen_displayed()
 
         then("Indikator wilayah kerja (Working Area) dapat dideteksi secara akurat")
-        assert home_pg.is_outside_working_area_warning_displayed() or home_pg.is_home_screen_displayed()
+        assert home_pg.is_outside_working_area_warning_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Peringatan batas Working Area terverifikasi.")
 
     @pytest.mark.positive_false

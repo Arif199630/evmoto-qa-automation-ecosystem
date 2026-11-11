@@ -78,7 +78,7 @@ class TestDrvRegister:
         reg_pg.submit_registration_form()
 
         then("Sistem menampilkan dialog 'DATA  YANG DIKIRIM BERHASIL'")
-        assert reg_pg.is_registration_success_displayed() or reg_pg.is_register_screen_displayed()
+        assert reg_pg.is_registration_success_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Pendaftaran Mitra ECGO Driver Berhasil divalidasi.")
 
     @pytest.mark.positive_true
@@ -110,7 +110,7 @@ class TestDrvRegister:
         reg_pg.submit_registration_form()
 
         then("Formulir pendaftaran berhasil dikirim dengan referral dev")
-        assert reg_pg.is_registration_success_displayed() or reg_pg.is_register_screen_displayed()
+        assert reg_pg.is_registration_success_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Pendaftaran Non-ECGO dengan referral terverifikasi.")
 
     @pytest.mark.positive_true
@@ -134,7 +134,7 @@ class TestDrvRegister:
         reg_pg.submit_registration_form()
 
         then("Format plat 1 digit diterima tanpa error validasi format")
-        assert reg_pg.is_register_screen_displayed() or reg_pg.is_registration_success_displayed()
+        assert reg_pg.is_registration_success_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Validasi plat 1 digit berhasil.")
 
     @pytest.mark.positive_true
@@ -158,7 +158,7 @@ class TestDrvRegister:
         reg_pg.submit_registration_form()
 
         then("Format plat 4 digit diterima sistem")
-        assert reg_pg.is_register_screen_displayed() or reg_pg.is_registration_success_displayed()
+        assert reg_pg.is_registration_success_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Validasi plat 4 digit berhasil.")
 
     @pytest.mark.positive_true
@@ -182,7 +182,7 @@ class TestDrvRegister:
         reg_pg.submit_registration_form()
 
         then("Plat wilayah D berhasil diproses")
-        assert reg_pg.is_register_screen_displayed() or reg_pg.is_registration_success_displayed()
+        assert reg_pg.is_registration_success_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Validasi plat wilayah Bandung D berhasil.")
 
     @pytest.mark.positive_true
@@ -206,7 +206,7 @@ class TestDrvRegister:
         reg_pg.submit_registration_form()
 
         then("Plat wilayah L berhasil diverifikasi")
-        assert reg_pg.is_register_screen_displayed() or reg_pg.is_registration_success_displayed()
+        assert reg_pg.is_registration_success_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Validasi plat wilayah Surabaya L berhasil.")
 
     @pytest.mark.positive_true
@@ -256,7 +256,7 @@ class TestDrvRegister:
         reg_pg.submit_registration_form()
 
         then("Sistem menolak atau memvalidasi plat nomor duplikat secara tepat")
-        assert reg_pg.is_mandatory_warning_displayed() or reg_pg.is_register_screen_displayed()
+        assert reg_pg.is_mandatory_warning_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Pencegahan registrasi plat nomor duplikat terverifikasi.")
 
     @pytest.mark.positive_false

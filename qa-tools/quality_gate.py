@@ -71,6 +71,19 @@ def receiver_name(node):
     return ""
 
 
+def undefined_names(text, filename):
+    """Nama tak terdefinisi menurut pyflakes (kosong bila pyflakes belum terpasang)."""
+    try:
+        from pyflakes.api import check
+        from pyflakes.reporter import Reporter
+    except ImportError:
+        return []
+    import io
+    out = io.StringIO()
+    check(text, filename, Reporter(out, io.StringIO()))
+    return sorted({m.group(1) for m in re.finditer(r"undefined name '([^']+)'", out.getvalue())})
+
+
 def scan(project):
     cfg = PROJECTS[project]
     root = cfg["root"]
@@ -98,6 +111,9 @@ def scan(project):
             func = min(inside, key=lambda f: f[1] - f[0])[2] if inside else "<module>"
             per_func[func] += 1
             found["assert_palsu"].append(f"{rel}::{func}#{per_func[func]}")
+        # Nama yang dipakai tetapi tidak pernah didefinisikan/di-import (NameError saat test jalan)
+        for name in undefined_names(text, rel):
+            found["nama_tidak_terdefinisi"].append(f"{rel}::{name}")
         for host in PRODUCTION_HOSTS:
             if host in text:
                 found["domain_production"].append(f"{rel}:{host}")

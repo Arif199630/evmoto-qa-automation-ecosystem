@@ -130,7 +130,7 @@ class TestDrvMenu:
             pass
 
         then("Cache aplikasi berhasil dibersihkan")
-        assert menu_pg.is_cache_cleared_success_displayed() or menu_pg.is_menu_screen_displayed()
+        assert menu_pg.is_cache_cleared_success_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Pembersihan cache aplikasi terverifikasi.")
 
     @pytest.mark.positive_true
@@ -227,7 +227,7 @@ class TestDrvMenu:
         self._ensure_driver_on_menu(driver_app)
 
         then("Konten Tips untuk Driver dapat dibaca")
-        assert menu_pg.is_tips_driver_displayed() or menu_pg.is_menu_screen_displayed()
+        assert menu_pg.is_tips_driver_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Edukasi Tips untuk Driver terverifikasi.")
 
     @pytest.mark.positive_true
@@ -346,7 +346,7 @@ class TestDrvMenu:
         menu_pg.click_delete_account_menu()
 
         then("Dialog konfirmasi pengajuan penghapusan akun tampil")
-        assert menu_pg.is_delete_account_confirmation_displayed() or menu_pg.is_menu_screen_displayed()
+        assert menu_pg.is_delete_account_confirmation_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Pembatalan pengajuan hapus akun terverifikasi.")
 
     @pytest.mark.negative_true
