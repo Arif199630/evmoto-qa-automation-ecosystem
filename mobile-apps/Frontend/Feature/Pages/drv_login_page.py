@@ -181,7 +181,15 @@ class DrvLoginPage(BasePage):
     def enter_otp(self, otp: str = os.environ.get("EVMOTO_OTP_BYPASS", "")):
         """Memasukkan 4 digit kode OTP verifikasi bypass dev."""
         logger.info(f"Input kode OTP verifikasi driver: {otp}")
-        self.type_text(self.FIELD_OTP, otp, label="Field Input 4 Kode OTP")
+        # Kolom PIN Flutter: send_keys per karakter menimpa isi sebelumnya (bukti CI: hanya 1 digit
+        # tersisa dan tombol 'Lanjutkan' disabled). Tekan tombol angka satu per satu seperti app User.
+        field = self.find(self.FIELD_OTP, timeout=10)
+        field.click()
+        time.sleep(0.3)
+        for ch in otp:
+            if ch.isdigit():
+                self.driver.press_keycode(int(ch) + 7)  # KEYCODE_0 = 7
+                time.sleep(0.15)
         # Kode tidak terkirim otomatis: layar OTP punya tombol 'Lanjutkan'
         if self.is_displayed(self.BTN_LANJUTKAN_OTP, timeout=3):
             self.find(self.BTN_LANJUTKAN_OTP).click()
