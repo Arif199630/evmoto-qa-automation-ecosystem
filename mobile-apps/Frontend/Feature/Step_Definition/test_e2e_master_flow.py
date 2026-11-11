@@ -16,6 +16,7 @@ Jeda Pengujian:
   - JEDA 5 DETIK WAJIB (time.sleep(5.0)) di setiap test case agar bebas dari race condition!
 ================================================================================
 """
+import os
 import time
 import pytest
 from appium.webdriver.webdriver import WebDriver
@@ -59,7 +60,7 @@ class TestComprehensiveE2E:
         yield
 
         logger.info("[ANTI RACE CONDITION] Memberikan jeda 5 detik sebelum skenario berikutnya...")
-        time.sleep(5.0)
+        time.sleep(float(os.getenv("QA_TEARDOWN_PAUSE", "5")))  # CI: 1 detik
 
     # ==========================================================================
     # FASE 1: RUNTIME PERMISSION, SPLASH & AUTENTIKASI (LOGIN & REGISTER)

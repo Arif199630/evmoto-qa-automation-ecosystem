@@ -29,6 +29,7 @@ Aturan Eksekusi :
     lalu membatalkan kembali ke Beranda.
 ================================================================================
 """
+import os
 import time
 import pytest
 from Pages.login_page import LoginPage
@@ -86,7 +87,7 @@ class TestHome:
 
         # JEDA 5 DETIK ANTI RACE CONDITION SETELAH SETIAP TEST CASE SELESAI
         logger.info("[ANTI RACE CONDITION] Memberikan jeda 5 detik sebelum lanjut...")
-        time.sleep(5.0)
+        time.sleep(float(os.getenv("QA_TEARDOWN_PAUSE", "5")))  # CI: 1 detik
 
     # ==========================================================================
     # BAGIAN 1: METODE HAPPY FLOW TERLEBIH DAHULU (E2E PERJALANAN LENGKAP BERANDA)

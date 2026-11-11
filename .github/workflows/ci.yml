@@ -63,7 +63,7 @@ jobs:
         env: { GH_TOKEN: "${{ github.token }}", DARI: "${{ inputs.lanjutkan_dari || github.run_id }}" }
         run: gh run download "$DARI" -R "${{ github.repository }}" -p "hasil-admin*" -D sebelumnya || true
       - name: Regression Admin Dashboard (Chrome headless)
-        env: { RESUME_DIR: sebelumnya }
+        env: { RESUME_DIR: sebelumnya, ADMIN_BUCKETS: "4" }
         run: python qa-tools/run_all.py --suite admin
       - uses: actions/upload-artifact@v4
         if: always()
@@ -96,10 +96,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: ${{ fromJSON(inputs.suites == 'peta' && '[0]' || '[0, 1, 2, 3, 4, 5]') }}
+        shard: ${{ fromJSON(inputs.suites == 'peta' && '[0]' || '[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]') }}
     env:
       SHARD_INDEX: ${{ matrix.shard }}
-      SHARD_TOTAL: 6
+      SHARD_TOTAL: 16
+      # Percepatan tanpa melewatkan test: file besar dipecah per 8 test lalu dibagi rata ke 16 emulator,
+      # jeda 'manusia' 3 detik per klik dimatikan, jeda setelah tiap test 1 detik.
+      CHUNK_SIZE: "8"
+      HEADLESS_FAST: "1"
+      QA_TEARDOWN_PAUSE: "1"
       INSTALL_APK: "0"
       RESUME_DIR: sebelumnya
       FILE_INCLUDE: ${{ inputs.file_filter }}

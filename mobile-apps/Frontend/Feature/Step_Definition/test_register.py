@@ -60,7 +60,7 @@ class TestRegister:
         untuk mencegah race condition pada pengujian mobile automation.
         """
         yield
-        time.sleep(5.0)
+        time.sleep(float(os.getenv("QA_TEARDOWN_PAUSE", "5")))  # CI: 1 detik
 
     # ==========================================================================
     # PILAR 1: POSITIVE TRUE (PT) - HAPPY PATH / SUKSES PENDAFTARAN
