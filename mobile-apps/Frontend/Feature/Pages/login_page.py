@@ -157,9 +157,23 @@ class LoginPage(BasePage):
     FIELD_FIRST_LOGIN_NAME = (AppiumBy.XPATH, "//android.widget.EditText")
     BTN_FIRST_LOGIN_SIMPAN = (AppiumBy.XPATH, "//android.widget.Button[@content-desc='Simpan' or @text='Simpan']")
 
-    def complete_first_login_name(self, name: str = "QA Auto"):
-        """Isi nama pengguna bila layar onboarding akun baru muncul setelah OTP (akun QA Auto staging)."""
-        if not self.is_displayed(self.TITLE_FIRST_LOGIN_NAME, timeout=4):
+    # Penanda Beranda User (peta layar CI): sapaan 'Hai, mau ke mana hari ini?' atau kartu 'Saldo Anda'
+    HOME_AFTER_LOGIN = (AppiumBy.XPATH, "//*[starts-with(@content-desc, 'Hai, mau ke mana') or @content-desc='Saldo Anda']")
+
+    def complete_first_login_name(self, name: str = "QA Auto", wait_seconds: int = 15):
+        """Isi nama pengguna bila layar onboarding akun baru muncul setelah OTP (akun QA Auto staging).
+
+        Layar ini baru muncul setelah server memverifikasi OTP (bisa >4 detik di emulator), jadi tunggu
+        sampai Beranda ATAU layar nama tampil.
+        """
+        deadline = time.time() + wait_seconds
+        while time.time() < deadline:
+            if self.driver.find_elements(*self.TITLE_FIRST_LOGIN_NAME):
+                break
+            if self.driver.find_elements(*self.HOME_AFTER_LOGIN):
+                return False
+            time.sleep(0.5)
+        else:
             return False
         logger.info("Layar 'Masukkan nama pengguna' muncul (akun baru): mengisi nama lalu Simpan")
         field = self.find(self.FIELD_FIRST_LOGIN_NAME)
