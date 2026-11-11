@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       suites:
-        description: "Suite yang dijalankan (all / admin / api / mobile / peta = peta layar aplikasi asli)"
+        description: "Suite yang dijalankan (all / admin / api / mobile / peta = peta layar aplikasi asli / repro = reproduksi dugaan bug registrasi)"
         default: all
       file_filter:
         description: "Regex nama file test yang dijalankan, mis. ^test_(login|drv_login)[.]py - kosongkan untuk semua"
@@ -91,13 +91,13 @@ jobs:
 
   mobile:
     needs: quality-gate
-    if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJSON('["all","mobile","peta"]'), inputs.suites) }}
+    if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJSON('["all","mobile","peta","repro"]'), inputs.suites) }}
     runs-on: ubuntu-latest
     timeout-minutes: 300
     strategy:
       fail-fast: false
       matrix:
-        shard: ${{ fromJSON(inputs.suites == 'peta' && '[0]' || '[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]') }}
+        shard: ${{ fromJSON((inputs.suites == 'peta' || inputs.suites == 'repro') && '[0]' || '[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]') }}
     env:
       SHARD_INDEX: ${{ matrix.shard }}
       SHARD_TOTAL: 16
@@ -177,7 +177,7 @@ jobs:
             nohup adb logcat -v time > bukti/logcat.txt 2>&1 &
             nohup appium --address 127.0.0.1 --port 4723 --log-level warn > appium.log 2>&1 &
             sleep 15
-            if [ "${{ inputs.suites }}" = "peta" ]; then python mobile-apps/scripts/dump_screens.py user; python mobile-apps/scripts/dump_screens.py driver; else python qa-tools/run_all.py --suite mobile cross; fi
+            if [ "${{ inputs.suites }}" = "peta" ]; then python mobile-apps/scripts/dump_screens.py user; python mobile-apps/scripts/dump_screens.py driver; elif [ "${{ inputs.suites }}" = "repro" ]; then python mobile-apps/scripts/reproduce_register.py; else python qa-tools/run_all.py --suite mobile cross; fi
       - name: Kumpulkan bukti kegagalan (screenshot + struktur layar)
         if: always()
         run: |
@@ -185,6 +185,7 @@ jobs:
           cp -r mobile-apps/reports/screenshots bukti/ 2>/dev/null || true
           cp appium.log bukti/ 2>/dev/null || true
           cp -r mobile-apps/reports/screen_map bukti/ 2>/dev/null || true
+          cp -r mobile-apps/reports/repro bukti/ 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
