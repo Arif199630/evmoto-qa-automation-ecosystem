@@ -63,6 +63,7 @@ class RegisterPage(BasePage):
     TEXT_FULL_NAME_REQUIRED = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Silakan masukkan nama lengkap') or contains(@text, 'Silakan masukkan nama lengkap') or "
+        "@content-desc='Wajib diisi' or @text='Wajib diisi' or "  # teks asli di bawah kolom Nama Lengkap (layar CI)
         "contains(@content-desc, 'Please enter your full name') or contains(@text, 'Please enter your full name')]"
     )
     # enter_mobile_number = 'Silakan masukkan nomor ponsel Anda' / 'Please enter your phone number'

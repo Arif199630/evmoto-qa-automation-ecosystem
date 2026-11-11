@@ -77,7 +77,7 @@ class TestRegister:
         Ekspektasi: Berhasil memproses pendaftaran akun baru.
         """
         data = REGISTER_DATA_POSITIVE_TRUE["TC_REG_PT_01"]
-        fresh_phone = f"821{int(time.time()) % 100000000:08d}"
+        fresh_phone = f"8002{int(time.time() * 1000) % 10000000:07d}"  # rentang 0800: bukan nomor HP
         login_page = LoginPage(driver)
         register_page = RegisterPage(driver)
 
@@ -112,7 +112,7 @@ class TestRegister:
         Ekspektasi: Sistem memproses pendaftaran dan menautkan kode referral ke akun baru.
         """
         data = REGISTER_DATA_POSITIVE_TRUE["TC_REG_PT_02"]
-        fresh_phone = f"821{int(time.time()) % 100000000:08d}"
+        fresh_phone = f"8002{int(time.time() * 1000) % 10000000:07d}"  # rentang 0800: bukan nomor HP
         login_page = LoginPage(driver)
         register_page = RegisterPage(driver)
 
@@ -148,7 +148,7 @@ class TestRegister:
         Ekspektasi: Karakter apostrof dan tanda hubung diterima secara sah tanpa error.
         """
         data = REGISTER_DATA_POSITIVE_TRUE["TC_REG_PT_03"]
-        fresh_phone = f"821{int(time.time()) % 100000000:08d}"
+        fresh_phone = f"8002{int(time.time() * 1000) % 10000000:07d}"  # rentang 0800: bukan nomor HP
         login_page = LoginPage(driver)
         register_page = RegisterPage(driver)
 
@@ -240,7 +240,7 @@ class TestRegister:
         Ekspektasi: Sistem menolak atau memunculkan peringatan kode referral tidak valid.
         """
         data = REGISTER_DATA_POSITIVE_FALSE["TC_REG_PF_02"]
-        fresh_phone = f"821{int(time.time()) % 100000000:08d}"
+        fresh_phone = f"8002{int(time.time() * 1000) % 10000000:07d}"  # rentang 0800: bukan nomor HP
         login_page = LoginPage(driver)
         register_page = RegisterPage(driver)
 
@@ -272,7 +272,7 @@ class TestRegister:
         Ekspektasi: Sistem menolak submit karena kode verifikasi belum diminta.
         """
         data = REGISTER_DATA_POSITIVE_FALSE["TC_REG_PF_03"]
-        fresh_phone = f"821{int(time.time()) % 100000000:08d}"
+        fresh_phone = f"8002{int(time.time() * 1000) % 10000000:07d}"  # rentang 0800: bukan nomor HP
         login_page = LoginPage(driver)
         register_page = RegisterPage(driver)
 
@@ -300,7 +300,7 @@ class TestRegister:
         mekanisme Rate Limiting / Cooldown Anti-Spam pengiriman SMS.
         Ekspektasi: Tombol masuk ke mode cooldown timer (misal countdown 60s) dan mencegah spamming request.
         """
-        fresh_phone = f"821{int(time.time()) % 100000000:08d}"
+        fresh_phone = f"8002{int(time.time() * 1000) % 10000000:07d}"  # rentang 0800: bukan nomor HP
         login_page = LoginPage(driver)
         register_page = RegisterPage(driver)
 
@@ -407,7 +407,7 @@ class TestRegister:
         Ekspektasi: Sistem memunculkan pesan validasi 'Silakan masukkan nama lengkap'.
         """
         data = REGISTER_DATA_NEGATIVE_TRUE["TC_REG_NT_04"]
-        fresh_phone = f"821{int(time.time()) % 100000000:08d}"
+        fresh_phone = f"8002{int(time.time() * 1000) % 10000000:07d}"  # rentang 0800: bukan nomor HP
         login_page = LoginPage(driver)
         register_page = RegisterPage(driver)
 
@@ -457,7 +457,7 @@ class TestRegister:
         Ekspektasi: Sistem menolak submit / memunculkan peringatan OTP harus 4 digit.
         """
         data = REGISTER_DATA_NEGATIVE_TRUE["TC_REG_NT_06"]
-        fresh_phone = f"821{int(time.time()) % 100000000:08d}"
+        fresh_phone = f"8002{int(time.time() * 1000) % 10000000:07d}"  # rentang 0800: bukan nomor HP
         login_page = LoginPage(driver)
         register_page = RegisterPage(driver)
 
@@ -485,7 +485,7 @@ class TestRegister:
         Ekspektasi: Sistem menolak input nama yang tidak memuat karakter huruf alfabet.
         """
         data = REGISTER_DATA_NEGATIVE_TRUE["TC_REG_NT_07"]
-        fresh_phone = f"821{int(time.time()) % 100000000:08d}"
+        fresh_phone = f"8002{int(time.time() * 1000) % 10000000:07d}"  # rentang 0800: bukan nomor HP
         login_page = LoginPage(driver)
         register_page = RegisterPage(driver)
 
@@ -515,7 +515,7 @@ class TestRegister:
         Ekspektasi: Sistem menolak atau memfilter simbol khusus sehingga kode referral tetap aman.
         """
         data = REGISTER_DATA_NEGATIVE_TRUE["TC_REG_NT_08"]
-        fresh_phone = f"821{int(time.time()) % 100000000:08d}"
+        fresh_phone = f"8002{int(time.time() * 1000) % 10000000:07d}"  # rentang 0800: bukan nomor HP
         login_page = LoginPage(driver)
         register_page = RegisterPage(driver)
 
@@ -570,7 +570,7 @@ class TestRegister:
         Ekspektasi: Script HTML/JS di-escape menjadi string aman dan tidak dieksekusi oleh webview/app.
         """
         data = REGISTER_DATA_NEGATIVE_FALSE["TC_REG_NF_02"]
-        fresh_phone = f"821{int(time.time()) % 100000000:08d}"
+        fresh_phone = f"8002{int(time.time() * 1000) % 10000000:07d}"  # rentang 0800: bukan nomor HP
         login_page = LoginPage(driver)
         register_page = RegisterPage(driver)
 
@@ -593,7 +593,7 @@ class TestRegister:
         Ekspektasi: Sistem membatasi panjang karakter (max-length) secara graceful tanpa buffer overflow.
         """
         data = REGISTER_DATA_NEGATIVE_FALSE["TC_REG_NF_03"]
-        fresh_phone = f"821{int(time.time()) % 100000000:08d}"
+        fresh_phone = f"8002{int(time.time() * 1000) % 10000000:07d}"  # rentang 0800: bukan nomor HP
         login_page = LoginPage(driver)
         register_page = RegisterPage(driver)
 
@@ -616,7 +616,7 @@ class TestRegister:
         Ekspektasi: Sistem otomatis melakukan trim dan memperlakukan input sebagai field kosong (ditolak).
         """
         data = REGISTER_DATA_NEGATIVE_FALSE["TC_REG_NF_04"]
-        fresh_phone = f"821{int(time.time()) % 100000000:08d}"
+        fresh_phone = f"8002{int(time.time() * 1000) % 10000000:07d}"  # rentang 0800: bukan nomor HP
         login_page = LoginPage(driver)
         register_page = RegisterPage(driver)
 
@@ -639,7 +639,7 @@ class TestRegister:
         Ekspektasi: Sistem dan database menangani encoding UTF-8 dengan aman tanpa crash UI.
         """
         data = REGISTER_DATA_NEGATIVE_FALSE["TC_REG_NF_05"]
-        fresh_phone = f"821{int(time.time()) % 100000000:08d}"
+        fresh_phone = f"8002{int(time.time() * 1000) % 10000000:07d}"  # rentang 0800: bukan nomor HP
         login_page = LoginPage(driver)
         register_page = RegisterPage(driver)
 
