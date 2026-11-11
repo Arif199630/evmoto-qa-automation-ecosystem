@@ -38,9 +38,10 @@ class DrvLoginPage(BasePage):
         "//android.widget.EditText[contains(@hint, '812') or contains(@hint, 'nomor') or contains(@hint, 'telepon') or "
         "contains(@content-desc, 'telepon') or @class='android.widget.EditText']"
     )
+    # Tombol persis 'Join Sekarang'. contains('Join Sekarang') juga cocok dengan judul 'Hai, Yuk Join Sekarang'.
     BTN_JOIN_SEKARANG = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Join Sekarang') or contains(@text, 'Join Sekarang')]"
+        "//android.widget.Button[@content-desc='Join Sekarang' or @text='Join Sekarang' or @content-desc='Join Now']"
     )
     LINK_REGISTER_NEW_DRIVER = (
         AppiumBy.XPATH,

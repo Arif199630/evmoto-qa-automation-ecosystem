@@ -7,6 +7,7 @@ Menyediakan method wrapper standar untuk explicit wait, interaksi elemen,
 pemberian log, scrolling, pengambilan screenshot, dan human-like pacing.
 ================================================================================
 """
+import re
 import time
 from typing import Tuple, List
 from selenium.webdriver.support.ui import WebDriverWait
@@ -30,9 +31,10 @@ class BasePage:
         """Menemukan satu elemen dengan Explicit Wait."""
         t = timeout or self.timeout
         try:
-            return WebDriverWait(self.driver, t).until(
+            element = WebDriverWait(self.driver, t).until(
                 EC.presence_of_element_located(locator)
             )
+            return self._best_match(locator, element)
         except TimeoutException:
             self.check_for_server_errors()
             logger.error(f"Elemen dengan locator {locator} tidak ditemukan dalam {t} detik.")
@@ -52,12 +54,39 @@ class BasePage:
         except TimeoutException:
             return []
 
+    def _best_match(self, locator: Tuple[str, str], fallback):
+        """Pilih elemen yang tepat bila locator 'contains(...)' cocok dengan beberapa elemen.
+
+        Contoh: contains(@content-desc,'Masuk') juga cocok dengan label 'Masukkan nomor handphone'.
+        Urutan pilihan: teks/content-desc yang PERSIS sama dengan kata kunci, lalu elemen Button,
+        lalu elemen pertama seperti sebelumnya.
+        """
+        if not isinstance(locator[1], str) or "contains(" not in locator[1]:
+            return fallback
+        try:
+            candidates = self.driver.find_elements(*locator)
+        except Exception:
+            return fallback
+        if len(candidates) <= 1:
+            return fallback
+        keywords = set(re.findall(r"contains\(@(?:content-desc|text),\s*'([^']+)'\)", locator[1]))
+
+        def label_of(el):
+            return ((el.get_attribute("content-desc") or el.get_attribute("text") or "").strip())
+
+        exact = [el for el in candidates if label_of(el) in keywords]
+        if exact:
+            return exact[0]
+        buttons = [el for el in candidates if (el.get_attribute("class") or "").endswith("Button")]
+        return buttons[0] if buttons else fallback
+
     def click(self, locator: Tuple[str, str], label: str = "", use_human_pacing: bool = True):
         """Menunggu elemen clickable kemudian melakukan klik."""
         try:
             element = WebDriverWait(self.driver, self.timeout).until(
                 EC.element_to_be_clickable(locator)
             )
+            element = self._best_match(locator, element)
             if use_human_pacing:
                 human_click(self.driver, element, label=label or str(locator[1]))
             else:

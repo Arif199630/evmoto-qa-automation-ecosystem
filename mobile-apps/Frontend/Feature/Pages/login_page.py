@@ -21,7 +21,8 @@ class LoginPage(BasePage):
     TITLE_LOGIN = (AppiumBy.XPATH, "//*[contains(@content-desc, 'green ride') or contains(@content-desc, 'Mulai perjalanan') or contains(@content-desc, 'Log In') or contains(@content-desc, 'Masuk')]")
     FIELD_PHONE = (AppiumBy.XPATH, "//android.widget.EditText[contains(@hint, '812') or contains(@hint, 'Nomor') or @class='android.widget.EditText']")
     INPUT_PHONE = FIELD_PHONE
-    BTN_SUBMIT_LOGIN = (AppiumBy.XPATH, "//*[contains(@content-desc, 'Log In') or contains(@content-desc, 'Masuk') or contains(@text, 'Log In')]")
+    # Tombol persis 'Masuk' / 'Log In'. contains('Masuk') juga cocok dengan label 'Masukkan nomor handphone Anda'.
+    BTN_SUBMIT_LOGIN = (AppiumBy.XPATH, "//android.widget.Button[@content-desc='Masuk' or @content-desc='Log In' or @text='Masuk' or @text='Log In']")
     LINK_REGISTER_NEW_USER = (AppiumBy.XPATH, "//*[contains(@content-desc, 'Register as a New User') or contains(@content-desc, 'Daftar sebagai Pengguna baru')]")
 
     # Locators Layar Verifikasi OTP
