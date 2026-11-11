@@ -3,7 +3,7 @@ Konsistensi konfigurasi bisnis di Admin Dashboard environment aktif (read-only).
 
 Sumber kebenaran tarif dan subsidi jam sibuk adalah halaman Admin (keputusan 11 Nov 2026).
 Test ini memastikan konfigurasi itu sendiri masuk akal sebelum dipakai test lain:
-  - Tarif Driver dan User harus sama (halaman Price control).
+  - Tarif Driver dan User harus sama (halaman Price control), kecuali INTENTIONAL_DIFFERENCES.
   - Window jam sibuk valid dan tidak tumpang tindih; tier subsidi naik berurutan.
 Kegagalan di sini adalah temuan KONFIGURASI, bukan bug kode aplikasi.
 """
@@ -14,6 +14,11 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # akses core/ di root mobile-apps
 from core.admin_config_reader import AdminConfigError, read_price_config, read_rush_hour_config  # noqa: E402
+
+# Perbedaan Driver vs User yang disengaja tim Product; tidak dianggap temuan.
+INTENTIONAL_DIFFERENCES = {
+    "waitFee": "Driver Rp 5.000, User Rp 3.000: disengaja tim Product (dikonfirmasi 11 Nov 2026)",
+}
 
 COMPARED_FIELDS = ("startPrice", "startKm", "mileageFee", "durationFee", "waitMinutes", "waitFee",
                    "farFrom1", "farTo1", "farFee1", "farFrom2", "farTo2", "farFee2", "farFrom3", "farFee3",
@@ -34,11 +39,14 @@ def _minutes(hhmm):
 
 class TestAdminPriceConfig:
     def test_tc_cfg_price_01_tarif_driver_dan_user_sama(self, record_property):
-        """[Pilar 1] Semua parameter tarif motor di halaman Price untuk Driver dan User bernilai sama."""
+        """[Pilar 1] Parameter tarif motor Driver dan User sama, kecuali perbedaan yang disengaja tim Product."""
         user, driver = _read(read_price_config, "User"), _read(read_price_config, "Driver")
         record_property("price_id_user", user["price_id"])
         record_property("price_id_driver", driver["price_id"])
-        beda = {f: {"User": user.get(f), "Driver": driver.get(f)} for f in COMPARED_FIELDS if user.get(f) != driver.get(f)}
+        beda = {f: {"User": user.get(f), "Driver": driver.get(f)} for f in COMPARED_FIELDS
+                if f not in INTENTIONAL_DIFFERENCES and user.get(f) != driver.get(f)}
+        for field, reason in INTENTIONAL_DIFFERENCES.items():
+            record_property(f"beda_disengaja_{field}", f"User={user.get(field)} Driver={driver.get(field)} ({reason})")
         assert not beda, f"Tarif Driver dan User berbeda di Admin (ID {driver['price_id']} vs {user['price_id']}): {beda}"
 
     def test_tc_cfg_price_02_tarif_lengkap_dan_berjenjang(self):
