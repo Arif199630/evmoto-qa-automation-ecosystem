@@ -88,9 +88,14 @@ def kasus(nama, phone, full_name, langkah_otp=True):
         if langkah_otp and driver.find_elements("xpath", "//*[@content-desc='Kode OTP' or @text='Kode OTP']"):
             ketik_otp(driver)
             bukti(driver, folder, 5, "sesudah_isi_otp")
+            # Keyboard angka menutupi tombol 'Buat Akun' (bukti run 43007065338): tutup dulu, baru ketuk
+            if driver.is_keyboard_shown():
+                driver.hide_keyboard()
+                time.sleep(1)
+            bukti(driver, folder, 6, "sebelum_buat_akun")
             ketuk(driver, "Buat Akun")
             time.sleep(3)
-            bukti(driver, folder, 6, "hasil_buat_akun")
+            bukti(driver, folder, 7, "hasil_buat_akun")
     except Exception as e:
         summary.append(f"  langkah gagal: {type(e).__name__}: {str(e)[:160]}")
         try:
