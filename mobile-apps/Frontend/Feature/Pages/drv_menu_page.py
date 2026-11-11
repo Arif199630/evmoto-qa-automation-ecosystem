@@ -24,9 +24,10 @@ class DrvMenuPage(BasePage):
     # ==========================================================================
     # 1. HEADER & IDENTITAS DRIVER
     # ==========================================================================
+    # Halaman Menu tidak punya judul 'Menu'; penandanya item 'Cara Penggunaan Aplikasi' (peta layar CI)
     TITLE_MENU = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Menu') or contains(@text, 'Menu')]"
+        "//*[@content-desc='Cara Penggunaan Aplikasi' or @text='Cara Penggunaan Aplikasi']"
     )
     PROFILE_DRIVER_NAME = (
         AppiumBy.XPATH,
@@ -102,7 +103,7 @@ class DrvMenuPage(BasePage):
     # ==========================================================================
     MENU_KELOLA_AKUN = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Kelola Akun') or contains(@text, 'Kelola Akun')]"
+        "//*[@content-desc='Kelola Akun' or @text='Kelola Akun' or @content-desc='Evaluasi Saya']"
     )
     MENU_OVERLAY_ORDER = (
         AppiumBy.XPATH,

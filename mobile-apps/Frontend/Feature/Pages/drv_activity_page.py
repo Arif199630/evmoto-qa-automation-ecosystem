@@ -73,9 +73,11 @@ class DrvActivityPage(BasePage):
     # ==========================================================================
     # 1. HEADER & TAB NAVIGASI AKTIVITAS
     # ==========================================================================
+    # Layar Aktivitas Saya punya tab 'Guarantee Income / Tab 1 dari 3' (kartu 'Aktivitas Saya' di Beranda
+    # memakai teks yang sama, jadi penandanya tab, bukan judul)
     HEADER_AKTIVITAS = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Aktivitas Saya') or contains(@text, 'Aktivitas Saya')]"
+        "//*[starts-with(@content-desc, 'Guarantee Income') or starts-with(@content-desc, 'Coupon Income')]"
     )
     TAB_PESANAN = (
         AppiumBy.XPATH,

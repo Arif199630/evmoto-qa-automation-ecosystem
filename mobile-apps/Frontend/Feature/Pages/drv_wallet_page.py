@@ -23,13 +23,14 @@ class DrvWalletPage(BasePage):
     # ==========================================================================
     # 1. HEADER & KARTU UTAMA EWALLET
     # ==========================================================================
+    # Layar eWallet (peta layar CI): judul persis 'eWallet' (contains juga cocok 'Putuskan eWallet')
     HEADER_EWALLET = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'eWallet') or contains(@text, 'eWallet')]"
+        "//*[@content-desc='eWallet' or @text='eWallet']"
     )
     CARD_SALDO_EVMOTO = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Saldo EVMoto') or contains(@text, 'Saldo EVMoto')]"
+        "//*[@content-desc='Saldo EVMoto' or @text='Saldo EVMoto']"
     )
     CARD_SALDO_ECGO = (
         AppiumBy.XPATH,

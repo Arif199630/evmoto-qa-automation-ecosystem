@@ -50,8 +50,10 @@ class TestDrvWallet:
         if not home_pg.is_home_screen_displayed() and not wallet_pg.is_wallet_screen_displayed():
             login_pg.login_as_driver(phone=DRIVER_ACTIVE_PHONE, otp=DRIVER_ACTIVE_PIN)
 
+        # eWallet dibuka lewat kartu 'Saldo Kamu' di Beranda (peta layar CI), bukan lewat Menu
         if home_pg.is_home_screen_displayed():
-            home_pg.navigate_to_menu()
+            home_pg.open_wallet()
+        assert wallet_pg.is_wallet_screen_displayed(), "Prasyarat: layar eWallet harus terbuka dari kartu 'Saldo Kamu'"
 
     # ==========================================================================
     # PILAR 1: POSITIVE TRUE (PT) - HAPPY PATH EWALLET & PENARIKAN DANA

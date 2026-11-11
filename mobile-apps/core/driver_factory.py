@@ -61,5 +61,11 @@ class DriverFactory:
         logger.info(f"Menghubungkan ke Appium Server: {server_url}")
         options = get_capabilities(no_reset=no_reset, full_reset=full_reset, is_driver_app=is_driver_app)
         driver = webdriver.Remote(command_executor=server_url, options=options)
+        # Beranda User berisi peta (Google Maps) yang terus beranimasi; UiAutomator2 bawaan menunggu layar
+        # "diam" sebelum mencari elemen / membaca page source sehingga bisa timeout (bukti CI: 240 detik).
+        try:
+            driver.update_settings({"waitForIdleTimeout": int(os.getenv("APPIUM_WAIT_FOR_IDLE_MS", "100"))})
+        except Exception as e:
+            logger.warning(f"Gagal mengatur waitForIdleTimeout: {e}")
         logger.info(f"Driver berhasil diinisialisasi untuk package '{target_pkg}' pada '{config.DEVICE_NAME}'.")
         return driver

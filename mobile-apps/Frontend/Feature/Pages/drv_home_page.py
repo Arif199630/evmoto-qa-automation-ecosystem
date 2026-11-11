@@ -26,9 +26,19 @@ class DrvHomePage(BasePage):
     # ==========================================================================
     # 1. HEADER & STATUS KERJA (ONLINE / OFFLINE)
     # ==========================================================================
+    # Penanda Beranda Driver (peta layar CI 11 Nov 2026): kartu statistik 'Pesanan Hari Ini'
     HEADER_BERANDA = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Beranda') or contains(@text, 'Beranda')]"
+        "//*[@content-desc='Pesanan Hari Ini' or @text='Pesanan Hari Ini']"
+    )
+    # Pop-up yang muncul saat Beranda dibuka dan menutupi layar
+    POPUP_JAM_OPERASIONAL = (
+        AppiumBy.XPATH,
+        "//*[starts-with(@content-desc, 'Pemberitahuan Jam Operasional')]"
+    )
+    BTN_LANJUTKAN_POPUP = (
+        AppiumBy.XPATH,
+        "//android.widget.Button[@content-desc='Lanjutkan' or @text='Lanjutkan']"
     )
     SWITCH_ONLINE_OFFLINE = (
         AppiumBy.XPATH,
@@ -61,7 +71,7 @@ class DrvHomePage(BasePage):
     # ==========================================================================
     CARD_SALDO_KAMU = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Saldo Kamu') or contains(@text, 'Saldo Kamu')]"
+        "//*[starts-with(@content-desc, 'Saldo Kamu') or starts-with(@text, 'Saldo Kamu')]"
     )
     VALUE_SALDO = (
         AppiumBy.XPATH,
@@ -174,18 +184,18 @@ class DrvHomePage(BasePage):
     # ==========================================================================
     # 6. BOTTOM NAVIGATION BAR
     # ==========================================================================
+    # Navigasi bawah Driver hanya: Beranda | Offline/Online | Menu. 'Aktivitas Saya' adalah kartu di Beranda.
     BOTTOM_NAV_BERANDA = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Beranda') or contains(@text, 'Beranda')][last()]"
+        "//*[@content-desc='Beranda' or @text='Beranda']"
     )
     BOTTOM_NAV_AKTIVITAS = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Aktivitas Saya') or contains(@text, 'Aktivitas Saya') or "
-        "contains(@content-desc, 'Order Saya') or contains(@text, 'Order Saya')]"
+        "//*[@content-desc='Aktivitas Saya' or @text='Aktivitas Saya']"
     )
     BOTTOM_NAV_MENU = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Menu') or contains(@text, 'Menu')]"
+        "//*[@content-desc='Menu' or @text='Menu']"
     )
 
     # ==========================================================================
@@ -193,7 +203,20 @@ class DrvHomePage(BasePage):
     # ==========================================================================
     def is_home_screen_displayed(self) -> bool:
         """Memeriksa apakah layar Beranda Driver tampil."""
+        self.dismiss_operational_popup()
         return self.is_displayed(self.HEADER_BERANDA, timeout=6) or self.is_displayed(self.CARD_SALDO_KAMU, timeout=4)
+
+    def dismiss_operational_popup(self):
+        """Tutup pop-up 'Pemberitahuan Jam Operasional' (tombol 'Lanjutkan') bila sedang tampil."""
+        if self.is_displayed(self.POPUP_JAM_OPERASIONAL, timeout=2):
+            buttons = self.driver.find_elements(*self.BTN_LANJUTKAN_POPUP)
+            if buttons:
+                buttons[0].click()
+
+    def open_wallet(self):
+        """Buka layar eWallet lewat kartu 'Saldo Kamu' di Beranda."""
+        self.dismiss_operational_popup()
+        self.click(self.CARD_SALDO_KAMU, label="Kartu Saldo Kamu")
 
     def toggle_online_offline_status(self):
         """Mengetuk tombol sakelar status kerja Online / Offline."""
