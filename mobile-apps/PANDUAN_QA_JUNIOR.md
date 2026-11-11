@@ -121,3 +121,12 @@ Backup sebelum perapian: folder `evmoto-user-mobile-automation_backup_2026-11-09
 - **Quality gate menolak pelanggaran baru:** method yang tidak ada, `assert True` atau `assert x or True`, domain production di file test, file test duplikat. Jalankan `python ../evmoto-qa-tools/quality_gate.py admin` atau `mobile` sebelum commit.
 - **Fitur baru:** mulai dari `templates/template_test_fitur_baru.py`.
 - **Skip selalu beralasan:** pakai `self.skipTest("alasan")` (Admin) atau `pytest.skip("alasan")` / `@pytest.mark.quarantine(reason="...")` (Mobile/API). Jangan menulis assertion yang selalu lulus.
+
+## 8. Sumber angka bisnis (11 November 2026)
+
+- **Tarif dan subsidi jam sibuk diambil dari Admin Dashboard environment aktif**, bukan angka yang ditulis di test. Pembacanya: `core/admin_config_reader.py` (hanya membaca halaman, tidak menyimpan apa pun).
+  - Tarif: Price control > Motorcycle Price Settings (`/tSystemPrice/special`), baris Driver dan User.
+  - Jam sibuk: Subsidi jam sibuk > Pengaturan (`/rushHour/settings`).
+- Membandingkan tarif di layar aplikasi: pakai `AdminDashboardFareCalculator.from_admin("User")`. Konstanta bawaan kalkulator adalah angka dokumen production dan hanya untuk unit test rumus.
+- Biaya e-wallet memakai rumus gross-up: `ceil(subtotal x 100 / (100 - rate))`, GoPay 2%, OVO 1,665%.
+- `api-testing/suites/test_admin_config_api.py` memeriksa konfigurasi itu sendiri (tarif Driver = User, window jam sibuk valid, tier naik). Kegagalan di sana adalah temuan konfigurasi, bukan bug kode aplikasi.

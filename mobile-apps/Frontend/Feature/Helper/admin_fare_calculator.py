@@ -108,6 +108,23 @@ class AdminDashboardFareCalculator:
             f"FarFee2 (15-100KM): +Rp {self.FAR_FEE_2:,.0f}/KM, Platform: 10%, E-Wallet Charge: 2% (GoPay/OVO)"
         )
 
+    @classmethod
+    def from_admin(cls, billing_object: str = "User") -> "AdminDashboardFareCalculator":
+        """Kalkulator dengan angka tarif dari halaman Price Admin environment aktif (bukan angka tetap).
+
+        Dipakai saat membandingkan tarif yang tampil di aplikasi staging/dev. Konstanta bawaan kelas ini
+        adalah angka dokumen production dan hanya cocok untuk unit test rumus.
+        """
+        from core.admin_config_reader import read_price_config
+        cfg = read_price_config(billing_object)
+        calc = cls()
+        calc.START_PRICE, calc.START_KM, calc.MILEAGE_FEE = cfg["startPrice"], cfg["startKm"], cfg["mileageFee"]
+        calc.FAR_FROM_1, calc.FAR_TO_1, calc.FAR_FEE_1 = cfg["farFrom1"], cfg["farTo1"], cfg["farFee1"]
+        calc.FAR_FROM_2, calc.FAR_TO_2, calc.FAR_FEE_2 = cfg["farFrom2"], cfg["farTo2"], cfg["farFee2"]
+        calc.FAR_FROM_3, calc.FAR_FEE_3 = cfg["farFrom3"], cfg["farFee3"]
+        calc.source = f"Admin Price {billing_object} (ID {cfg['price_id']})"
+        return calc
+
     def calculate_base_argo(self, distance_km: float) -> Dict[str, Any]:
         """
         Kondisi 1: Menghitung Tarif Argo Normal berdasarkan jarak persis Dashboard Admin Production:

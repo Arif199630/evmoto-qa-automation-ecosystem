@@ -89,8 +89,12 @@ def driver_simulator():
 
 @pytest.fixture(scope="function")
 def fare_calculator():
-    """Kalkulator argo berbasis settingan Dashboard Admin (/tSystemPrice/special)."""
-    return AdminDashboardFareCalculator()
+    """Kalkulator argo dengan angka tarif yang dibaca langsung dari Admin environment aktif (/tSystemPrice/special)."""
+    from core.admin_config_reader import AdminConfigError
+    try:
+        return AdminDashboardFareCalculator.from_admin("User")
+    except AdminConfigError as e:
+        pytest.skip(f"Tarif Admin tidak bisa dibaca: {e}")
 
 @pytest.fixture(scope="function")
 def wallet_helper():
