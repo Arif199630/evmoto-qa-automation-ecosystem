@@ -484,6 +484,8 @@ class TestRegister:
         [NEGATIVE TRUE - NT-07]
         Deskripsi: Mengisi field Nama Lengkap hanya dengan angka numerik (1234567890).
         Ekspektasi: Sistem menolak input nama yang tidak memuat karakter huruf alfabet.
+        Aturan dikonfirmasi user 12 Nov 2026: field Nama tidak boleh menerima input numerik.
+        Bug terverifikasi 11 Nov 2026 (repro CI run 43007909205): nama '1234567890' tetap 'Pendaftaran Berhasil.'
         """
         data = REGISTER_DATA_NEGATIVE_TRUE["TC_REG_NT_07"]
         fresh_phone = f"8002{int(time.time() * 1000) % 10000000:07d}"  # rentang 0800: bukan nomor HP
