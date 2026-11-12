@@ -11,6 +11,7 @@ import os
 import re
 import sys
 import time
+import traceback
 from pathlib import Path
 
 os.environ["TEST_USER_POOL_INDEX"] = os.getenv("E2E_USER_POOL_INDEX", "13")  # akun QA pool 13 (Cash); akun utama dipakai tarif_metode_bayar.py di run paralel
@@ -161,6 +162,7 @@ def main():
             save(d, "user", "akhir_perjalanan")
             order_dibuat = False if any("Selesai" in r or "Penilaian" in r for r in ringkasan[-3:]) else order_dibuat
     except Exception as e:
+        traceback.print_exc()
         ringkasan.append(f"langkah gagal: {type(e).__name__}: {str(e)[:200]}")
         try:
             save(d, "x", "saat_error")

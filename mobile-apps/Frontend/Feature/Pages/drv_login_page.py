@@ -154,7 +154,7 @@ class DrvLoginPage(BasePage):
 
     def enter_phone_number(self, phone: str):
         """Memasukkan nomor handphone driver ke field input."""
-        logger.info(f"Input nomor handphone driver: {phone}")
+        logger.info(f"Input nomor handphone driver: {str(phone)[:4]}****{str(phone)[-2:]}")
         self.type_text(self.FIELD_PHONE, phone, label="Field Nomor Telepon Driver")
 
     def click_join_sekarang(self):
@@ -251,7 +251,7 @@ class DrvLoginPage(BasePage):
         Alur lengkap end-to-end login Driver ke aplikasi Dev Golang.
         Input nomor -> Join Sekarang -> Masukkan OTP <EVMOTO_OTP_BYPASS> -> Handle Izin Lokasi.
         """
-        logger.info(f"Melakukan proses login driver dengan nomor: {phone}")
+        logger.info(f"Melakukan proses login driver dengan nomor: {str(phone)[:4]}****{str(phone)[-2:]}")
         self.handle_system_permissions()
 
         if self.is_login_screen_displayed():

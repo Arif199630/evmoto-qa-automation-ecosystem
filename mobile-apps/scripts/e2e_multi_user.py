@@ -14,6 +14,7 @@ import os
 import re
 import sys
 import time
+import traceback
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -154,6 +155,7 @@ def main():
         ringkasan.append(f"HASIL driver sibuk: tawaran pesanan baru selama mengantar = {tawaran} kali "
                          f"({'BENAR' if tawaran == 0 else 'PERLU DICEK'})")
     except Exception as e:
+        traceback.print_exc()
         ringkasan.append(f"langkah gagal: {type(e).__name__}: {str(e)[:220]}")
     finally:
         for d, dev, key in ((da, "A-user", "A"), (db, "B-user", "B")):

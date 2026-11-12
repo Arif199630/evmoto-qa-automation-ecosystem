@@ -14,6 +14,7 @@ import os
 import re
 import sys
 import time
+import traceback
 from pathlib import Path
 
 os.environ["TEST_USER_POOL_INDEX"] = os.getenv("TARIF_POOL_INDEX", "0")  # 0 = akun utama (Saldo EVMoto + OVO)
@@ -111,9 +112,13 @@ def main():
                 try:
                     bp.open_place_order(tujuan, pickup=PICKUP)
                 except Exception as e:
-                    ringkasan.append(f"{kategori}: '{tujuan}' gagal dibuka ({type(e).__name__})")
+                    traceback.print_exc()
+                    ringkasan.append(f"{kategori}: '{tujuan}' gagal dibuka ({type(e).__name__}: {str(e)[:120]})")
+                    save(d, f"{kategori.replace(' ', '_')}_gagal_buka")
                     continue
                 km = bp.get_trip_distance_km()
+                if km is None:
+                    save(d, f"{kategori.replace(' ', '_')}_jarak_tak_terbaca")
                 if km is not None and lo < km <= hi:
                     break
                 ringkasan.append(f"{kategori}: '{tujuan}' jarak {km} km di luar rentang {lo}-{hi}")
@@ -158,6 +163,7 @@ def main():
         except Exception:
             pass
     except Exception as e:
+        traceback.print_exc()
         ringkasan.append(f"langkah gagal: {type(e).__name__}: {str(e)[:200]}")
         try:
             save(d, "saat_error")
