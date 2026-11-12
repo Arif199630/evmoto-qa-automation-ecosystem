@@ -2302,7 +2302,7 @@ class TestOrderBehaviourMatrix:
 # Petogogan, Kebayoran Baru), dipilih lewat kolom jemput aplikasi. Bisa diganti lewat env EVMOTO_TEST_PICKUP.
 FARE_PICKUP = os.getenv("EVMOTO_TEST_PICKUP", "Ecgo Evmoto Wijaya")
 FARE_TIERS = [
-    ("Dekat", 0.0, 1.99, ["Blok M Plaza", "Blok M Square", "Taman Langsat"]),
+    ("Dekat", 0.0, 1.99, ["Starbucks Wijaya", "Wijaya Grand Centre", "Pasar Santa"]),  # dari kantor pusat: Blok M >2,3 km
     ("Sedang", 1.99, 6.0, ["Senayan City", "Gandaria City", "Pondok Indah Mall"]),
     ("Jauh", 6.0, 19.99, ["Plaza Indonesia", "Grand Indonesia", "Taman Mini Indonesia Indah"]),
     ("Sangat Jauh", 19.99, 60.0, ["Bandara Soekarno Hatta", "Ancol Taman Impian", "Summarecon Mall Bekasi"]),
@@ -2353,8 +2353,11 @@ class TestFarePerDistanceTierOnApp:
         fares = booking_page._service_card_fares()
         assert fares, "Nominal tarif tidak tampil di kartu layanan Place Order"
         sebelum_kupon, setelah_kupon = max(fares), min(fares)
-        labels = [(e.get_attribute("content-desc") or "") for e in
-                  driver.find_elements(AppiumBy.XPATH, "//android.widget.ImageView[string-length(@content-desc) > 2]")[:4]]
+        # Label titik jemput dan tujuan = dua label pertama di layar Place Order (peta layar CI: 'Ecgo Evmoto Wijaya',
+        # 'Plaza Indonesia'), setelah status koneksi dan overlay error Flutter
+        labels = [(e.get_attribute("content-desc") or "") for e in driver.find_elements(
+            AppiumBy.XPATH, "//*[string-length(@content-desc) > 2 and not(starts-with(@content-desc, 'Ping')) and "
+                            "not(starts-with(@content-desc, 'PlatformException'))]")[:2]]
         bayar = [(e.get_attribute("content-desc") or "") for e in driver.find_elements(*booking_page.BTN_PAYMENT_METHOD)]
         logger.info(f"[{tier}] jemput/tujuan {labels[:2]} | jarak {jarak} KM | metode bayar {bayar} | "
                     f"argo {sebelum_kupon} | setelah kupon {setelah_kupon}")
