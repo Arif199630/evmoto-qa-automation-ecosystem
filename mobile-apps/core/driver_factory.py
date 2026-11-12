@@ -35,7 +35,8 @@ class DriverFactory:
             return False
 
     @staticmethod
-    def create_driver(no_reset: bool = False, full_reset: bool = False, is_driver_app: bool = False):
+    def create_driver(no_reset: bool = False, full_reset: bool = False, is_driver_app: bool = False,
+                      udid: str = None, system_port: int = None):
         """
         Membuat instance driver baru.
 
@@ -60,6 +61,11 @@ class DriverFactory:
 
         logger.info(f"Menghubungkan ke Appium Server: {server_url}")
         options = get_capabilities(no_reset=no_reset, full_reset=full_reset, is_driver_app=is_driver_app)
+        # Multi-perangkat (skenario beberapa pengguna): pilih emulator dan port UiAutomator2 yang berbeda per sesi
+        if udid:
+            options.udid = udid
+        if system_port:
+            options.set_capability("appium:systemPort", int(system_port))
         driver = webdriver.Remote(command_executor=server_url, options=options)
         # Beranda User berisi peta (Google Maps) yang terus beranimasi; UiAutomator2 bawaan menunggu layar
         # "diam" sebelum mencari elemen / membaca page source sehingga bisa timeout (bukti CI: 240 detik).

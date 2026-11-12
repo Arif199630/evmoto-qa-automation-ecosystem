@@ -94,13 +94,13 @@ jobs:
 
   mobile:
     needs: quality-gate
-    if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJSON('["all","mobile","peta","repro","diag","petadriver","skrip"]'), inputs.suites) }}
+    if: ${{ github.event_name != 'workflow_dispatch' || contains(fromJSON('["all","mobile","peta","repro","diag","petadriver","skrip","skrip2"]'), inputs.suites) }}
     runs-on: ubuntu-latest
     timeout-minutes: 300
     strategy:
       fail-fast: false
       matrix:
-        shard: ${{ fromJSON((inputs.suites == 'peta' || inputs.suites == 'repro' || inputs.suites == 'diag' || inputs.suites == 'petadriver' || inputs.suites == 'skrip') && '[0]' || '[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]') }}
+        shard: ${{ fromJSON((inputs.suites == 'peta' || inputs.suites == 'repro' || inputs.suites == 'diag' || inputs.suites == 'petadriver' || inputs.suites == 'skrip' || inputs.suites == 'skrip2') && '[0]' || '[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]') }}
     env:
       SHARD_INDEX: ${{ matrix.shard }}
       SHARD_TOTAL: 16
@@ -184,9 +184,21 @@ jobs:
             # GPS emulator bawaan ada di California (Vista Del Lago Rd): aplikasi menolak 'Diluar Area Layanan'.
             # Set ke area layanan EvMoto (Jl. Wijaya I, Petogogan, Kebayoran Baru, Jakarta Selatan). Urutan: bujur lintang.
             adb emu geo fix 106.8037 -6.2449 || true
+            if [ "${{ inputs.suites }}" = "skrip2" ]; then
+              # Emulator ke-2 (AVD yang sama, read-only) untuk skenario multi-pengguna: emulator-5556
+              EMU="${ANDROID_HOME:-$ANDROID_SDK_ROOT}/emulator/emulator"; AVD=$("$EMU" -list-avds | head -1)
+              nohup "$EMU" -avd "$AVD" -read-only -port 5556 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -dns-server 8.8.8.8,1.1.1.1 > bukti/emulator2.log 2>&1 &
+              adb -s emulator-5556 wait-for-device
+              adb -s emulator-5556 shell 'while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done'
+              adb -s emulator-5556 root || true; sleep 5; adb -s emulator-5556 wait-for-device
+              adb -s emulator-5556 install -r -g apk/evmoto-user.apk
+              adb -s emulator-5556 install -r -g apk/evmoto-driver.apk
+              adb -s emulator-5556 emu geo fix 106.8037 -6.2449 || true
+              adb devices
+            fi
             nohup appium --address 127.0.0.1 --port 4723 --log-level warn > appium.log 2>&1 &
             sleep 15
-            if [ "${{ inputs.suites }}" = "peta" ]; then python mobile-apps/scripts/dump_screens.py user; python mobile-apps/scripts/dump_screens.py driver; elif [ "${{ inputs.suites }}" = "repro" ]; then python mobile-apps/scripts/reproduce_register.py; elif [ "${{ inputs.suites }}" = "diag" ]; then python mobile-apps/scripts/repro_otp_salah.py; python mobile-apps/scripts/map_activity.py; python mobile-apps/scripts/diag_first_login.py; elif [ "${{ inputs.suites }}" = "petadriver" ]; then python mobile-apps/scripts/map_driver.py; elif [ "${{ inputs.suites }}" = "skrip" ]; then SKRIP="$FILE_INCLUDE"; echo "$SKRIP" | grep -Eq '^[a-z_]+[.]py$' && python "mobile-apps/scripts/$SKRIP"; else python qa-tools/run_all.py --suite mobile cross; fi
+            if [ "${{ inputs.suites }}" = "peta" ]; then python mobile-apps/scripts/dump_screens.py user; python mobile-apps/scripts/dump_screens.py driver; elif [ "${{ inputs.suites }}" = "repro" ]; then python mobile-apps/scripts/reproduce_register.py; elif [ "${{ inputs.suites }}" = "diag" ]; then python mobile-apps/scripts/repro_otp_salah.py; python mobile-apps/scripts/map_activity.py; python mobile-apps/scripts/diag_first_login.py; elif [ "${{ inputs.suites }}" = "petadriver" ]; then python mobile-apps/scripts/map_driver.py; elif [ "${{ inputs.suites }}" = "skrip" ] || [ "${{ inputs.suites }}" = "skrip2" ]; then SKRIP="$FILE_INCLUDE"; echo "$SKRIP" | grep -Eq '^[a-z_]+[.]py$' && python "mobile-apps/scripts/$SKRIP"; else python qa-tools/run_all.py --suite mobile cross; fi
       - name: Kumpulkan bukti kegagalan (screenshot + struktur layar)
         if: always()
         run: |
