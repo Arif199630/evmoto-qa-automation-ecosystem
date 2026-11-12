@@ -116,16 +116,43 @@ def main():
         for kategori, lo, hi, tujuan_list in TIERS:
             km = None
             for tujuan in tujuan_list:
-                beranda(d)
+                try:
+                    beranda(d)
+                except Exception as e:
+                    if "instrumentation" in str(e) or "socket hang up" in str(e) or "proxy" in str(e):
+                        ringkasan.append(f"{kategori}: UiAutomator2 berhenti, sesi dibuat ulang")
+                        try:
+                            d.quit()
+                        except Exception:
+                            pass
+                        d = DriverFactory.create_driver(no_reset=True)
+                        beranda(d)
+                    else:
+                        raise
                 bp = BookingPage(d)
                 try:
                     bp.open_place_order(tujuan, pickup=PICKUP)
                 except Exception as e:
                     traceback.print_exc()
                     ringkasan.append(f"{kategori}: '{tujuan}' gagal dibuka ({type(e).__name__}: {str(e)[:120]})")
-                    save(d, f"{kategori.replace(' ', '_')}_gagal_buka")
+                    try:
+                        save(d, f"{kategori.replace(' ', '_')}_gagal_buka")
+                    except Exception:
+                        pass
+                    if "instrumentation" in str(e) or "socket hang up" in str(e) or "proxy" in str(e):
+                        ringkasan.append(f"{kategori}: UiAutomator2 berhenti, sesi dibuat ulang")
+                        try:
+                            d.quit()
+                        except Exception:
+                            pass
+                        d = DriverFactory.create_driver(no_reset=True)
                     continue
-                km = bp.get_trip_distance_km()
+                # run 43200263018: rute + kartu tarif baru tampil beberapa detik setelah Place Order terbuka
+                km = None
+                batas = time.time() + 40
+                while km is None and time.time() < batas:
+                    tunggu_overlay(d, 10)
+                    km = bp.get_trip_distance_km()
                 if km is None:
                     save(d, f"{kategori.replace(' ', '_')}_jarak_tak_terbaca")
                 if km is not None and lo < km <= hi:
