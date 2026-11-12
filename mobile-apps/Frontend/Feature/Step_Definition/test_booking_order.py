@@ -2358,6 +2358,14 @@ class TestFarePerDistanceTierOnApp:
         bayar = [(e.get_attribute("content-desc") or "") for e in driver.find_elements(*booking_page.BTN_PAYMENT_METHOD)]
         logger.info(f"[{tier}] jemput/tujuan {labels[:2]} | jarak {jarak} KM | metode bayar {bayar} | "
                     f"argo {sebelum_kupon} | setelah kupon {setelah_kupon}")
+        # Catat detail tiap kategori (lulus maupun gagal) ke file bukti yang ikut diunggah CI
+        from pathlib import Path
+        bukti = Path(__file__).resolve().parents[3] / "reports" / "repro" / "tarif_per_kategori.txt"
+        bukti.parent.mkdir(parents=True, exist_ok=True)
+        with bukti.open("a", encoding="utf-8") as fh:
+            fh.write(f"{tier} | jemput: {labels[0] if labels else '-'} | tujuan: {labels[1] if len(labels) > 1 else '-'} | "
+                     f"jarak {jarak} km | metode bayar: {', '.join(bayar) or '-'} | argo sebelum kupon Rp{sebelum_kupon} | "
+                     f"setelah kupon Rp{setelah_kupon}\n")
 
         then("Argo sebelum kupon sesuai rumus Price Admin (termasuk biaya jarak jauh)")
         ok, pesan = fare_calculator.verify_ui_fare(f"Rp{sebelum_kupon}", distance_km=jarak, distance_rounding=0.005)
