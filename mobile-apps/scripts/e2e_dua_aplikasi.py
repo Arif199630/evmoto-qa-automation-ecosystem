@@ -13,7 +13,7 @@ import sys
 import time
 from pathlib import Path
 
-os.environ["TEST_USER_POOL_INDEX"] = os.getenv("E2E_USER_POOL_INDEX", "14")
+os.environ["TEST_USER_POOL_INDEX"] = os.getenv("E2E_USER_POOL_INDEX", "0")  # 0 = akun utama: tidak dipakai job lain saat run booking
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "Frontend" / "Feature")]
 
