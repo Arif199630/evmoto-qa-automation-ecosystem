@@ -10,7 +10,7 @@ import sys
 import time
 from pathlib import Path
 
-os.environ["TEST_USER_POOL_INDEX"] = os.getenv("MAP_POOL_INDEX", "15")
+os.environ["TEST_USER_POOL_INDEX"] = os.getenv("MAP_POOL_INDEX", "0")  # 0 = akun utama (cek saldo dan e-wallet tertaut)
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "Frontend" / "Feature")]
 
