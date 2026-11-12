@@ -343,7 +343,7 @@ class TestRegister:
         print("\n--- [PILAR 3: NT-01] TEST REGISTRASI DENGAN OTP SALAH ---")
         login_page.navigate_to_register()
         register_page.fill_phone(data["phone"])
-        register_page.fill_name("QA Tester Invalid OTP")
+        register_page.fill_name("QA Invalid OTP")
         register_page.request_otp()
 
         register_page.pause(1.2, 1.8, "Memasukkan kode OTP salah 9999")
@@ -372,6 +372,7 @@ class TestRegister:
         print("\n--- [PILAR 3: NT-02] TEST NOMOR HARUS DIAWALI ANGKA 8 ---")
         login_page.navigate_to_register()
         register_page.fill_phone(data["phone"])
+        register_page.fill_name("QA Awalan Nol")  # pindah fokus: validasi nomor tampil setelah kolom ditinggalkan
 
         assert register_page.is_phone_must_start_with_8_displayed(timeout=5), (
             f"[GAGAL NT-02] Validasi 'Nomor telepon harus diawali dengan 8' tidak tampil untuk nomor '{data['phone']}'!"
@@ -392,7 +393,7 @@ class TestRegister:
         print("\n--- [PILAR 3: NT-03] TEST NOMOR HP KURANG DARI 8 DIGIT ---")
         login_page.navigate_to_register()
         register_page.fill_phone(data["phone"])
-        register_page.fill_name("QA Tester Short Phone")
+        register_page.fill_name("QA Short Phone")
 
         assert register_page.is_phone_min_8_digit_displayed(timeout=5), (
             f"[GAGAL NT-03] Validasi 'Nomor telepon minimal 8 digit' tidak tampil untuk nomor '{data['phone']}'!"
@@ -441,7 +442,7 @@ class TestRegister:
         print("\n--- [PILAR 3: NT-05] TEST FIELD NOMOR TELEPON KOSONG ---")
         login_page.navigate_to_register()
         register_page.clear_phone()
-        register_page.fill_name("QA Tester Empty Phone")
+        register_page.fill_name("QA Empty Phone")
         register_page.request_otp()
 
         assert register_page.is_phone_required_displayed(timeout=5), (
@@ -464,7 +465,7 @@ class TestRegister:
         print("\n--- [PILAR 3: NT-06] TEST KODE OTP INCOMPLETE (< 4 DIGIT) ---")
         login_page.navigate_to_register()
         register_page.fill_phone(fresh_phone)
-        register_page.fill_name("QA Tester Incomplete OTP")
+        register_page.fill_name("QA Incomplete OTP")
         register_page.request_otp()
         register_page.fill_otp(data["otp_incomplete"])
         register_page.submit_register()
@@ -523,7 +524,7 @@ class TestRegister:
         given("Pengguna berada di layar pendaftaran akun baru")
         login_page.navigate_to_register()
         register_page.fill_phone(fresh_phone)
-        register_page.fill_name("QA Tester Invalid Ref Char")
+        register_page.fill_name("QA Invalid Ref Char")
 
         when(f"Pengguna menginput kode referral bersimbol khusus '{data['referral_code_invalid']}'")
         register_page.fill_referral(data["referral_code_invalid"])

@@ -71,7 +71,9 @@ class RegisterPage(BasePage):
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Silakan masukkan nomor ponsel Anda') or "
         "contains(@text, 'Silakan masukkan nomor ponsel Anda') or "
-        "contains(@content-desc, 'Please enter your phone number') or contains(@text, 'Please enter your phone number')]"
+        "contains(@content-desc, 'Please enter your phone number') or contains(@text, 'Please enter your phone number') or "
+        # teks asli: 'Wajib diisi' di bawah kolom Nomor Telepon (sebelum label Nama Lengkap), layar CI 11 Nov 2026
+        "((@content-desc='Wajib diisi' or @text='Wajib diisi') and following::*[@content-desc='Nama Lengkap' or @text='Nama Lengkap'])]"
     )
     BTN_GO_TO_HOME = (AppiumBy.XPATH, "//*[contains(@content-desc, 'Home') or contains(@content-desc, 'Beranda')]")
 

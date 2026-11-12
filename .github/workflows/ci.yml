@@ -177,7 +177,7 @@ jobs:
             nohup adb logcat -v time > bukti/logcat.txt 2>&1 &
             nohup appium --address 127.0.0.1 --port 4723 --log-level warn > appium.log 2>&1 &
             sleep 15
-            if [ "${{ inputs.suites }}" = "peta" ]; then python mobile-apps/scripts/dump_screens.py user; python mobile-apps/scripts/dump_screens.py driver; elif [ "${{ inputs.suites }}" = "repro" ]; then python mobile-apps/scripts/reproduce_register.py; elif [ "${{ inputs.suites }}" = "diag" ]; then python mobile-apps/scripts/diag_first_login.py; python mobile-apps/scripts/map_activity.py; else python qa-tools/run_all.py --suite mobile cross; fi
+            if [ "${{ inputs.suites }}" = "peta" ]; then python mobile-apps/scripts/dump_screens.py user; python mobile-apps/scripts/dump_screens.py driver; elif [ "${{ inputs.suites }}" = "repro" ]; then python mobile-apps/scripts/reproduce_register.py; elif [ "${{ inputs.suites }}" = "diag" ]; then python mobile-apps/scripts/repro_otp_salah.py; python mobile-apps/scripts/map_activity.py; python mobile-apps/scripts/diag_first_login.py; else python qa-tools/run_all.py --suite mobile cross; fi
       - name: Kumpulkan bukti kegagalan (screenshot + struktur layar)
         if: always()
         run: |

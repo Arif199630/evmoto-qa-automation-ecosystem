@@ -153,7 +153,7 @@ REGISTER_DATA_POSITIVE_TRUE = {
     "TC_REG_PT_02": {
         "tag": "POSITIVE_TRUE",
         "description": "Registrasi akun baru dengan kode referral dev aktif (EVMOTO26)",
-        "full_name": "QA Tester Referral EvMoto",
+        "full_name": "QA Referral EvMoto",
         "otp": dev_otp,
         "referral_code": "EVMOTO26",
         "expected_result": "SUCCESS_REGISTRATION_WITH_REFERRAL"
@@ -161,7 +161,7 @@ REGISTER_DATA_POSITIVE_TRUE = {
     "TC_REG_PT_03": {
         "tag": "POSITIVE_TRUE",
         "description": "Registrasi akun baru dengan nama berkarakter khusus sah Indonesia (apostrof & tanda hubung)",
-        "full_name": "Ahmad Syafi'i Kusuma-Wardani",
+        "full_name": "Syafi'i Kusuma-Wardi",
         "otp": dev_otp,
         "referral_code": "",
         "expected_result": "SUCCESS_REGISTRATION_SPECIAL_NAME"
@@ -185,7 +185,7 @@ REGISTER_DATA_POSITIVE_FALSE = {
     "TC_REG_PF_02": {
         "tag": "POSITIVE_FALSE",
         "description": "Registrasi dengan kode referral yang tidak valid / kadaluarsa",
-        "full_name": "QA Tester Invalid Ref",
+        "full_name": "QA Invalid Referral",
         "otp": dev_otp,
         "referral_code": "EXPIRED99",
         "expected_error": "Kode referral tidak valid atau sudah berakhir."
