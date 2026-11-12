@@ -13,7 +13,7 @@ import sys
 import time
 from pathlib import Path
 
-os.environ["TEST_USER_POOL_INDEX"] = os.getenv("E2E_USER_POOL_INDEX", "0")  # 0 = akun utama: tidak dipakai job lain saat run booking
+os.environ["TEST_USER_POOL_INDEX"] = os.getenv("E2E_USER_POOL_INDEX", "13")  # akun QA pool 13 (Cash); akun utama dipakai tarif_metode_bayar.py di run paralel
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "Frontend" / "Feature")]
 
