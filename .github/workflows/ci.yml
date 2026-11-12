@@ -3,6 +3,8 @@
 # Hanya environment dev/staging; staging_guard membatalkan run yang mengarah ke production.
 # Semua kredensial dari GitHub Secrets (lihat README "Secrets yang dibutuhkan"); tidak ada nilai rahasia di file ini.
 name: evmoto-regression
+# Judul run memuat input supaya skrip pause/lanjutkan (evmoto-qa-tools/jadwal) tahu cara mengulang run ini
+run-name: "evmoto-regression ${{ inputs.suites || 'jadwal' }} ${{ inputs.file_filter }}"
 
 on:
   workflow_dispatch:
