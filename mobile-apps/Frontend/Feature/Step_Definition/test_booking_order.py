@@ -36,6 +36,7 @@ Daftar Cakupan Pengujian:
 ================================================================================
 """
 import os
+import re
 import time
 import math
 import pytest
@@ -2287,3 +2288,81 @@ class TestOrderBehaviourMatrix:
 
 
 
+
+
+# ==============================================================================
+# MATRIKS TARIF DI LAYAR APLIKASI: SEMUA KATEGORI JARAK (ditambahkan 12 Nov 2026)
+# ==============================================================================
+# TestOrderBehaviourMatrix di atas hanya menguji rumus kalkulator (tanpa aplikasi). Kelas ini membuka aplikasi User
+# asli untuk tiap kategori jarak dan membandingkan tarif di layar Place Order dengan konfigurasi Price Admin aktif.
+# Aturan dikonfirmasi user 12 Nov 2026: biaya jarak jauh (farFee) wajib ikut dihitung di tarif.
+# Titik jemput = lokasi GPS emulator CI (Jl. Wijaya I, Jakarta Selatan). Tiap kategori punya beberapa tujuan cadangan;
+# tujuan pertama yang jaraknya masuk rentang kategori dipakai. Tidak pernah menekan 'Pesan EVMoto'.
+FARE_TIERS = [
+    ("Dekat", 0.0, 1.99, ["Blok M Plaza", "Blok M Square", "Taman Langsat"]),
+    ("Sedang", 1.99, 6.0, ["Senayan City", "Gandaria City", "Pondok Indah Mall"]),
+    ("Jauh", 6.0, 19.99, ["Plaza Indonesia", "Grand Indonesia", "Taman Mini Indonesia Indah"]),
+    ("Sangat Jauh", 19.99, 60.0, ["Bandara Soekarno Hatta", "Ancol Taman Impian", "Summarecon Mall Bekasi"]),
+]
+
+
+class TestFarePerDistanceTierOnApp:
+
+    @staticmethod
+    def _kembali_ke_beranda(driver, home_page):
+        for _ in range(4):
+            if home_page.is_home_screen_displayed(timeout=3):
+                return
+            driver.back()
+            time.sleep(1.5)
+
+    @pytest.mark.booking
+    @pytest.mark.parametrize("tier,min_km,max_km,tujuan_list", FARE_TIERS, ids=[t[0].replace(" ", "_") for t in FARE_TIERS])
+    def test_TC_FARE_UI_tarif_layar_sesuai_admin_per_kategori_jarak(self, driver, authenticated_home, home_page,
+                                                                     booking_page, fare_calculator,
+                                                                     tier, min_km, max_km, tujuan_list):
+        """
+        [Pilar 1 - Positive True] Tarif di layar Place Order sesuai Price Admin untuk kategori jarak {tier}.
+        Ekspektasi:
+          1. Jarak yang tampil masuk rentang kategori (bila tidak ada tujuan yang cocok: data uji, bukan bug).
+          2. Argo sebelum kupon = startPrice + (jarak - startKm) x mileageFee + biaya jarak jauh per tier (farFee).
+          3. Harga setelah kupon = argo - nominal 'Diskon Rp …' yang tampil.
+        """
+        given(f"Pengguna di Beranda dengan titik jemput area layanan, kategori jarak {tier} ({min_km}-{max_km} KM)")
+        dicoba = []
+        jarak = None
+        for tujuan in tujuan_list:
+            self._kembali_ke_beranda(driver, home_page)
+            booking_page.open_place_order(tujuan)
+            if not booking_page.is_place_order_displayed(timeout=10):
+                dicoba.append(f"{tujuan}: layar Place Order tidak tampil")
+                continue
+            jarak = booking_page.get_trip_distance_km()
+            if jarak is not None and min_km < jarak <= max_km:
+                break
+            dicoba.append(f"{tujuan}: {jarak} KM")
+            jarak = None
+        assert jarak is not None, (
+            f"[DATA UJI] Tidak ada tujuan dengan jarak kategori {tier} ({min_km}-{max_km} KM). Dicoba: {dicoba}"
+        )
+
+        when(f"Aplikasi menampilkan tarif untuk jarak {jarak} KM ({tier})")
+        fares = booking_page._service_card_fares()
+        assert fares, "Nominal tarif tidak tampil di kartu layanan Place Order"
+        sebelum_kupon, setelah_kupon = max(fares), min(fares)
+        logger.info(f"[{tier}] jarak {jarak} KM | argo {sebelum_kupon} | setelah kupon {setelah_kupon}")
+
+        then("Argo sebelum kupon sesuai rumus Price Admin (termasuk biaya jarak jauh)")
+        ok, pesan = fare_calculator.verify_ui_fare(f"Rp{sebelum_kupon}", distance_km=jarak, distance_rounding=0.005)
+        assert ok, f"[{tier}] Tarif di layar tidak sesuai Price Admin: {pesan}"
+
+        and_step("Harga setelah kupon = argo dikurangi diskon yang tampil")
+        diskon_el = driver.find_elements(*booking_page.BTN_APPLY_VOUCHER)
+        if len(fares) >= 2 and diskon_el:
+            label = diskon_el[0].get_attribute("content-desc") or ""
+            angka = re.sub(r"[^0-9]", "", label)
+            assert angka, f"Nominal diskon tidak terbaca dari '{label}'"
+            assert setelah_kupon == max(0, sebelum_kupon - int(angka)), (
+                f"[{tier}] Harga setelah kupon Rp{setelah_kupon} != argo Rp{sebelum_kupon} - diskon Rp{angka}"
+            )
+        self._kembali_ke_beranda(driver, home_page)
