@@ -21,6 +21,7 @@ sys.path[:0] = [str(ROOT), str(ROOT / "Frontend" / "Feature")]
 from config import config  # noqa: E402
 from core.driver_factory import DriverFactory  # noqa: E402
 from Pages.login_page import LoginPage  # noqa: E402
+from _diag_util import buka_aplikasi_bersih, izinkan_lokasi, log  # noqa: E402
 
 OUT = ROOT / "reports" / "repro" / "diag_first_login"
 PREFIX = os.getenv("TEST_USER_POOL_PREFIX", "")
@@ -57,6 +58,8 @@ def tunggu_hasil(driver, label, detik=45):
     """Catat layar tiap 3 detik sampai layar nama / Beranda muncul."""
     mulai = time.time()
     while time.time() - mulai < detik:
+        if izinkan_lokasi(driver):
+            summary.append(f"   {label}: dialog izin lokasi Android diketuk 'Saat aplikasi digunakan'")
         s = layar(driver)
         if s != "lain":
             summary.append(f"   {label}: layar '{s}' muncul setelah {time.time() - mulai:.1f} detik")
@@ -77,8 +80,8 @@ def indexes():
 def satu_akun(driver, idx):
     phone = f"{PREFIX}{idx:02d}"
     summary.append(f"== akun indeks {idx:02d} ({phone[:4]}****{phone[-2:]})")
-    driver.execute_script("mobile: clearApp", {"appId": config.APP_PACKAGE})
-    driver.activate_app(config.APP_PACKAGE)
+    log(f"akun {idx:02d}: buka aplikasi bersih")
+    buka_aplikasi_bersih(driver, config.APP_PACKAGE)
     login = LoginPage(driver)
     if not login.is_login_screen_displayed(timeout=25):
         bukti(driver, f"a{idx:02d}_bukan_layar_login")

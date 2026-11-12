@@ -18,6 +18,7 @@ sys.path[:0] = [str(ROOT), str(ROOT / "Frontend" / "Feature")]
 from config import config  # noqa: E402
 from core.driver_factory import DriverFactory  # noqa: E402
 from Pages.login_page import LoginPage  # noqa: E402
+from _diag_util import buka_aplikasi_bersih, izinkan_lokasi  # noqa: E402
 
 OUT = ROOT / "reports" / "repro" / "otp_salah"
 summary = []
@@ -36,13 +37,14 @@ def main():
     summary.append(f"akun {phone[:4]}****{phone[-2:]} | OTP salah = OTP dev dengan tiap digit +1")
     driver = DriverFactory.create_driver()
     try:
-        driver.execute_script("mobile: clearApp", {"appId": config.APP_PACKAGE})
-        driver.activate_app(config.APP_PACKAGE)
+        buka_aplikasi_bersih(driver, config.APP_PACKAGE)
         login = LoginPage(driver)
         login.is_login_screen_displayed(timeout=25)
         login.input_phone_number(phone)
         login.click_submit_login()
         login.find(login.TITLE_OTP, timeout=15)
+        field = login.find(login.FIELD_OTP, timeout=10)
+        izinkan_lokasi(driver)
         field = login.find(login.FIELD_OTP, timeout=10)
         field.click()
         t0 = time.time()
@@ -51,6 +53,8 @@ def main():
             time.sleep(0.15)
         seen = {}
         for i in range(20):
+            if izinkan_lokasi(driver):
+                summary.append(f"  +{time.time() - t0:4.1f} dtk: dialog izin lokasi Android muncul dan diketuk (bukan bagian aplikasi)")
             xml = driver.page_source
             items = teks(xml)
             for t in items:

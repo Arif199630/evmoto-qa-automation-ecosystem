@@ -16,6 +16,7 @@ sys.path[:0] = [str(ROOT), str(ROOT / "Frontend" / "Feature")]
 from config import config  # noqa: E402
 from core.driver_factory import DriverFactory  # noqa: E402
 from Pages.login_page import LoginPage  # noqa: E402
+from _diag_util import izinkan_lokasi, log  # noqa: E402
 
 OUT = ROOT / "reports" / "repro" / "map_activity"
 index = []
@@ -29,6 +30,7 @@ def teks(xml):
 def save(driver, nama):
     global step
     step += 1
+    log(f"simpan layar {step:02d}_{nama}")
     xml = driver.page_source
     (OUT / f"{step:02d}_{nama}.xml").write_text(xml, encoding="utf-8")
     driver.save_screenshot(str(OUT / f"{step:02d}_{nama}.png"))
@@ -36,6 +38,8 @@ def save(driver, nama):
 
 
 def tap(driver, xpath, nama, tunggu=3):
+    log(f"ketuk {nama}")
+    izinkan_lokasi(driver)
     els = driver.find_elements("xpath", xpath)
     if not els:
         index.append(f"   tidak ditemukan: {nama} ({xpath})")
@@ -55,12 +59,17 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     driver = DriverFactory.create_driver()
     try:
+        log("driver siap, cek layar login")
+        izinkan_lokasi(driver)
         login = LoginPage(driver)
         if login.is_login_screen_displayed(timeout=20):
+            log("login akun utama")
             login.input_phone_number(config.ACTIVE_PHONE)
             login.click_submit_login()
             login.input_otp_dev(config.ACTIVE_OTP)
+        log("OTP selesai, tunggu Beranda")
         time.sleep(5)
+        izinkan_lokasi(driver)
         for label in ("Lanjutkan", "Nanti", "Tutup", "OK"):  # popup sambutan / jam operasional bila ada
             els = driver.find_elements("xpath", f"//*[@content-desc='{label}' or @text='{label}']")
             if els:
