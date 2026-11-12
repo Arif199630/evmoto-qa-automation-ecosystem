@@ -87,6 +87,14 @@ def beranda(d):
             time.sleep(1.5)
 
 
+def tunggu_overlay(d, detik=20):
+    """Tunggu overlay merah 'PlatformException ... newLatLngBounds' di Place Order hilang (menahan ketukan)."""
+    deadline = time.time() + detik
+    while time.time() < deadline and d.find_elements(
+            "xpath", "//*[starts-with(@content-desc,'PlatformException') or starts-with(@text,'PlatformException')]"):
+        time.sleep(1)
+
+
 def diskon(d):
     els = d.find_elements("xpath", "//*[starts-with(@content-desc,'Diskon') or starts-with(@content-desc,'Belum ada promosi')]")
     return (els[0].get_attribute("content-desc") or "").strip() if els else ""
@@ -129,7 +137,13 @@ def main():
                 continue
             for kode, nama, rate in METODE:
                 try:
-                    bp.select_payment_method(kode)
+                    try:
+                        tunggu_overlay(d)
+                        bp.select_payment_method(kode)
+                    except Exception:
+                        # run 43197232012: ketukan pertama ke chip metode bayar tertahan overlay PlatformException
+                        tunggu_overlay(d)
+                        bp.select_payment_method(kode)
                     time.sleep(3)
                 except Exception as e:
                     rows.append(f"{kategori}\t{tujuan}\t{km}\t{nama}\t-\t-\t-\t-\t-\ttidak bisa dipilih: {str(e)[:90]}")
