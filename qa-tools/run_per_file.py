@@ -136,11 +136,37 @@ groups = [units[i::buckets] for i in range(buckets)]
 RESUME_DIR = os.getenv("RESUME_DIR")
 
 
+# Tanda hasil yang gagal karena lingkungan (emulator/Appium mati), bukan karena aplikasi atau test.
+# Hasil seperti ini tidak dipakai ulang saat melanjutkan run, sehingga unitnya dijalankan lagi.
+INFRA_MARKERS = ("Appium tidak aktif di", "device offline", "instrumentation process is not running",
+                 "Could not find a connected Android device", "socket hang up")
+infra_down = threading.Event()
+
+
+def has_infra_error(xml_path):
+    try:
+        text = Path(xml_path).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+    return any(m in text for m in INFRA_MARKERS)
+
+
+def appium_alive():
+    import socket
+    url = os.getenv("APPIUM_SERVER_URL", "http://127.0.0.1:4723").split("//")[-1].split("/")[0]
+    host, port = url.split(":")
+    try:
+        with socket.create_connection((host, int(port)), timeout=2):
+            return True
+    except OSError:
+        return False
+
+
 def find_previous(stem):
-    """XML unit yang sama dari run sebelumnya (RESUME_DIR), di folder suite yang sama."""
+    """XML unit yang sama dari run sebelumnya (RESUME_DIR), di folder suite yang sama, tanpa error lingkungan."""
     if not RESUME_DIR:
         return None
-    hits = [p for p in Path(RESUME_DIR).rglob(f"{stem}.xml") if p.parent.name == out_dir.name]
+    hits = [p for p in Path(RESUME_DIR).rglob(f"{stem}.xml") if p.parent.name == out_dir.name and not has_infra_error(p)]
     return max(hits, key=lambda p: p.stat().st_mtime) if hits else None
 
 
@@ -149,6 +175,9 @@ def run_bucket(index, group):
     with log.open("a", encoding="utf-8") as fh:
         for stem, label, targets, _count, _device in group:
             xml = out_dir / f"{stem}.xml"
+            if infra_down.is_set():
+                fh.write(f"### {label}\n### DILEWATI: emulator/Appium mati, unit ini dijalankan saat run dilanjutkan\n")
+                continue
             if xml.exists():
                 continue  # sudah selesai di run sebelumnya
             previous = find_previous(stem)
@@ -163,6 +192,12 @@ def run_bucket(index, group):
             proc = subprocess.run(cmd, cwd=project, stdout=fh, stderr=subprocess.STDOUT, env=os.environ.copy())
             fh.write(f"### exit {proc.returncode} {label}\n")
             fh.flush()
+            if has_infra_error(xml) and not appium_alive():
+                # Emulator/Appium mati: unit ini dan sisanya tidak dicatat sebagai gagal palsu
+                infra_down.set()
+                xml.rename(xml.with_name(xml.name + ".infra_error"))  # bukan .xml: tidak ikut dihitung di laporan
+                (out_dir / "INFRA_DOWN").write_text(f"emulator/Appium mati saat {label}", encoding="utf-8")
+                fh.write("### EMULATOR/APPIUM MATI: unit ini dan sisanya dijalankan ulang saat run dilanjutkan\n")
 
 
 threads = [threading.Thread(target=run_bucket, args=(i, g)) for i, g in enumerate(groups)]
