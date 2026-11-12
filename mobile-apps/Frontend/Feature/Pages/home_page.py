@@ -395,7 +395,38 @@ class HomePage(BasePage):
         contains('Home') / contains('Hi,') yang terlalu lebar dan bisa cocok di layar lain.
         """
         self.dismiss_welcome_popup_if_present()
-        return self.is_displayed(self.HOME_SCREEN_MARKER, timeout=timeout)
+        deadline = time.time() + timeout
+        while True:
+            if self.driver.find_elements(*self.HOME_SCREEN_MARKER):
+                return True
+            # Akun yang belum punya nama diarahkan ke layar 'Masukkan nama pengguna' setelah OTP. Layar itu bisa
+            # muncul lebih dari 15 detik setelah OTP saat koneksi lambat (bukti CI 11 Nov 2026), jadi ditangani di sini juga.
+            if self.driver.find_elements(*self.FIRST_LOGIN_NAME_TITLE):
+                self._fill_first_login_name()
+                deadline = max(deadline, time.time() + 10)
+            if time.time() > deadline:
+                return False
+            time.sleep(0.5)
+
+    FIRST_LOGIN_NAME_TITLE = (AppiumBy.XPATH, "//*[@content-desc='Masukkan nama pengguna' or @text='Masukkan nama pengguna']")
+    FIRST_LOGIN_NAME_SAVE = (AppiumBy.XPATH, "//android.widget.Button[@content-desc='Simpan' or @text='Simpan']")
+
+    def _fill_first_login_name(self, name: str = "QA Auto"):
+        """Isi nama pada layar onboarding akun baru lalu tekan 'Simpan'."""
+        logger.info("Layar 'Masukkan nama pengguna' tampil: mengisi nama lalu Simpan")
+        try:
+            field = self.driver.find_element(AppiumBy.XPATH, "//android.widget.EditText")
+            field.click()
+            time.sleep(0.3)
+            field.send_keys(name)
+            time.sleep(0.5)
+            if self.driver.is_keyboard_shown():
+                self.driver.hide_keyboard()
+                time.sleep(0.5)
+            self.driver.find_element(*self.FIRST_LOGIN_NAME_SAVE).click()
+            time.sleep(2)
+        except Exception as e:
+            logger.warning(f"Gagal mengisi layar nama pengguna: {e}")
 
     # 1. Header & Greeting
     def get_user_greeting_text(self) -> str:
