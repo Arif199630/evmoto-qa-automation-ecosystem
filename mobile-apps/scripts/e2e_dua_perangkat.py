@@ -31,6 +31,52 @@ e.OUT = ROOT / "reports" / "repro" / "e2e_dua_perangkat"
 PESAN = "//android.widget.Button[@content-desc='Pesan EVMoto' or @text='Pesan EVMoto']"
 
 
+SLIDER = ("//android.widget.ImageView[@clickable='true' and string-length(@content-desc)>0 and "
+          "not(contains(@content-desc,'Batalkan'))]")
+
+
+def slider_driver(dd, detik=60):
+    """Slider tahap order di aplikasi Driver (mis. ImageView 'Mengantar penumpang' di bagian bawah, lebar > 200 px).
+
+    Run 43200401778: setelah order diterima, layar Driver memuat (spinner) beberapa detik sebelum slider tampil.
+    """
+    deadline = time.time() + detik
+    while time.time() < deadline:
+        for el in dd.find_elements("xpath", SLIDER):
+            rc = el.rect
+            if rc["width"] >= 200 and rc["y"] > 350:
+                return el
+        time.sleep(3)
+    return None
+
+
+def geser_el(dd, el):
+    rc = el.rect
+    y = rc["y"] + rc["height"] // 2
+    label = (el.get_attribute("content-desc") or "")[:50]
+    dd.swipe(rc["x"] + 20, y, rc["x"] + rc["width"] - 10, y, 900)
+    time.sleep(4)
+    return label
+
+
+def batalkan_driver(dd, e, nama):
+    """Batalkan order aktif dari aplikasi Driver (tombol 'Batalkan' + konfirmasi) untuk membersihkan staging."""
+    if not e.ketuk(dd, "//android.widget.Button[@content-desc='Batalkan' or @text='Batalkan']", 3):
+        return False
+    e.save(dd, "driver", f"{nama}_dialog_batal")
+    for label in ("Ya, Batalkan", "Ya", "Batalkan Pesanan", "Konfirmasi"):
+        if e.ketuk(dd, f"//*[@content-desc='{label}' or @text='{label}']", 3):
+            break
+    # alasan pembatalan bila diminta
+    els = dd.find_elements("xpath", "//android.widget.RadioButton | //*[@clickable='true' and contains(@content-desc,'Lainnya')]")
+    if els:
+        els[0].click()
+        time.sleep(1)
+        e.ketuk(dd, "//android.widget.Button[contains(@content-desc,'Kirim') or contains(@content-desc,'Batalkan') or contains(@content-desc,'Konfirmasi')]", 3)
+    e.save(dd, "driver", f"{nama}_setelah_batal")
+    return True
+
+
 def main():
     e.OUT.mkdir(parents=True, exist_ok=True)
     r = e.ringkasan
@@ -44,6 +90,16 @@ def main():
         time.sleep(4)
         e.tutup_popup(dd)
         xml = e.save(dd, "driver", "beranda")
+        if 'content-desc="Batalkan"' in xml and batalkan_driver(dd, e, "sisa_run_lalu"):
+            r.append("   order aktif sisa run sebelumnya dibatalkan dari aplikasi Driver")
+            xml = e.save(dd, "driver", "beranda_setelah_bersih")
+        elif "Pesanan Berjalan" in xml and e.ketuk(dd, "//*[@content-desc='Pesanan Berjalan']", 4):
+            xml2 = e.save(dd, "driver", "cek_pesanan_berjalan")
+            if "Batalkan" in xml2 and batalkan_driver(dd, e, "sisa_run_lalu"):
+                r.append("   order aktif sisa run sebelumnya dibatalkan dari aplikasi Driver")
+            dd.back()
+            time.sleep(2)
+            xml = e.save(dd, "driver", "beranda_2")
         if "content-desc=\"Offline\"" in xml:
             e.ketuk(dd, "//*[@content-desc='Offline' or @text='Offline']", 3)
         xml = e.save(dd, "driver", "status")
@@ -73,14 +129,22 @@ def main():
             r.append(f"   geser terima: {e.geser(dd, ['Swipe', 'Geser', 'Terima'])}")
             e.save(dd, "driver", "setelah_terima")
             e.save(du, "user", "driver_ditemukan")
-            for tahap in range(6):
-                lbl = e.geser(dd, ["Geser", "Swipe", "Tiba", "Mulai", "Selesai", "Berangkat", "Antar"])
-                if not lbl:
+            sebelumnya, ulang = None, 0
+            for tahap in range(8):
+                el = slider_driver(dd, 60)
+                if el is None:
+                    r.append(f"   tahap {tahap + 1}: slider tidak tampil dalam 60 dtk")
                     break
+                lbl = geser_el(dd, el)
+                ulang = ulang + 1 if lbl == sebelumnya else 0
+                sebelumnya = lbl
                 r.append(f"   tahap {tahap + 1}: geser '{lbl}'")
                 e.save(dd, "driver", f"tahap_{tahap + 1}")
                 e.save(du, "user", f"tahap_{tahap + 1}")
-            for label in ("Sudah Diterima", "Terima Pembayaran", "Selesai", "OK"):
+                if ulang >= 2:
+                    r.append("   slider yang sama 3x berturut-turut, berhenti")
+                    break
+            for label in ("Sudah Diterima", "Terima Pembayaran", "Selesai", "OK", "Kembali ke Beranda"):
                 if e.ketuk(dd, f"//*[@content-desc='{label}' or @text='{label}']", 3):
                     e.save(dd, "driver", f"ketuk_{label.replace(' ', '_')}")
             e.save(dd, "driver", "akhir")
@@ -97,6 +161,8 @@ def main():
                     e.ketuk(du, f"//*[contains(@content-desc, '{label}') or contains(@text, '{label}')]", 2)
                 e.save(du, "user", "pembersihan_batal")
             if dd is not None:
+                if order_dibuat and batalkan_driver(dd, e, "pembersihan"):
+                    r.append("   pembersihan: order dibatalkan dari aplikasi Driver")
                 e.ketuk(dd, "//*[@content-desc='Online' or @text='Online']", 2)
                 e.save(dd, "driver", "pembersihan_offline")
         except Exception as ex:
