@@ -187,7 +187,7 @@ class TestComprehensiveE2E:
 
         # Promo Carousel & Pull to refresh
         when("Menguji carousel banner promo dengan gestur swipe horizontal")
-        self.home_page.swipe_promo_banner_next(direction="left")
+        self.home_page.swipe_promo_banner_next()
         time.sleep(1.0)
         self.home_page.pull_to_refresh_home()
         time.sleep(1.5)

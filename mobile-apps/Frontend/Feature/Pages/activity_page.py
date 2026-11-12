@@ -29,30 +29,39 @@ class ActivityPage(BasePage):
     # ==========================================================================
     # 0. TAB NAVIGASI UTAMA (BOTTOM NAVIGATION BAR)
     # ==========================================================================
+    # peta layar CI 12 Nov 2026: 13_aktivitas_akun_qa -> tab bawah = ImageView 'Beranda' / 'Aktivitas' / 'Akun'.
+    # Dibatasi ImageView karena judul layar (View 'Aktivitas') memakai kata yang sama.
     NAV_ACTIVITY = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Activity') or contains(@content-desc, 'Aktivitas') or "
-        "contains(@text, 'Activity') or contains(@text, 'Aktivitas')]"
+        "//android.widget.ImageView[starts-with(@content-desc, 'Aktivitas') or starts-with(@content-desc, 'Activity')]"
     )
     NAV_HOME = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Home') or contains(@content-desc, 'Beranda') or "
-        "contains(@text, 'Home') or contains(@text, 'Beranda')]"
+        "//android.widget.ImageView[starts-with(@content-desc, 'Beranda') or starts-with(@content-desc, 'Home')]"
     )
     NAV_ME = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Me') or contains(@content-desc, 'Akun') or "
-        "contains(@text, 'Me') or contains(@text, 'Akun')]"
+        "//android.widget.ImageView[starts-with(@content-desc, 'Akun') or @content-desc='Me']"
     )
 
     # ==========================================================================
     # 1. HEADER & PUSAT BANTUAN DI HALAMAN AKTIVITAS
     # ==========================================================================
+    # peta layar CI 12 Nov 2026: 13_aktivitas_akun_qa -> judul = View 'Aktivitas'. Locator lama contains('Aktivitas')
+    # dan contains('Riwayat') ikut cocok dengan tab ImageView 'Aktivitas' dan shortcut 'Riwayat' di Beranda (01_beranda),
+    # sehingga Beranda dianggap layar Aktivitas dan setup test tidak pernah pindah tab.
     HEADER_TITLE = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Aktivitas') or contains(@text, 'Aktivitas') or "
-        "contains(@content-desc, 'Activity') or contains(@text, 'Activity') or "
-        "contains(@content-desc, 'Riwayat') or contains(@text, 'Riwayat')]"
+        "//*[(@content-desc='Aktivitas' or @text='Aktivitas' or @content-desc='Activity' or @text='Activity') "
+        "and not(self::android.widget.ImageView)]"
+    )
+    # Penanda layar Aktivitas: judul di atas, atau tab ImageView 'Aktivitas' yang sedang selected='true'.
+    ACTIVITY_SCREEN_MARKER = (
+        AppiumBy.XPATH,
+        "//*[(@content-desc='Aktivitas' or @text='Aktivitas' or @content-desc='Activity' or @text='Activity') "
+        "and not(self::android.widget.ImageView)] | "
+        "//android.widget.ImageView[@selected='true' and "
+        "(starts-with(@content-desc, 'Aktivitas') or starts-with(@content-desc, 'Activity'))]"
     )
     BTN_HELP_CENTER = (
         AppiumBy.XPATH,
@@ -77,18 +86,21 @@ class ActivityPage(BasePage):
     # Label resmi aplikasi (user_lang_id.json / user_lang_en.json, APK 1.2.33):
     # activity_category_normal = 'Normal' (ID) / 'Reguler' (EN); activity_category_booking = 'Dipesan' (ID) / 'Booking' (EN).
     # 'Normal' dan 'Dipesan' dicocokkan persis karena kata pendek.
+    # peta layar CI 12 Nov 2026: 13_aktivitas_akun_qa + dump riwayat (test_TC_ACT_HF_01_*_FAILED.xml) -> tab
+    # 'Reguler\nTab 1 of 2' / 'Booking\nTab 2 of 2'. starts-with + tanpa 'Rp' agar kartu pesanan
+    # ('Normal\nPenilaian\nRp 6.000\n…') tidak ikut cocok.
     TAB_REGULAR = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Regular') or contains(@text, 'Regular') or "
-        "contains(@content-desc, 'Reguler') or contains(@text, 'Reguler') or "
-        "@content-desc='Normal' or @text='Normal']"
+        "//*[(starts-with(@content-desc, 'Reguler') or starts-with(@text, 'Reguler') or "
+        "starts-with(@content-desc, 'Regular') or starts-with(@text, 'Regular') or "
+        "@content-desc='Normal' or @text='Normal') and not(contains(@content-desc, 'Rp'))]"
     )
     # Tab 2: Tab Booking -> Untuk melihat history order dari Advance Booking (Scheduled Ride)
     TAB_BOOKING = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Booking') or contains(@text, 'Booking') or "
-        "contains(@content-desc, 'Advance') or contains(@text, 'Advance') or "
-        "@content-desc='Dipesan' or @text='Dipesan']"
+        "//*[(starts-with(@content-desc, 'Booking') or starts-with(@text, 'Booking') or "
+        "starts-with(@content-desc, 'Advance') or starts-with(@text, 'Advance') or "
+        "@content-desc='Dipesan' or @text='Dipesan') and not(contains(@content-desc, 'Rp'))]"
     )
 
     # Sub-Filter Status di Dalam Tab (Ongoing vs Completed vs Cancelled)
@@ -181,9 +193,15 @@ class ActivityPage(BasePage):
     )
     # Kartu pesanan dikenali dari ID order atau label status resmi (order_completed / canceled).
     # Nama layanan (EvRide/EvSend/EvRent) sengaja tidak dipakai karena juga cocok dengan chip filter layanan.
+    # peta layar CI (dump riwayat test_TC_ACT_HF_01_*_FAILED.xml): kartu = View clickable berisi
+    # 'Normal\n<status>\nRp <tarif>\n<tanggal> ⬩ <jam>' (status 'Penilaian' atau 'Pesanan Dibatalkan').
+    # Locator lama hanya cocok dengan status 'Pesanan Dibatalkan', jadi kartu pertama ('Penilaian') terlewat.
     CARD_ORDER_FIRST = (
         AppiumBy.XPATH,
-        "(//*[contains(@content-desc, 'ORD-') or "
+        "(//*[(@clickable='true' and contains(@content-desc, 'Rp') and "
+        "(starts-with(@content-desc, 'Normal') or starts-with(@content-desc, 'Dipesan') or "
+        "starts-with(@content-desc, 'Reguler') or starts-with(@content-desc, 'Booking'))) or "
+        "contains(@content-desc, 'ORD-') or "
         "contains(@content-desc, 'Pesanan Selesai') or contains(@content-desc, 'Pesanan Dibatalkan') or "
         "contains(@content-desc, 'Order Completed') or contains(@content-desc, 'Order Cancelled') or "
         "contains(@resource-id, 'card_order') or contains(@resource-id, 'item_order')])[1]"
@@ -223,9 +241,11 @@ class ActivityPage(BasePage):
         "//*[contains(@content-desc, 'Pesan Lagi') or contains(@content-desc, 'Reorder') or "
         "contains(@text, 'Pesan Lagi') or contains(@text, 'Reorder')]"
     )
+    # peta layar CI (dump riwayat test_TC_ACT_HF_01_*_FAILED.xml): tombol kartu = ImageView 'Beri penilaian' (p kecil)
     BTN_RATE_DRIVER_CARD = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Beri Nilai') or contains(@content-desc, 'Beri Ulasan') or "
+        "//*[@content-desc='Beri penilaian' or @text='Beri penilaian' or "
+        "contains(@content-desc, 'Beri Nilai') or contains(@content-desc, 'Beri Ulasan') or "
         "contains(@content-desc, 'Rating') or contains(@text, 'Beri Ulasan') or contains(@text, 'Nilai')]"
     )
     BTN_CANCEL_ACTIVE_ORDER = (
@@ -557,9 +577,13 @@ class ActivityPage(BasePage):
     # 9. EMPTY STATES & RESILIENSI JARINGAN PADA HALAMAN AKTIVITAS
     # ==========================================================================
     # activity_not_found_title = 'Belum ada riwayat perjalanan' / 'No trip history yet'
+    # peta layar CI 12 Nov 2026: 13_aktivitas_akun_qa -> state kosong tab Reguler = 'Apakah Anda sudah mencoba EVMoto?'
+    # + 'Mulai perjalanan hijau Anda!' + Button 'Pesan EVMoto'.
     EMPTY_STATE_CONTAINER = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Belum Ada Aktivitas') or contains(@text, 'Belum Ada Aktivitas') or "
+        "//*[@content-desc='Apakah Anda sudah mencoba EVMoto?' or @text='Apakah Anda sudah mencoba EVMoto?' or "
+        "@content-desc='Mulai perjalanan hijau Anda!' or @text='Mulai perjalanan hijau Anda!' or "
+        "contains(@content-desc, 'Belum Ada Aktivitas') or contains(@text, 'Belum Ada Aktivitas') or "
         "contains(@content-desc, 'Tidak ada riwayat') or contains(@text, 'Tidak ada riwayat') or "
         "contains(@content-desc, 'Belum ada riwayat perjalanan') or contains(@text, 'Belum ada riwayat perjalanan') or "
         "contains(@content-desc, 'No trip history yet') or contains(@text, 'No trip history yet') or "
@@ -618,20 +642,20 @@ class ActivityPage(BasePage):
         self.click(self.NAV_ACTIVITY, label="Tab Navigasi 'Activity'")
 
     def is_activity_screen_displayed(self, timeout: int = 10) -> bool:
-        """Memverifikasi apakah pengguna berada di layar Halaman Aktivitas."""
-        return (
-            self.is_displayed(self.HEADER_TITLE, timeout=timeout)
-            or self.is_displayed(self.TAB_HISTORY, timeout=timeout)
-            or self.is_displayed(self.TAB_IN_PROGRESS, timeout=timeout)
-            or self.is_displayed(self.EMPTY_STATE_CONTAINER, timeout=timeout)
-        )
+        """Memverifikasi apakah pengguna berada di layar Halaman Aktivitas.
+
+        Peta layar CI 12 Nov 2026 (13_aktivitas_akun_qa): layar Aktivitas tidak punya tab 'Riwayat' / 'Dalam Proses';
+        TAB_HISTORY justru cocok dengan shortcut 'Riwayat' di Beranda (01_beranda). Penandanya kini judul 'Aktivitas'
+        atau tab Aktivitas yang selected.
+        """
+        return self.is_displayed(self.ACTIVITY_SCREEN_MARKER, timeout=timeout)
 
     def get_header_title_text(self) -> str:
         """Mengambil teks judul header Halaman Aktivitas."""
         try:
             return self.get_text(self.HEADER_TITLE)
         except Exception:
-            return "Aktivitas"
+            return ""  # sebelumnya 'Aktivitas' sehingga cek judul selalu lulus walau header tidak ada
 
     def open_help_center(self):
         """Membuka pusat bantuan dari header Halaman Aktivitas."""

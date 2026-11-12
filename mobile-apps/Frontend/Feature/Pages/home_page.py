@@ -42,6 +42,7 @@ Struktur UI Beranda Lengkap (Diurutkan dari Atas ke Bawah):
 """
 import time
 from appium.webdriver.common.appiumby import AppiumBy
+from selenium.common.exceptions import StaleElementReferenceException
 from core.base_page import BasePage
 from utils.logger import get_logger
 
@@ -54,11 +55,12 @@ class HomePage(BasePage):
     # ==========================================================================
     # 1. HEADER, GREETING, LOKASI PENJEMPUTAN & NOTIFIKASI
     # ==========================================================================
+    # peta layar CI 12 Nov 2026: 01_beranda -> View content-desc 'Hai, mau ke mana hari ini?\nQA Auto'
+    # (huruf kecil 'mau'; nama pengguna ditambahkan setelah baris baru, jadi dicocokkan dengan starts-with).
     TEXT_GREETING_TITLE = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'where are you going') or contains(@content-desc, 'Mau ke mana') or "
-        "contains(@content-desc, 'Hi,') or contains(@content-desc, 'Halo,') or "
-        "contains(@text, 'where are you going') or contains(@text, 'Mau ke mana')]"
+        "//*[starts-with(@content-desc, 'Hai, mau ke mana hari ini?') or starts-with(@text, 'Hai, mau ke mana hari ini?') or "
+        "starts-with(@content-desc, 'Hi, where are you going today?') or starts-with(@text, 'Hi, where are you going today?')]"
     )
     USER_AVATAR_HEADER = (
         AppiumBy.XPATH,
@@ -88,34 +90,39 @@ class HomePage(BasePage):
     # ==========================================================================
     # 2. KARTU SALDO & SHORTCUT DOMPET (EVWALLET CARD)
     # ==========================================================================
+    # peta layar CI 12 Nov 2026: 01_beranda -> 'Saldo Anda' lalu 'Rp0' tepat sesudahnya
     CARD_WALLET_CONTAINER = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Saldo') or contains(@content-desc, 'Balance') or "
-        "contains(@content-desc, 'Rp') or contains(@text, 'Rp')]"
+        "//*[@content-desc='Saldo Anda' or @text='Saldo Anda' or contains(@content-desc, 'Balance')]"
     )
     TEXT_HOME_WALLET_BALANCE = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Rp') or contains(@text, 'Rp')]"
+        "//*[@content-desc='Saldo Anda' or @text='Saldo Anda']"
+        "/following::*[starts-with(@content-desc, 'Rp') or starts-with(@text, 'Rp')][1]"
     )
+    # peta layar CI 12 Nov 2026: 01_beranda -> shortcut isi saldo = ImageView 'Isi Ulang' (tidak ada label 'Top Up').
+    # Dibatasi ImageView karena layar Riwayat (08_riwayat_saldo) juga punya tab View 'Isi Ulang'.
     BTN_WALLET_TOP_UP = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Top Up') or contains(@content-desc, 'Isi Saldo') or "
-        "contains(@text, 'Top Up') or contains(@text, 'Isi Saldo')]"
+        "//android.widget.ImageView[@content-desc='Isi Ulang' or @text='Isi Ulang'] | "
+        "//*[@content-desc='Top Up' or @text='Top Up' or @content-desc='Isi Saldo' or @text='Isi Saldo']"
     )
     BTN_WALLET_PAY_QR = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Bayar') or contains(@content-desc, 'Pay') or "
         "contains(@content-desc, 'QRIS') or contains(@text, 'Bayar')]"
     )
+    # peta layar CI 12 Nov 2026: 01_beranda -> ImageView 'Riwayat' pada kartu saldo
     BTN_WALLET_HISTORY = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Riwayat') or contains(@content-desc, 'History') or "
-        "contains(@text, 'Riwayat')]"
+        "//android.widget.ImageView[@content-desc='Riwayat' or @text='Riwayat' or @content-desc='History']"
     )
+    # peta layar CI 12 Nov 2026: 07_isi_ulang -> layar penuh 'Isi Ulang Saldo' (bukan modal) dengan 'Masukkan Nominal'.
+    # 'Top Up' dihapus dari locator ini karena dulu ikut cocok dengan tombol shortcut di Beranda sendiri.
     MODAL_TOP_UP_CHOICE = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Nominal') or contains(@content-desc, 'Pilih Nominal') or "
-        "contains(@content-desc, 'Top Up')]"
+        "//*[@content-desc='Isi Ulang Saldo' or @text='Isi Ulang Saldo' or "
+        "@content-desc='Masukkan Nominal' or @text='Masukkan Nominal' or contains(@content-desc, 'Pilih Nominal')]"
     )
     BTN_CLOSE_MODAL = (
         AppiumBy.XPATH,
@@ -126,10 +133,12 @@ class HomePage(BasePage):
     # ==========================================================================
     # 3. BILAH PENCARIAN DESTINASI & QUICK DESTINATION CHIPS
     # ==========================================================================
+    # peta layar CI 12 Nov 2026: 01_beranda -> kolom tujuan = ImageView clickable 'Hello, mau kemana hari ini?'.
+    # Dibatasi ImageView agar tidak tertukar dengan sapaan header (View 'Hai, mau ke mana hari ini?').
     SEARCH_DESTINATION = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'where are you going') or contains(@content-desc, 'Mau ke mana') or "
-        "contains(@content-desc, 'Cari tujuan') or contains(@text, 'where are you going')]"
+        "//android.widget.ImageView[@content-desc='Hello, mau kemana hari ini?' or "
+        "@content-desc='Hi, where are you going today?'] | //*[contains(@content-desc, 'Cari tujuan')]"
     )
     INPUT_SEARCH_FIELD = (
         AppiumBy.XPATH,
@@ -141,15 +150,15 @@ class HomePage(BasePage):
         "//*[contains(@content-desc, 'Tempat ngopi') or contains(@content-desc, 'Coffee') or "
         "contains(@text, 'Tempat ngopi')]"
     )
+    # peta layar CI 12 Nov 2026: 01_beranda -> chip ImageView 'Rumah' / 'Kantor' / 'Lainnya' (tidak ada 'Tempat ngopi').
+    # Dicocokkan persis: contains('Rumah') juga cocok dengan 'Tambah Rumah' (06_alamat_rumah), contains('Home') dengan tab EN.
     DESTINATION_OFFICE = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Kantor') or contains(@content-desc, 'Office') or "
-        "contains(@text, 'Kantor')]"
+        "//android.widget.ImageView[@content-desc='Kantor' or @text='Kantor' or @content-desc='Office']"
     )
     DESTINATION_HOME = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Rumah') or contains(@content-desc, 'Home') or "
-        "contains(@text, 'Rumah')]"
+        "//android.widget.ImageView[@content-desc='Rumah' or @text='Rumah']"
     )
     BTN_ADD_FAVORITE_LOCATION = (
         AppiumBy.XPATH,
@@ -261,29 +270,36 @@ class HomePage(BasePage):
     # ==========================================================================
     # 7. BILAH NAVIGASI BAWAH (BOTTOM NAVIGATION BAR)
     # ==========================================================================
+    # peta layar CI 12 Nov 2026: 01_beranda / 09_akun / 13_aktivitas_akun_qa -> tab bawah = ImageView
+    # 'Beranda' / 'Aktivitas' / 'Akun'. Dibatasi ImageView karena judul layar Akun/Aktivitas (View) memakai kata yang sama.
     NAV_HOME = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Home') or contains(@content-desc, 'Beranda') or "
-        "contains(@text, 'Home') or contains(@text, 'Beranda')]"
+        "//android.widget.ImageView[starts-with(@content-desc, 'Beranda') or starts-with(@content-desc, 'Home')]"
     )
     NAV_ACTIVITY = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Activity') or contains(@content-desc, 'Aktivitas') or "
-        "contains(@text, 'Activity') or contains(@text, 'Aktivitas')]"
+        "//android.widget.ImageView[starts-with(@content-desc, 'Aktivitas') or starts-with(@content-desc, 'Activity')]"
     )
     NAV_ME = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Me') or contains(@content-desc, 'Akun') or "
-        "contains(@content-desc, 'Profil') or contains(@text, 'Me') or contains(@text, 'Akun')]"
+        "//android.widget.ImageView[starts-with(@content-desc, 'Akun') or @content-desc='Me' or "
+        "starts-with(@content-desc, 'Profil')]"
     )
 
     # ==========================================================================
     # 8. DIALOG, POPUP SAMBUTAN & EXIT CONFIRMATION
     # ==========================================================================
+    # peta layar CI 12 Nov 2026: 01_beranda -> popup 'Pemberitahuan Jam Operasional' ditutup dengan Button 'Lanjutkan'.
+    # Dibatasi Button agar tidak menekan elemen lain yang memuat kata 'Lanjut'.
     BTN_CONTINUE_POPUP = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Continue') or contains(@content-desc, 'Lanjut') or "
-        "contains(@text, 'Continue') or contains(@text, 'Lanjut')]"
+        "//android.widget.Button[@content-desc='Lanjutkan' or @text='Lanjutkan' or "
+        "@content-desc='Lanjut' or @text='Lanjut' or @content-desc='Continue' or @text='Continue']"
+    )
+    POPUP_OPERATIONAL_HOURS = (
+        AppiumBy.XPATH,
+        "//*[starts-with(@content-desc, 'Pemberitahuan Jam Operasional') or "
+        "starts-with(@text, 'Pemberitahuan Jam Operasional')]"
     )
     POPUP_LOCATION_DISABLED_WARNING = (
         AppiumBy.XPATH,
@@ -316,10 +332,15 @@ class HomePage(BasePage):
         "//*[contains(@content-desc, 'Tutup') or contains(@content-desc, 'Close') or "
         "contains(@content-desc, 'Back') or contains(@content-desc, 'Kembali')]"
     )
+    # peta layar CI 12 Nov 2026: 08_riwayat_saldo -> judul View 'Riwayat', tab 'Semua'/'Isi Ulang'/'Tarik Dana'/'Perjalanan',
+    # state kosong 'Tidak Ada Transaksi Saat Ini'. contains('Riwayat') dihapus karena ikut cocok dengan shortcut
+    # ImageView 'Riwayat' di Beranda (01_beranda), sehingga layar riwayat dianggap terbuka padahal masih di Beranda.
     SCREEN_WALLET_HISTORY = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Riwayat Transaksi') or contains(@content-desc, 'Mutasi') or "
-        "contains(@content-desc, 'Riwayat') or contains(@text, 'Riwayat Transaksi')]"
+        "//*[(@content-desc='Riwayat' or @text='Riwayat') and not(self::android.widget.ImageView)] | "
+        "//*[@content-desc='Tidak Ada Transaksi Saat Ini' or @text='Tidak Ada Transaksi Saat Ini' or "
+        "contains(@content-desc, 'Riwayat Transaksi') or contains(@content-desc, 'Mutasi') or "
+        "contains(@text, 'Riwayat Transaksi')]"
     )
     SCREEN_EVSEND_CONTAINER = (
         AppiumBy.XPATH,
@@ -362,15 +383,18 @@ class HomePage(BasePage):
     # - hello_where_today = 'Hai, mau ke mana hari ini?'; home_ride_ready_to_go_hint = 'Hello, mau kemana hari ini?'
     #   (EN keduanya 'Hi, where are you going today?')
     # - home_ride_ready_to_go_title = 'Siap jalan? tentukan tujuanmu' / 'Ready to go? Determine your destination'
+    # peta layar CI 12 Nov 2026: tab ImageView 'Beranda' ada juga di 09_akun dan 13_aktivitas_akun_qa, jadi
+    # starts-with('Beranda') saja membuat layar Akun/Aktivitas dianggap Beranda. Penanda sekarang hanya elemen
+    # khas Beranda (01_beranda): sapaan header, kolom tujuan, atau tab 'Beranda' yang sedang selected='true'.
     HOME_SCREEN_MARKER = (
         AppiumBy.XPATH,
-        "//*[starts-with(@content-desc, 'Beranda') or @text='Beranda' or "
-        "starts-with(@content-desc, 'Home') or @text='Home' or "
-        "contains(@content-desc, 'mau ke mana hari ini') or contains(@text, 'mau ke mana hari ini') or "
+        "//*[contains(@content-desc, 'mau ke mana hari ini') or contains(@text, 'mau ke mana hari ini') or "
         "contains(@content-desc, 'mau kemana hari ini') or contains(@text, 'mau kemana hari ini') or "
         "contains(@content-desc, 'where are you going today') or contains(@text, 'where are you going today') or "
         "contains(@content-desc, 'Siap jalan? tentukan tujuanmu') or "
-        "contains(@content-desc, 'Ready to go? Determine your destination')]"
+        "contains(@content-desc, 'Ready to go? Determine your destination')] | "
+        "//android.widget.ImageView[@selected='true' and "
+        "(starts-with(@content-desc, 'Beranda') or starts-with(@content-desc, 'Home'))]"
     )
 
     # ==========================================================================
@@ -378,25 +402,42 @@ class HomePage(BasePage):
     # ==========================================================================
 
     def dismiss_welcome_popup_if_present(self):
-        """Menutup dialog sambutan / modal 'Continue' jika ada."""
+        """Menutup popup Beranda (mis. 'Pemberitahuan Jam Operasional') lewat Button 'Lanjutkan' jika ada."""
         try:
             buttons = self.find_all(self.BTN_CONTINUE_POPUP, timeout=3)
             if buttons:
-                logger.info("Mendeteksi popup sambutan 'Continue', menutup popup...")
+                logger.info("Mendeteksi popup Beranda (tombol 'Lanjutkan'), menutup popup...")
                 buttons[0].click()
                 time.sleep(1)
         except Exception:
             pass
+
+    def _close_popup_now(self) -> bool:
+        """Tanpa menunggu: tekan 'Lanjutkan' bila popup Beranda sedang tampil. True bila ditekan."""
+        buttons = self.driver.find_elements(*self.BTN_CONTINUE_POPUP)
+        if not buttons:
+            return False
+        logger.info("Popup Beranda (mis. 'Pemberitahuan Jam Operasional') tampil, menekan 'Lanjutkan'")
+        try:
+            buttons[0].click()
+        except StaleElementReferenceException:
+            # Popup sudah tertutup sendiri di antara pencarian dan ketukan.
+            return False
+        time.sleep(1)
+        return True
 
     def is_home_screen_displayed(self, timeout: int = 15) -> bool:
         """Memeriksa apakah layar Beranda aktif dan elemen utama termuat.
 
         Memakai satu locator HOME_SCREEN_MARKER yang hanya berisi teks resmi aplikasi, bukan
         contains('Home') / contains('Hi,') yang terlalu lebar dan bisa cocok di layar lain.
+        Popup 'Pemberitahuan Jam Operasional' (peta layar CI 12 Nov 2026: 01_beranda) menutupi Beranda
+        padahal sapaan Beranda tetap ada di page source, jadi popup ditutup dulu sebelum Beranda dianggap siap.
         """
         self.dismiss_welcome_popup_if_present()
         deadline = time.time() + timeout
         while True:
+            self._close_popup_now()
             if self.driver.find_elements(*self.HOME_SCREEN_MARKER):
                 return True
             # Akun yang belum punya nama diarahkan ke layar 'Masukkan nama pengguna' setelah OTP. Layar itu bisa
@@ -488,8 +529,18 @@ class HomePage(BasePage):
 
     # 3. Pencarian Tujuan & Shortcut Destinasi
     def open_search_destination(self):
-        """Mengetuk bar pencarian destinasi untuk membuka form input alamat."""
-        self.click(self.SEARCH_DESTINATION, label="Bilah Pencarian 'where are you going'")
+        """Mengetuk kolom tujuan 'Hello, mau kemana hari ini?' untuk membuka form input alamat.
+
+        Peta layar CI 12 Nov 2026 (04_form_tujuan): ketukan pertama hanya menaikkan panel bawah dan belum ada
+        kolom input (EditText); ketukan kedua membuka form tujuan. Jadi kolom diketuk ulang sekali bila form
+        belum terbuka.
+        """
+        self.click(self.SEARCH_DESTINATION, label="Kolom Tujuan 'Hello, mau kemana hari ini?'")
+        if self.find_all(self.INPUT_SEARCH_FIELD, timeout=3):
+            return
+        logger.info("Form tujuan belum terbuka (panel baru naik), mengetuk kolom tujuan sekali lagi")
+        self.click(self.SEARCH_DESTINATION, label="Kolom Tujuan (ketukan kedua)")
+        self.find_all(self.INPUT_SEARCH_FIELD, timeout=5)
 
     def input_destination_search(self, destination: str):
         """Menginput kata kunci lokasi tujuan pada kolom pencarian."""

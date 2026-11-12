@@ -30,20 +30,26 @@ class ProfilPage(BasePage):
     # ==========================================================================
     # 0. TAB NAVIGASI UTAMA (BOTTOM NAVIGATION BAR)
     # ==========================================================================
+    # peta layar CI 12 Nov 2026: 09_akun -> tab bawah = ImageView 'Beranda' / 'Aktivitas' / 'Akun'.
+    # Dibatasi ImageView karena judul layar Akun (View 'Akun') memakai kata yang sama.
     NAV_ME = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Me') or contains(@content-desc, 'Akun') or "
-        "contains(@text, 'Me') or contains(@text, 'Akun')]"
+        "//android.widget.ImageView[starts-with(@content-desc, 'Akun') or @content-desc='Me']"
     )
     NAV_HOME = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Home') or contains(@content-desc, 'Beranda') or "
-        "contains(@text, 'Home') or contains(@text, 'Beranda')]"
+        "//android.widget.ImageView[starts-with(@content-desc, 'Beranda') or starts-with(@content-desc, 'Home')]"
     )
     NAV_ACTIVITY = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Activity') or contains(@content-desc, 'Aktivitas') or "
-        "contains(@text, 'Activity') or contains(@text, 'Aktivitas')]"
+        "//android.widget.ImageView[starts-with(@content-desc, 'Aktivitas') or starts-with(@content-desc, 'Activity')]"
+    )
+    # peta layar CI 12 Nov 2026: 09_akun..12_akun_gulir_3 -> tab ImageView 'Akun' selected='true' hanya di layar Akun;
+    # sub-layar (Alamat Favorit, Bahasa, Cara Penggunaan Aplikasi; dump gagal CI 12 Nov) tidak punya tab bawah.
+    # Layar Akun tidak punya tombol 'Log Out', jadi BTN_LOGOUT bukan penanda layar Profil.
+    PROFILE_SCREEN_MARKER = (
+        AppiumBy.XPATH,
+        "//android.widget.ImageView[@selected='true' and (starts-with(@content-desc, 'Akun') or @content-desc='Me')]"
     )
 
     # ==========================================================================
@@ -303,9 +309,17 @@ class ProfilPage(BasePage):
     # ==========================================================================
     # 5. PENGATURAN BAHASA (LANGUAGE SETTINGS & SNACKBAR)
     # ==========================================================================
+    # peta layar CI 12 Nov 2026: 09_akun -> menu View 'Bahasa'. Dicocokkan persis karena layar Bahasa juga memuat
+    # opsi 'Bahasa Indonesia (ID)'.
     MENU_LANGUAGE = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Language') or contains(@content-desc, 'Bahasa')]"
+        "//*[@content-desc='Bahasa' or @text='Bahasa' or @content-desc='Language' or @text='Language']"
+    )
+    # Dump gagal CI 12 Nov 2026 (test_TC_PROF_PT_05_*_FAILED.xml): layar Bahasa berisi 'Bahasa Indonesia (ID)',
+    # 'English (EN)', '简体中文 (ZH_CN)' dan tombol 'Simpan'; pilihan bahasa baru berlaku setelah 'Simpan' ditekan.
+    BTN_SAVE_LANGUAGE = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Simpan' or @text='Simpan' or @content-desc='Save' or @text='Save']"
     )
     OPT_LANG_ENGLISH = (
         AppiumBy.XPATH,
@@ -339,17 +353,23 @@ class ProfilPage(BasePage):
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Langkah Mudah Menggunakan Aplikasi') or contains(@content-desc, 'Easy Steps')]"
     )
+    # Dump gagal CI 12 Nov 2026 (test_TC_PROF_PT_06_*_FAILED.xml): layar 'Cara Penggunaan Aplikasi' hanya punya tiga
+    # langkah 'Daftar dan Login\n…', 'Tentukan Tujuan\n…', 'Layanan Perjalanan\n…' (label lama 'Unduh dan Daftar',
+    # 'Buka Halaman Utama', 'Cara Memesan Perjalanan' tidak ada). Dipetakan sesuai urutan langkah 1, 2, 3.
     ITEM_FAQ_DOWNLOAD_REGISTER = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Unduh dan Daftar') or contains(@content-desc, 'Download and Register')]"
+        "//*[starts-with(@content-desc, 'Daftar dan Login') or "
+        "contains(@content-desc, 'Unduh dan Daftar') or contains(@content-desc, 'Download and Register')]"
     )
     ITEM_FAQ_OPEN_HOME = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Buka Halaman Utama') or contains(@content-desc, 'Open Home')]"
+        "//*[starts-with(@content-desc, 'Tentukan Tujuan') or "
+        "contains(@content-desc, 'Buka Halaman Utama') or contains(@content-desc, 'Open Home')]"
     )
     ITEM_FAQ_BOOK_RIDE = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Cara Memesan Perjalanan') or contains(@content-desc, 'How to Book')]"
+        "//*[starts-with(@content-desc, 'Layanan Perjalanan') or "
+        "contains(@content-desc, 'Cara Memesan Perjalanan') or contains(@content-desc, 'How to Book')]"
     )
     ELEMENT_VIDEO_PLAYER = (
         AppiumBy.XPATH,
@@ -497,12 +517,19 @@ class ProfilPage(BasePage):
 
     # 1. Header Identitas
     def is_profile_screen_displayed(self, timeout: int = 15) -> bool:
-        """Memeriksa apakah layar Profil/Akun aktif dan elemen utama termuat."""
-        return (
-            self.is_displayed(self.BTN_LOGOUT, timeout=timeout) or
-            self.is_displayed(self.MENU_PAYMENT_SETTINGS, timeout=timeout) or
-            self.is_displayed(self.USER_PHONE, timeout=timeout)
-        )
+        """Memeriksa apakah layar Profil/Akun aktif (tab 'Akun' selected, peta layar CI 12 Nov 2026: 09_akun)."""
+        return self.is_displayed(self.PROFILE_SCREEN_MARKER, timeout=timeout)
+
+    def _scroll_until_visible(self, locator, max_swipes: int = 4) -> bool:
+        """Geser daftar menu Akun ke atas sampai elemen tampil (menu bawah ada di 10_akun_gulir_1)."""
+        for _ in range(max_swipes + 1):
+            if self.is_displayed(locator, timeout=2):
+                return True
+            size = self.driver.get_window_size()
+            x = int(size['width'] * 0.5)
+            self.swipe(x, int(size['height'] * 0.75), x, int(size['height'] * 0.35), duration=500)
+            time.sleep(1)
+        return False
 
     def is_avatar_displayed(self, timeout: int = 5) -> bool:
         """Memeriksa apakah gambar avatar profil tampil di header."""
@@ -713,6 +740,10 @@ class ProfilPage(BasePage):
             self.click(self.OPT_LANG_INDONESIAN, label="Pilihan Bahasa Indonesia")
         else:
             self.click(self.OPT_LANG_ENGLISH, label="Pilihan Bahasa Inggris")
+        time.sleep(1)
+        # Pilihan baru berlaku setelah tombol 'Simpan' (dump gagal CI 12 Nov 2026: test_TC_PROF_PT_05_*_FAILED.xml)
+        if self.is_displayed(self.BTN_SAVE_LANGUAGE, timeout=3):
+            self.click(self.BTN_SAVE_LANGUAGE, label="Tombol 'Simpan' Bahasa")
         time.sleep(1.5)
 
     def is_ui_in_english(self, timeout: int = 5) -> bool:
@@ -749,7 +780,8 @@ class ProfilPage(BasePage):
         if has_error:
             logger.error("Ditemukan kegagalan pemuatan video tutorial: 'Video gagal dimuat'!")
             return False
-        return self.is_displayed(self.ELEMENT_VIDEO_PLAYER, timeout=timeout) or not has_error
+        # Sebelumnya '... or not has_error' membuat cek ini selalu True walau player tidak ada
+        return self.is_displayed(self.ELEMENT_VIDEO_PLAYER, timeout=timeout)
 
     # 7. Banner CS & Popup Media
     def verify_cs_banner_and_popup(self, timeout: int = 5) -> bool:
@@ -779,11 +811,13 @@ class ProfilPage(BasePage):
 
     # 8. Legalitas (Terms & Privacy)
     def navigate_to_terms(self):
-        """Membuka halaman Syarat & Ketentuan."""
+        """Membuka halaman Syarat & Ketentuan (menu di bawah lipatan layar: peta layar CI 12 Nov 2026 10_akun_gulir_1)."""
+        self._scroll_until_visible(self.MENU_TERMS)
         self.click(self.MENU_TERMS, label="Menu 'Terms and Conditions'")
 
     def navigate_to_privacy(self):
-        """Membuka halaman Kebijakan Privasi."""
+        """Membuka halaman Kebijakan Privasi (menu di bawah lipatan layar: peta layar CI 12 Nov 2026 10_akun_gulir_1)."""
+        self._scroll_until_visible(self.MENU_PRIVACY)
         self.click(self.MENU_PRIVACY, label="Menu 'Privacy Policy'")
 
     # 9. Hapus Akun
@@ -835,8 +869,11 @@ class ProfilPage(BasePage):
 
     def scroll_to_bottom(self, times: int = 3):
         """Geser layar ke atas beberapa kali sampai bagian bawah halaman Profil."""
+        # Koordinat dari ukuran layar (emulator CI 320x640); sebelumnya tetap 540,1600 di luar layar
+        size = self.driver.get_window_size()
         for _ in range(times):
-            self.swipe(start_x=540, start_y=1600, end_x=540, end_y=500, duration=400)
+            self.swipe(start_x=size["width"] // 2, start_y=int(size["height"] * 0.8),
+                       end_x=size["width"] // 2, end_y=int(size["height"] * 0.3), duration=400)
 
     def press_back_key(self):
         """Menekan tombol Android Hardware Back Key (Keycode 4)."""
