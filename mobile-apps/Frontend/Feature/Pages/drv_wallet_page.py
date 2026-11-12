@@ -276,8 +276,12 @@ class DrvWalletPage(BasePage):
         return self.is_displayed(self.HEADER_EWALLET, timeout=5) or self.is_displayed(self.CARD_SALDO_EVMOTO, timeout=3)
 
     def is_ecgo_connected(self) -> bool:
-        """Memeriksa apakah eWallet terhubung dengan armada ECGO."""
-        return self.is_displayed(self.TEXT_STATUS_TERHUBUNG, timeout=3)
+        """Memeriksa apakah eWallet terhubung dengan armada ECGO.
+
+        Label 'Terhubung dengan ECGO' hanya ada di Beranda. Di layar eWallet, akun yang terhubung ditandai tombol
+        'Putuskan eWallet' beserta nomor eWallet tersamar (peta layar CI 11 Nov 2026: 04_Saldo_Kamu).
+        """
+        return self.is_displayed(self.TEXT_STATUS_TERHUBUNG, timeout=3) or self.is_displayed(self.BTN_PUTUSKAN_EWALLET, timeout=2)
 
     def open_hubungkan_modal(self):
         """Membuka modal panduan dan aktivasi Hubungkan eWallet ECGO."""

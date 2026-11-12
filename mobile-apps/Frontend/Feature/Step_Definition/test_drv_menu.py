@@ -227,6 +227,11 @@ class TestDrvMenu:
         menu_pg = DrvMenuPage(driver_app)
         self._ensure_driver_on_menu(driver_app)
 
+        # 'Tips untuk Driver' berada di layar Cara Penggunaan Aplikasi, bukan di Menu
+        # (peta layar CI 12 Nov 2026: 21_cara_penggunaan_gulir_2)
+        when("Mitra membuka 'Cara Penggunaan Aplikasi'")
+        menu_pg.open_cara_penggunaan()
+
         then("Konten Tips untuk Driver dapat dibaca")
         assert menu_pg.is_tips_driver_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
         logger.info("[SUCCESS] Edukasi Tips untuk Driver terverifikasi.")

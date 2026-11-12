@@ -14,6 +14,7 @@ import time
 from typing import Optional
 from appium.webdriver.common.appiumby import AppiumBy
 from core.base_page import BasePage
+from Pages.drv_home_page import DrvHomePage
 from utils.logger import get_logger
 
 logger = get_logger("DrvActivityPage")
@@ -79,24 +80,45 @@ class DrvActivityPage(BasePage):
         AppiumBy.XPATH,
         "//*[starts-with(@content-desc, 'Guarantee Income') or starts-with(@content-desc, 'Coupon Income')]"
     )
+    # Layar Aktivitas Saya tidak punya tab Pesanan. Riwayat order driver ada di layar terpisah 'Order Saya'
+    # yang dibuka dari kartu 'Order Saya' di Beranda (peta layar CI 12 Nov 2026: 01_beranda -> 13_order_saya).
+    # contains('Pesanan') lama hanya cocok dengan 'Pesanan Hari Ini' / 'Pesanan Berjalan' di Beranda.
     TAB_PESANAN = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Pesanan') or contains(@text, 'Pesanan')]"
+        "//*[@content-desc='Order Saya' or @text='Order Saya']"
     )
+    # Tab pertama layar Order Saya: 'Semua\nTab 1 dari 3' (13_order_saya); penanda layar Order Saya
+    # (label 'Order Saya' saja juga dipakai kartu di Beranda)
+    TAB_ORDER_SAYA_SEMUA = (
+        AppiumBy.XPATH,
+        "//*[starts-with(@content-desc, 'Semua') and contains(@content-desc, 'Tab 1')]"
+    )
+    # Tombol kembali di kiri atas tiap sub-layar (09_aktivitas_saya, 13_order_saya, 17_kirim_masukan)
+    BTN_KEMBALI = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Kembali' or @text='Kembali']"
+    )
+    # Tab Flutter berlabel 'Guarantee Income\nTab 1 dari 3' (09_aktivitas_saya)
     TAB_GUARANTEE_INCOME = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Guarantee Income') or contains(@text, 'Guarantee Income')]"
+        "//*[(starts-with(@content-desc, 'Guarantee Income') and contains(@content-desc, 'Tab 1')) or "
+        "@text='Guarantee Income']"
     )
+    # Tab 'Riwayat Pendapatan / Revenue Summary' di aplikasi = tab 'Coupon Income\nTab 2 dari 3', berisi rincian
+    # Jenis Pendapatan (Order Income, Cash Income, E-wallet, OVO, GoPay, Penalti). Key APK label Order Income juga
+    # my_activity_coupon_order_income. Peta layar CI 12 Nov 2026: 10_tab_coupon_income.
     TAB_PENDAPATAN = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Revenue Summary') or contains(@text, 'Revenue Summary') or "
+        "//*[(starts-with(@content-desc, 'Coupon Income') and contains(@content-desc, 'Tab 2')) or "
+        "contains(@content-desc, 'Revenue Summary') or contains(@text, 'Revenue Summary') or "
         "contains(@content-desc, 'Riwayat Pendapatan') or contains(@text, 'Riwayat Pendapatan')]"
     )
-    # Label tab resmi APK: my_activity_tab_referral = 'Referral Program' (dicocokkan persis);
+    # Label tab resmi APK: my_activity_tab_referral = 'Referral Program'. Flutter menambah akhiran
+    # '\nTab 3 dari 3', jadi dicocokkan dengan starts-with (10_tab_coupon_income, 12_tab_ketiga).
     # 'Referral Income' dipertahankan dari locator lama.
     TAB_REFERRAL = (
         AppiumBy.XPATH,
-        "//*[@content-desc='Referral Program' or @text='Referral Program' or "
+        "//*[starts-with(@content-desc, 'Referral Program') or @text='Referral Program' or "
         "contains(@content-desc, 'Referral Income') or contains(@text, 'Referral Income')]"
     )
 
@@ -105,10 +127,12 @@ class DrvActivityPage(BasePage):
         AppiumBy.XPATH,
         "//*[contains(@resource-id, 'order_list') or contains(@class, 'RecyclerView') or contains(@class, 'ListView')]"
     )
+    # Kartu riwayat di layar Order Saya berlabel 'Reguler\nSelesai\nLokasi Tujuan\n<alamat>' (13_order_saya).
+    # contains('Pesanan') / contains('Rp') lama juga cocok dengan Beranda ('Pesanan Hari Ini', 'Saldo Kamu Rp...').
     CARD_ORDER_ITEM = (
         AppiumBy.XPATH,
-        "(//*[contains(@content-desc, 'ORD-') or contains(@content-desc, 'Pesanan') or contains(@text, 'ORD-') or "
-        "contains(@content-desc, 'Rp') or contains(@text, 'Rp')])[1]"
+        "(//*[contains(@content-desc, 'Lokasi Tujuan') or contains(@text, 'Lokasi Tujuan') or "
+        "contains(@content-desc, 'ORD-') or contains(@text, 'ORD-')])[1]"
     )
     HEADER_ORDER_DETAIL_DRIVER = (
         AppiumBy.XPATH,
@@ -188,10 +212,11 @@ class DrvActivityPage(BasePage):
         "//*[contains(@content-desc, 'Selesai') or contains(@text, 'Selesai') or "
         "contains(@content-desc, 'Dibatalkan') or contains(@text, 'Dibatalkan')]"
     )
+    # Sub-layar aplikasi Driver memakai ImageView content-desc 'Kembali' di kiri atas (09, 13, 17, 19 peta layar
+    # CI 12 Nov 2026). contains(@class,'ImageView') lama cocok dengan ikon apa saja.
     BTN_KEMBALI_DETAIL_PESANAN = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Kembali') or contains(@content-desc, 'Back') or "
-        "contains(@content-desc, 'Navigate up') or contains(@class, 'ImageView')][1]"
+        "//*[@content-desc='Kembali' or @text='Kembali' or @content-desc='Navigate up']"
     )
     EMPTY_STATE_PESANAN = (
         AppiumBy.XPATH,
@@ -282,9 +307,11 @@ class DrvActivityPage(BasePage):
     # ==========================================================================
     # 3. REVENUE SUMMARY & RIWAYAT PENDAPATAN
     # ==========================================================================
+    # Isi tab Coupon Income: tabel 'Jenis Pendapatan | Pendapatan' (10_tab_coupon_income)
     HEADER_REVENUE_SUMMARY = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Revenue Summary') or contains(@text, 'Revenue Summary') or "
+        "//*[@content-desc='Jenis Pendapatan' or @text='Jenis Pendapatan' or "
+        "contains(@content-desc, 'Revenue Summary') or contains(@text, 'Revenue Summary') or "
         "contains(@content-desc, 'Riwayat Pendapatan') or contains(@text, 'Riwayat Pendapatan')]"
     )
     TEXT_DRIVER_EARNINGS = (
@@ -318,6 +345,13 @@ class DrvActivityPage(BasePage):
     HEADER_REFERRAL_INCOME = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Riwayat Referral Income') or contains(@text, 'Riwayat Referral Income')]"
+    )
+    # Isi tab 'Referral Program' (tab 3): 'Estimasi Total Pendapatan', kode DRV-..., 'Lihat QR Code',
+    # 'Unduh QR Code' (peta layar CI 12 Nov 2026: 12_tab_ketiga). Label ini tidak ada di tab 1 dan 2.
+    HEADER_REFERRAL_PROGRAM = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Estimasi Total Pendapatan' or @text='Estimasi Total Pendapatan' or "
+        "@content-desc='Lihat QR Code' or @text='Lihat QR Code']"
     )
     TEXT_REFERRAL_PER_REGISTER = (
         AppiumBy.XPATH,
@@ -384,15 +418,24 @@ class DrvActivityPage(BasePage):
         return self.is_displayed(self.HEADER_REVENUE_SUMMARY, timeout=4) or self.is_displayed(self.TEXT_DRIVER_EARNINGS, timeout=3)
 
     def switch_to_referral_tab(self):
-        """Berpindah ke tab Riwayat Referral Income."""
-        logger.info("Berpindah ke Tab Referral Income")
-        self.click(self.TAB_REFERRAL, label="Tab Referral Income")
+        """Berpindah ke tab Referral Program (tab ke-3).
+
+        Saat Aktivitas Saya baru dibuka, baris tab hanya menampilkan Guarantee Income dan Coupon Income;
+        tab ke-3 baru ikut tampil setelah tab Coupon Income dipilih (peta layar CI 12 Nov 2026:
+        09_aktivitas_saya -> 10_tab_coupon_income).
+        """
+        logger.info("Berpindah ke Tab Referral Program")
+        if not self.is_displayed(self.TAB_REFERRAL, timeout=2):
+            self.click(self.TAB_PENDAPATAN, label="Tab Coupon Income (memunculkan tab ke-3)")
+            time.sleep(1)
+        self.click(self.TAB_REFERRAL, label="Tab Referral Program")
         time.sleep(1)
 
     def is_referral_income_displayed(self) -> bool:
-        """Memeriksa apakah tampilan referral income tampil."""
+        """Memeriksa apakah tampilan referral (tab Referral Program) tampil."""
         return (
-            self.is_displayed(self.HEADER_REFERRAL_INCOME, timeout=4) or
+            self.is_displayed(self.HEADER_REFERRAL_PROGRAM, timeout=4) or
+            self.is_displayed(self.HEADER_REFERRAL_INCOME, timeout=2) or
             self.is_displayed(self.TEXT_REFERRAL_PER_REGISTER, timeout=3) or
             self.is_displayed(self.EMPTY_STATE_REFERRAL, timeout=2)
         )
@@ -401,13 +444,27 @@ class DrvActivityPage(BasePage):
     # METHODS TAB PESANAN & INVOICE / DETAIL PESANAN DRIVER
     # ==========================================================================
     def switch_to_pesanan_tab(self):
-        """Berpindah ke tab Pesanan (Riwayat Order Driver)."""
-        logger.info("Berpindah ke Tab Pesanan Driver")
-        self.click(self.TAB_PESANAN, label="Tab Pesanan Driver")
+        """Membuka riwayat order driver: layar 'Order Saya' dari Beranda (bukan tab di Aktivitas Saya).
+
+        Dari layar Aktivitas Saya kembali dulu ke Beranda lewat tombol 'Kembali', lalu ketuk kartu 'Order Saya'
+        (peta layar CI 12 Nov 2026: 09_aktivitas_saya, 01_beranda, 13_order_saya).
+        """
+        logger.info("Membuka layar Order Saya (riwayat order driver)")
+        if self.is_displayed(self.TAB_ORDER_SAYA_SEMUA, timeout=2):
+            return
+        if self.is_displayed(self.HEADER_AKTIVITAS, timeout=2):
+            self.click(self.BTN_KEMBALI, label="Tombol Kembali dari Aktivitas Saya")
+            time.sleep(1)
+        # Pop-up 'Pemberitahuan Jam Operasional' bisa menutupi Beranda (bukti CI: HOME_PT_16_FAILED.xml)
+        DrvHomePage(self.driver).dismiss_operational_popup()
+        self.click(self.TAB_PESANAN, label="Kartu Order Saya di Beranda")
+        self.is_displayed(self.TAB_ORDER_SAYA_SEMUA, timeout=6)
         time.sleep(1)
 
     def is_pesanan_tab_displayed(self) -> bool:
-        """Memeriksa apakah tab Pesanan aktif."""
+        """Memeriksa layar Order Saya aktif dan memuat kartu riwayat atau empty state."""
+        if not self.is_displayed(self.TAB_ORDER_SAYA_SEMUA, timeout=4):
+            return False
         return self.is_displayed(self.CARD_ORDER_ITEM, timeout=3) or self.is_displayed(self.EMPTY_STATE_PESANAN, timeout=3)
 
     def click_order_item_to_view_invoice(self):
@@ -533,9 +590,11 @@ class DrvActivityPage(BasePage):
         "contains(@text, 'Kesalahan sistem, silakan coba lagi nanti')]"
     )
     # Bukti ada riwayat pesanan: status persis order_state_completed / order_state_cancelled, atau nomor order
+    # Di Order Saya status menyatu dengan label kartu: 'Reguler\nSelesai\nLokasi Tujuan\n...' (13_order_saya)
     BUKTI_RIWAYAT_PESANAN = (
         AppiumBy.XPATH,
         "//*[@content-desc='Selesai' or @text='Selesai' or @content-desc='Dibatalkan' or @text='Dibatalkan' or "
+        "contains(@content-desc, 'Lokasi Tujuan') or "
         "contains(@content-desc, 'ORD-') or contains(@text, 'ORD-') or "
         "contains(@content-desc, 'Order #') or contains(@text, 'Order #')]"
     )

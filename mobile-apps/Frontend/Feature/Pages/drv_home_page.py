@@ -197,6 +197,16 @@ class DrvHomePage(BasePage):
         AppiumBy.XPATH,
         "//*[@content-desc='Menu' or @text='Menu']"
     )
+    # Penanda layar tujuan navigasi: header 'Total Orderan' hanya ada di Menu (04_menu s.d. 07_menu_gulir_3),
+    # tab 'Guarantee Income / Tab 1 dari 3' hanya ada di Aktivitas Saya (09_aktivitas_saya). Peta layar CI 12 Nov 2026.
+    PENANDA_MENU = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Total Orderan' or @text='Total Orderan']"
+    )
+    PENANDA_AKTIVITAS = (
+        AppiumBy.XPATH,
+        "//*[starts-with(@content-desc, 'Guarantee Income') and contains(@content-desc, 'Tab 1')]"
+    )
 
     # ==========================================================================
     # METHODS / USER ACTIONS
@@ -275,16 +285,29 @@ class DrvHomePage(BasePage):
         """Berpindah ke tab Pesanan Terjadwal."""
         self.click(self.TAB_PESANAN_TERJADWAL, label="Tab Pesanan Terjadwal")
 
+    def _ketuk_dan_tunggu(self, tombol, penanda, label: str, percobaan: int = 2):
+        """Ketuk tombol navigasi lalu tunggu layar tujuan (penanda) tampil; ulang sekali bila ketukan tertelan.
+
+        Di CI ketukan pertama setelah login kadang tidak memindahkan layar (run 43134989584, MENU_PT_18:
+        tombol Menu diketuk tetapi layar tetap Beranda). Bila layar tujuan tetap tidak tampil, langkah
+        berikutnya di test yang gagal, jadi tidak ada kegagalan yang disembunyikan.
+        """
+        for _ in range(percobaan):
+            self.dismiss_operational_popup()
+            self.click(tombol, label=label)
+            if self.is_displayed(penanda, timeout=6):
+                return
+
     def navigate_to_menu(self):
         """Navigasi ke halaman Menu melalui Bottom Navigation Bar."""
         logger.info("Navigasi ke menu melalui Bottom Bar")
-        self.click(self.BOTTOM_NAV_MENU, label="Tab Bottom Nav Menu")
+        self._ketuk_dan_tunggu(self.BOTTOM_NAV_MENU, self.PENANDA_MENU, "Tab Bottom Nav Menu")
         time.sleep(1)
 
     def navigate_to_activity(self):
-        """Navigasi ke halaman Aktivitas Saya melalui Bottom Navigation Bar."""
-        logger.info("Navigasi ke Aktivitas Saya melalui Bottom Bar")
-        self.click(self.BOTTOM_NAV_AKTIVITAS, label="Tab Bottom Nav Aktivitas Saya")
+        """Navigasi ke halaman Aktivitas Saya lewat kartu 'Aktivitas Saya' di Beranda."""
+        logger.info("Navigasi ke Aktivitas Saya melalui kartu di Beranda")
+        self._ketuk_dan_tunggu(self.BOTTOM_NAV_AKTIVITAS, self.PENANDA_AKTIVITAS, "Kartu Aktivitas Saya")
         time.sleep(1)
 
     def toggle_hide_balance(self):

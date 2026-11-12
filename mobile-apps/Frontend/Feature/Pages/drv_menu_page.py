@@ -24,10 +24,12 @@ class DrvMenuPage(BasePage):
     # ==========================================================================
     # 1. HEADER & IDENTITAS DRIVER
     # ==========================================================================
-    # Halaman Menu tidak punya judul 'Menu'; penandanya item 'Cara Penggunaan Aplikasi' (peta layar CI)
+    # Halaman Menu tidak punya judul 'Menu'. Penandanya label header 'Total Orderan' yang tetap tampil saat
+    # daftar menu digulir (peta layar CI 12 Nov 2026: 04_menu s.d. 07_menu_gulir_3). 'Cara Penggunaan Aplikasi'
+    # tidak dipakai lagi: hilang saat digulir (05/06) dan juga judul layar panduan (19_cara_penggunaan_5dtk).
     TITLE_MENU = (
         AppiumBy.XPATH,
-        "//*[@content-desc='Cara Penggunaan Aplikasi' or @text='Cara Penggunaan Aplikasi']"
+        "//*[@content-desc='Total Orderan' or @text='Total Orderan']"
     )
     PROFILE_DRIVER_NAME = (
         AppiumBy.XPATH,
@@ -101,9 +103,11 @@ class DrvMenuPage(BasePage):
     # ==========================================================================
     # 4. PENGATURAN APLIKASI & KELOLA AKUN
     # ==========================================================================
+    # Label persis 'Kelola Akun' di bagian bawah Menu (peta layar CI 12 Nov 2026: 06_menu_gulir_2).
+    # Alternatif lama 'Evaluasi Saya' dibuang: itu menu lain (18_evaluasi_saya), bukan Kelola Akun.
     MENU_KELOLA_AKUN = (
         AppiumBy.XPATH,
-        "//*[@content-desc='Kelola Akun' or @text='Kelola Akun' or @content-desc='Evaluasi Saya']"
+        "//*[@content-desc='Kelola Akun' or @text='Kelola Akun']"
     )
     MENU_OVERLAY_ORDER = (
         AppiumBy.XPATH,
@@ -148,6 +152,12 @@ class DrvMenuPage(BasePage):
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Cara Penggunaan Aplikasi') or contains(@text, 'Cara Penggunaan Aplikasi')]"
     )
+    # Subjudul layar panduan, tampil setelah konten selesai dimuat (peta layar CI 12 Nov 2026: 19_cara_penggunaan_5dtk)
+    TITLE_LANGKAH_MUDAH = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Langkah Mudah Menggunakan Aplikasi' or @text='Langkah Mudah Menggunakan Aplikasi']"
+    )
+    # 'Tips untuk Driver' ada di bagian bawah layar Cara Penggunaan Aplikasi (21_cara_penggunaan_gulir_2), bukan di Menu
     TEXT_TIPS_DRIVER = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Tips untuk Driver') or contains(@text, 'Tips untuk Driver')]"
@@ -229,7 +239,8 @@ class DrvMenuPage(BasePage):
         self.click(self.BTN_SIMPAN_REKENING, label="Tombol Simpan Rekening")
 
     def open_kelola_akun(self):
-        """Membuka sub-menu Kelola Akun."""
+        """Membuka sub-menu Kelola Akun (item paling bawah Menu, perlu digulir: 06_menu_gulir_2)."""
+        self.is_displayed_after_scroll(self.MENU_KELOLA_AKUN)
         self.click(self.MENU_KELOLA_AKUN, label="Menu Kelola Akun")
 
     def toggle_overlay_order_permission(self):
@@ -262,12 +273,14 @@ class DrvMenuPage(BasePage):
         return self.is_displayed(self.SNACKBAR_LANG_SUCCESS, timeout=3)
 
     def open_cara_penggunaan(self):
-        """Membuka layar Cara Penggunaan Aplikasi & Tips Driver."""
+        """Membuka layar Cara Penggunaan Aplikasi & Tips Driver, lalu menunggu daftar langkah selesai dimuat."""
         self.click(self.MENU_CARA_PENGGUNAAN, label="Menu Cara Penggunaan Aplikasi")
+        # Konten panduan baru muncul beberapa detik setelah layar terbuka (peta layar CI: dump 19 diambil 5 detik)
+        self.is_displayed(self.TITLE_LANGKAH_MUDAH, timeout=10)
 
     def is_tips_driver_displayed(self) -> bool:
-        """Memeriksa apakah konten Tips untuk Driver tampil."""
-        return self.is_displayed(self.TEXT_TIPS_DRIVER, timeout=4)
+        """Memeriksa apakah konten Tips untuk Driver tampil (boleh menggeser layar panduan)."""
+        return self.is_displayed_after_scroll(self.TEXT_TIPS_DRIVER)
 
     def click_logout_menu(self):
         """Mengetuk menu Keluar dari Akun."""
@@ -298,9 +311,10 @@ class DrvMenuPage(BasePage):
     # ==========================================================================
     # 6. FEEDBACK / MASUKAN DRIVER & TENTANG KAMI
     # ==========================================================================
+    # Item Menu 'Kirim Masukan' (peta layar CI 12 Nov 2026: 04_menu); dicocokkan persis
     MENU_FEEDBACK = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Masukan') or contains(@text, 'Masukan') or contains(@content-desc, 'Feedback')]"
+        "//*[@content-desc='Kirim Masukan' or @text='Kirim Masukan' or contains(@content-desc, 'Feedback')]"
     )
     # Hint resmi kolom masukan (hint_feedback) diawali 'Kemajuan kami tidak terlepas...', bukan 'Masukan'.
     # Form masukan hanya punya satu kolom input, jadi EditText pertama sudah cukup spesifik.
@@ -323,23 +337,31 @@ class DrvMenuPage(BasePage):
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Tentang Kami') or contains(@text, 'Tentang Kami')]"
     )
+    # Label versi di bagian bawah Menu: 'App Versi v.1.9.27+97' (peta layar CI 12 Nov 2026: 06_menu_gulir_2)
     TEXT_APP_VERSION = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'v1.9') or contains(@text, 'v1.9') or contains(@content-desc, 'Versi') or contains(@text, 'Versi')]"
+        "//*[starts-with(@content-desc, 'App Versi') or starts-with(@text, 'App Versi') or "
+        "contains(@content-desc, 'v1.9') or contains(@text, 'v1.9') or contains(@content-desc, 'Versi') or contains(@text, 'Versi')]"
     )
 
     # Detail FAQ & Video Tutorial
+    # Langkah 1 di aplikasi berjudul 'Unduh Aplikasi' dengan isi '...dan daftar akun...'
+    # (peta layar CI 12 Nov 2026: 19_cara_penggunaan_5dtk); label lama 'Unduh dan Daftar' dipertahankan
     FAQ_STEP_DOWNLOAD = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Unduh dan Daftar') or contains(@text, 'Unduh dan Daftar')]"
+        "//*[starts-with(@content-desc, 'Unduh Aplikasi') or starts-with(@text, 'Unduh Aplikasi') or "
+        "contains(@content-desc, 'Unduh dan Daftar') or contains(@text, 'Unduh dan Daftar')]"
     )
     FAQ_STEP_OPEN_HOME = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Buka Halaman Utama') or contains(@text, 'Buka Halaman Utama')]"
     )
+    # Langkah 'Aktifkan Aplikasi' (peta layar CI 12 Nov 2026: 19_cara_penggunaan_5dtk, 21_cara_penggunaan_gulir_2);
+    # label lama 'Cara mengaktifkan aplikasi' dipertahankan
     FAQ_STEP_ACTIVATE = (
         AppiumBy.XPATH,
-        "//*[contains(@content-desc, 'Cara mengaktifkan aplikasi') or contains(@text, 'Cara mengaktifkan aplikasi')]"
+        "//*[starts-with(@content-desc, 'Aktifkan Aplikasi') or starts-with(@text, 'Aktifkan Aplikasi') or "
+        "contains(@content-desc, 'Cara mengaktifkan aplikasi') or contains(@text, 'Cara mengaktifkan aplikasi')]"
     )
     VIDEO_LOAD_FAILED = (
         AppiumBy.XPATH,
