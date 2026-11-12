@@ -102,6 +102,20 @@ def main():
         tap(driver, kolom, "panel_naik", 2)
         if not driver.find_elements("xpath", "//android.widget.EditText"):
             tap(driver, kolom, "form_tujuan_ketuk_kedua", 3)
+        # Elemen kolom tujuan adalah wadah panel (kolom + chip Rumah/Kantor/Lainnya): element.click() mengetuk tengah
+        # wadah, bukan kolomnya. Coba ketuk koordinat kolom (bagian atas wadah).
+        for percobaan in range(2):
+            if driver.find_elements("xpath", "//android.widget.EditText"):
+                break
+            els = driver.find_elements("xpath", kolom)
+            if not els:
+                break
+            r = els[0].rect
+            x, y = r["x"] + r["width"] // 2, r["y"] + 20
+            index.append(f"   ketuk koordinat kolom tujuan ({x},{y}) dari wadah {r}")
+            driver.execute_script("mobile: clickGesture", {"x": x, "y": y})
+            time.sleep(3)
+            save(driver, f"form_tujuan_koordinat_{percobaan + 1}")
         if driver.find_elements("xpath", "//android.widget.EditText"):
             fields = driver.find_elements("xpath", "//android.widget.EditText")
             index.append(f"   kolom di form tujuan: {[(f.get_attribute('hint') or f.get_attribute('text')) for f in fields]}")
