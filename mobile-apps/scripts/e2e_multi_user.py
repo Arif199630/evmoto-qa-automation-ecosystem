@@ -1,7 +1,10 @@
 """
 E2E multi-pengguna dengan dua emulator (CI suite skrip2), staging, metode bayar Cash:
-  Emulator A (emulator-5554): aplikasi Driver (akun driver uji) + aplikasi User A (akun utama), berpindah aplikasi.
-  Emulator B (emulator-5556): aplikasi User B (akun QA Auto indeks E2E_USER_B_INDEX, default 14).
+  emulator-5558: aplikasi Driver (akun driver uji), sendirian dan selalu di depan.
+  emulator-5554: aplikasi User A (akun QA pool E2E_USER_A_INDEX, default 12).
+  emulator-5556: aplikasi User B (akun QA pool E2E_USER_B_INDEX, default 14).
+Run 43195711401 membuktikan Driver harus di perangkat sendiri: User di perangkat yang sama dengan aplikasi Driver
+(di belakang) melihat 'Belum ada driver yang tersedia', User di perangkat lain melihat 'Driver terdekat 0 m'.
 
 Skenario:
   1. Race condition: Driver Online; User A dan User B memesan hampir bersamaan dari titik yang sama ke tujuan yang
@@ -43,7 +46,7 @@ def main():
 
     user_pkg, driver_pkg = config.APP_PACKAGE, getattr(config, "DRIVER_PACKAGE", "com.evmoto.driver.app")
     tujuan = os.getenv("E2E_TUJUAN", "Senayan City")
-    phone_a = akun_pool(0)
+    phone_a = akun_pool(int(os.getenv("E2E_USER_A_INDEX", "12")))
     phone_b = akun_pool(int(os.getenv("E2E_USER_B_INDEX", "14")))
     OUT.mkdir(parents=True, exist_ok=True)
 
@@ -96,20 +99,20 @@ def main():
             ketuk(d, f"//*[contains(@content-desc, '{label}') or contains(@text, '{label}')]", 2)
         save(d, dev, "pembersihan_batal")
 
-    da = db = None
+    dv = da = db = None
     pesanan = {"A": False, "B": False}
     try:
-        da = DriverFactory.create_driver(is_driver_app=True, udid="emulator-5554", system_port=8200)
+        dv = DriverFactory.create_driver(is_driver_app=True, udid="emulator-5558", system_port=8202)
+        da = DriverFactory.create_driver(udid="emulator-5554", system_port=8200)
         db = DriverFactory.create_driver(udid="emulator-5556", system_port=8201)
-        ringkasan.append("perangkat A: emulator-5554 (Driver + User A), perangkat B: emulator-5556 (User B); metode bayar: Cash")
+        ringkasan.append("Driver: emulator-5558 | User A: emulator-5554 | User B: emulator-5556 (akun QA pool); metode bayar: Cash")
         # Driver Online di perangkat A
-        DrvLoginPage(da).login_as_driver()
+        DrvLoginPage(dv).login_as_driver()
         time.sleep(4)
-        ketuk(da, "//*[@content-desc='Lanjutkan' or @text='Lanjutkan']", 1.5)
-        ketuk(da, "//*[@content-desc='Offline' or @text='Offline']", 3)
-        save(da, "A-driver", "status_online")
+        ketuk(dv, "//*[@content-desc='Lanjutkan' or @text='Lanjutkan']", 1.5)
+        ketuk(dv, "//*[@content-desc='Offline' or @text='Offline']", 3)
+        save(dv, "driver", "status_online")
         # User A dan User B login, lalu memesan hampir bersamaan
-        da = ke(da, user_pkg)
         login_user(da, phone_a)
         login_user(db, phone_b)
         save(da, "A-user", "beranda")
@@ -123,37 +126,37 @@ def main():
         save(da, "A-user", "setelah_pesan")
         save(db, "B-user", "setelah_pesan")
         # Driver menerima satu pesanan
-        da = ke(da, driver_pkg)
         diterima = None
         for _ in range(20):
-            xml = save(da, "A-driver", "cek_order_masuk")
+            xml = save(dv, "driver", "cek_order_masuk")
             if re.search(r"Swipe|Geser|Terima|Orderan Baru|Pesanan Baru", xml):
-                els = da.find_elements("xpath", "//*[contains(@content-desc,'Swipe') or contains(@content-desc,'Geser') or contains(@text,'Geser') or contains(@content-desc,'Terima')]")
+                els = dv.find_elements("xpath", "//*[contains(@content-desc,'Swipe') or contains(@content-desc,'Geser') or contains(@text,'Geser') or contains(@content-desc,'Terima')]")
                 if els:
                     r = els[-1].rect
                     y = r["y"] + r["height"] // 2
-                    da.swipe(r["x"] + 15, y, r["x"] + r["width"] - 10, y, 900)
+                    dv.swipe(r["x"] + 15, y, r["x"] + r["width"] - 10, y, 900)
                     time.sleep(4)
-                    diterima = save(da, "A-driver", "setelah_terima")
+                    diterima = save(dv, "driver", "setelah_terima")
                 break
             time.sleep(6)
         ringkasan.append("   driver menerima pesanan" if diterima else "   tidak ada pesanan masuk ke driver dalam ±2 menit")
         # Status kedua user setelah driver menerima: hanya satu yang boleh mendapat driver
-        da = ke(da, user_pkg)
         xa = save(da, "A-user", "status_setelah_driver_terima")
         xb = save(db, "B-user", "status_setelah_driver_terima")
         dapat = [n for n, x in (("A", xa), ("B", xb)) if re.search(r"B 9099|testdr|Driver menuju|sedang menuju|dalam perjalanan", x)]
         ringkasan.append(f"HASIL race condition: user yang mendapat driver = {dapat or 'tidak ada'} "
                          f"({'BENAR: hanya satu' if len(dapat) == 1 else 'PERLU DICEK' if not dapat else 'SALAH: lebih dari satu user mendapat driver yang sama'})")
         # Driver sibuk: selama 60 dtk, pesanan user lain tidak boleh ditawarkan ke driver ini
-        da = ke(da, driver_pkg)
         tawaran = 0
         for _ in range(6):
-            xml = save(da, "A-driver", "selama_mengantar")
+            xml = save(dv, "driver", "selama_mengantar")
             tawaran += 1 if re.search(r"Orderan Baru|Pesanan Baru|Swipe untuk mendapatkan", xml) else 0
             time.sleep(10)
-        ringkasan.append(f"HASIL driver sibuk: tawaran pesanan baru selama mengantar = {tawaran} kali "
-                         f"({'BENAR' if tawaran == 0 else 'PERLU DICEK'})")
+        if diterima:
+            ringkasan.append(f"HASIL driver sibuk: tawaran pesanan baru selama mengantar = {tawaran} kali "
+                             f"({'BENAR' if tawaran == 0 else 'PERLU DICEK'})")
+        else:
+            ringkasan.append("HASIL driver sibuk: tidak bisa dinilai (driver tidak memegang order)")
     except Exception as e:
         traceback.print_exc()
         ringkasan.append(f"langkah gagal: {type(e).__name__}: {str(e)[:220]}")
@@ -161,19 +164,16 @@ def main():
         for d, dev, key in ((da, "A-user", "A"), (db, "B-user", "B")):
             try:
                 if d is not None and pesanan.get(key):
-                    if dev.startswith("A"):
-                        d = da = ke(d, user_pkg)
                     batalkan(d, dev)
             except Exception:
                 pass
         try:
-            if da is not None:
-                da = ke(da, driver_pkg)
-                ketuk(da, "//*[@content-desc='Online' or @text='Online']", 2)
-                save(da, "A-driver", "pembersihan_offline")
+            if dv is not None:
+                ketuk(dv, "//*[@content-desc='Online' or @text='Online']", 2)
+                save(dv, "driver", "pembersihan_offline")
         except Exception:
             pass
-        for d in (da, db):
+        for d in (dv, da, db):
             try:
                 if d is not None:
                     d.quit()
