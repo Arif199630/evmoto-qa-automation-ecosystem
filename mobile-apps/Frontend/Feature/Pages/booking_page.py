@@ -432,9 +432,32 @@ class BookingPage(BasePage):
         self.open_pickup_section()
         if pickup:
             self.set_pickup(pickup)
-        self.enter_destination(destination)
-        self.select_first_suggestion()
+            self.enter_destination(destination)
+            self._select_suggestion_for(destination, exclude=pickup)
+        else:
+            self.enter_destination(destination)
+            self.select_first_suggestion()
         self.confirm_pickup_location()
+
+    def _select_suggestion_for(self, destination: str, exclude: str = None, timeout: int = 12):
+        """Pilih saran alamat yang cocok dengan tujuan, bukan sisa daftar saran titik jemput.
+
+        Run 43193268521: setelah titik jemput diisi, daftar saran jemput ('Ecgo Evmoto Wijaya 0.47km') masih tampil
+        saat tujuan diketik; mengetuk saran pertama membuat tujuan = titik jemput ('Titik jemput dan tujuan sama').
+        """
+        kata = [w.lower() for w in re.findall(r"[A-Za-z0-9]{3,}", destination)]
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            for el in self.driver.find_elements(AppiumBy.XPATH, self.FIRST_SUGGESTION_WORD[1][1:].rsplit(')[1]', 1)[0]):
+                label = (el.get_attribute("content-desc") or el.get_attribute("text") or "").lower()
+                if exclude and exclude.lower() in label and not any(k in label for k in kata):
+                    continue
+                if any(k in label for k in kata):
+                    el.click()
+                    time.sleep(2)
+                    return
+            time.sleep(1)
+        raise AssertionError(f"Saran alamat untuk tujuan '{destination}' tidak muncul dalam {timeout} dtk")
 
     def click_set_on_map(self):
         """Memilih penentuan lokasi menggunakan peta interaktif."""
