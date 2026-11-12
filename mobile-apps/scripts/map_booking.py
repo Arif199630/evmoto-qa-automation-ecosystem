@@ -127,6 +127,11 @@ def main():
                     (e.get_attribute("content-desc") or e.get_attribute("text") or "")[:50]
                     for e in driver.find_elements("xpath", "//*[contains(@class,'View') and string-length(@content-desc) > 3]")[:6]))
                 tap(driver, "(//*[contains(@content-desc, 'Senayan') or contains(@text, 'Senayan')])[last()]", "pilih_saran", 6)
+                # Layar konfirmasi 'Lokasi Penjemputan' / tujuan: tombol 'Pilih Lokasi' (bukan transaksi), bisa dua kali
+                for k in range(3):
+                    if not tap(driver, "//*[@content-desc='Pilih Lokasi' or @text='Pilih Lokasi']", f"konfirmasi_lokasi_{k + 1}", 5):
+                        break
+                tap(driver, "//*[@content-desc='Lanjutkan']", "tutup_popup_place_order", 2)
                 gulir(driver, "place_order", 1)
                 tap(driver, "//*[contains(@content-desc, 'Tunai') or contains(@content-desc, 'Pembayaran') or contains(@content-desc, 'Cash')]",
                     "pilih_pembayaran", 3)
