@@ -136,10 +136,9 @@ ALASAN_BUTUH_DRIVER_NYATA = (
 
 
 def _buka_place_order(booking_page, tujuan: str):
-    """Membuka form rute, mengisi tujuan, memilih saran pertama, lalu memastikan Place Order tampil."""
-    booking_page.open_pickup_section()
-    booking_page.enter_destination(tujuan)
-    booking_page.select_first_suggestion()
+    """Membuka form rute, mengisi tujuan, memilih saran pertama, menekan 'Pilih Lokasi' di layar 'Lokasi Penjemputan',
+    lalu memastikan Place Order tampil (peta layar CI 12 Nov 2026: 01_beranda -> 03 -> 04 -> 05 -> 06)."""
+    booking_page.open_place_order(tujuan)
     assert booking_page.is_place_order_displayed(), (
         f"Prasyarat gagal: layar Place Order (tombol 'Pesan EVMoto') tidak tampil setelah memilih tujuan '{tujuan}'"
     )
@@ -338,6 +337,7 @@ class TestNormalBookingSuite:
         booking_page.enter_destination("Grand Indonesia")
         time.sleep(1)
         booking_page.select_first_suggestion()
+        booking_page.confirm_pickup_location()  # peta layar CI 12 Nov 2026: 05_pilih_saran
 
         then("Data destinasi tersimpan dan aplikasi beralih ke layar Place Order")
         assert booking_page.is_place_order_displayed(), (
@@ -373,6 +373,7 @@ class TestNormalBookingSuite:
         booking_page.open_pickup_section()
         booking_page.enter_destination("Senayan City")
         booking_page.select_first_suggestion()
+        booking_page.confirm_pickup_location()  # peta layar CI 12 Nov 2026: 05_pilih_saran
 
         when("Pengguna menekan tombol 'Book EVMoto'")
         booking_page.submit_book_evmoto()
@@ -622,6 +623,7 @@ class TestNormalBookingSuite:
         when("Pengguna memasukkan destinasi di luar jangkauan ibu kota (> 60 km)")
         booking_page.enter_destination("Bandung Kota Kembang Jawa Barat")
         booking_page.select_first_suggestion()
+        booking_page.confirm_pickup_location()  # peta layar CI 12 Nov 2026: 05_pilih_saran
 
         then("Sistem menolak rute dan menampilkan popup peringatan jarak melebihi batas 60 km")
         assert booking_page.is_distance_exceeded_warning_displayed()
@@ -816,6 +818,7 @@ class TestBookingCoreEnhancements:
         when("Pengguna memasukkan destinasi yang persis sama dengan koordinat jemput")
         booking_page.enter_destination(alamat_jemput[0])
         booking_page.select_first_suggestion()
+        booking_page.confirm_pickup_location()  # peta layar CI 12 Nov 2026: 05_pilih_saran
 
         then("Sistem menampilkan validasi 'Titik penjemputan dan tujuan tidak boleh sama'")
         assert booking_page.is_same_location_warning_displayed(), (
@@ -909,6 +912,7 @@ class TestBookingCoreEnhancements:
         when("Pengguna memasukkan destinasi dan memilih rute")
         booking_page.enter_destination("Plaza Indonesia")
         booking_page.select_first_suggestion()
+        booking_page.confirm_pickup_location()  # peta layar CI 12 Nov 2026: 05_pilih_saran
         assert booking_page.is_place_order_displayed(), "Layar Place Order (tombol 'Pesan EVMoto') tidak tampil setelah memilih rute"
 
         and_step("Pengguna meninjau tarif dan melakukan pemesanan")
@@ -962,6 +966,7 @@ class TestSpecializedUserBookingSuite:
         booking_page.open_pickup_section()
         booking_page.enter_destination("Grand Indonesia Mall")
         booking_page.select_first_suggestion()
+        booking_page.confirm_pickup_location()  # peta layar CI 12 Nov 2026: 05_pilih_saran
 
         and_step("Pengguna 1 dan Pengguna 2 melakukan booking secara bersamaan (simultan)")
         booking_page.submit_book_evmoto()
@@ -1002,17 +1007,24 @@ class TestSpecializedUserBookingSuite:
         given("Pengguna berada di layar penentuan rute penjemputan dan tujuan")
         booking_page.open_pickup_section()
 
-        when("Pengguna memasukkan destinasi Plaza Senayan dengan jarak rute terukur 3.5 KM")
+        when("Pengguna memasukkan destinasi Plaza Senayan dan aplikasi menampilkan jarak rute terukur")
         booking_page.enter_destination("Plaza Senayan")
         booking_page.select_first_suggestion()
-        trip_distance_km = 3.5
+        booking_page.confirm_pickup_location()  # peta layar CI 12 Nov 2026: 05_pilih_saran
+        # Jarak dibaca dari layar ('Jarak 3.88 km . 15 menit', 06_konfirmasi_lokasi_1), bukan angka dokumen 3.5 KM:
+        # jarak rute nyata bergantung titik jemput GPS emulator.
+        trip_distance_km = booking_page.get_trip_distance_km()
+        assert trip_distance_km is not None, "Jarak rute ('Jarak <n> km') tidak terbaca di layar Place Order"
 
         and_step("Aplikasi menampilkan rincian estimasi tarif argo pada layar Place Order")
-        ui_fare_text = booking_page.get_estimated_fare()
+        # Argo = harga sebelum kupon (harga coret di kartu 'ECGO 3', mis. Rp10.901 di samping Rp6.901 setelah kupon).
+        ui_fare_text = booking_page.get_fare_before_discount()
         logger.info(f"Tarif tertera di User App: '{ui_fare_text}' untuk jarak {trip_distance_km} KM")
 
         then("Harga argo diverifikasi cocok dengan rumus konfigurasi Dashboard Admin Production")
-        is_valid, validation_msg = fare_calculator.verify_ui_fare(ui_fare_text, distance_km=trip_distance_km)
+        # Jarak tampil dibulatkan 2 desimal (3.88 = 3,875-3,885 km), sedangkan aplikasi menghitung dari jarak asli
+        is_valid, validation_msg = fare_calculator.verify_ui_fare(ui_fare_text, distance_km=trip_distance_km,
+                                                                  distance_rounding=0.005)
         assert is_valid is True, f"Kalkulasi argo tidak sinkron dengan dashboard: {validation_msg}"
         time.sleep(Config.HUMAN_PACING_MIN)
 
@@ -1033,6 +1045,7 @@ class TestSpecializedUserBookingSuite:
         booking_page.open_pickup_section()
         booking_page.enter_destination("Plaza Indonesia")
         booking_page.select_first_suggestion()
+        booking_page.confirm_pickup_location()  # peta layar CI 12 Nov 2026: 05_pilih_saran
         booking_page.submit_book_evmoto()
 
         and_step("Mitra Driver menerima ping pesanan dan menekan 'Terima Order' pada APK Driver")
@@ -1072,6 +1085,7 @@ class TestSpecializedUserBookingSuite:
         booking_page.open_pickup_section()
         booking_page.enter_destination("Cilandak Town Square")
         booking_page.select_first_suggestion()
+        booking_page.confirm_pickup_location()  # peta layar CI 12 Nov 2026: 05_pilih_saran
         booking_page.submit_book_evmoto()
 
         and_step("Sistem memverifikasi ketersediaan armada terdekat")
@@ -1100,6 +1114,7 @@ class TestSpecializedUserBookingSuite:
         booking_page.open_pickup_section()
         booking_page.enter_destination("Menara BCA Grand Indonesia")
         booking_page.select_first_suggestion()
+        booking_page.confirm_pickup_location()  # peta layar CI 12 Nov 2026: 05_pilih_saran
 
         when("Pengguna membuka opsi pembayaran dan beralih ke metode EvWallet (Cashless)")
         booking_page.select_payment_method("wallet")
@@ -1135,6 +1150,7 @@ class TestSpecializedUserBookingSuite:
         booking_page.open_pickup_section()
         booking_page.enter_destination("Kota Kasablanka Mall")
         booking_page.select_first_suggestion()
+        booking_page.confirm_pickup_location()  # peta layar CI 12 Nov 2026: 05_pilih_saran
         booking_page.select_payment_method("wallet")
         booking_page.submit_book_evmoto()
 
@@ -1417,6 +1433,7 @@ class TestEvMotoWaitingFeeCancellationPRDSuite:
         booking_page.open_pickup_section()
         booking_page.enter_destination("Plaza Indonesia")
         booking_page.select_first_suggestion()
+        booking_page.confirm_pickup_location()  # peta layar CI 12 Nov 2026: 05_pilih_saran
         booking_page.submit_book_evmoto()
 
         # Driver menerima pesanan tetapi belum tiba di lokasi jemput
@@ -1457,6 +1474,7 @@ class TestEvMotoWaitingFeeCancellationPRDSuite:
         booking_page.open_pickup_section()
         booking_page.enter_destination("Grand Indonesia")
         booking_page.select_first_suggestion()
+        booking_page.confirm_pickup_location()  # peta layar CI 12 Nov 2026: 05_pilih_saran
         booking_page.submit_book_evmoto()
 
         driver_simulator.accept_order({

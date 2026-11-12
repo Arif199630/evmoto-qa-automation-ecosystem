@@ -32,6 +32,7 @@ from Frontend.Feature.Helper.admin_fare_calculator import AdminDashboardFareCalc
 from Frontend.Feature.Pages.booking_page import BookingPage
 from Frontend.Feature.Pages.drv_booking_page import DrvBookingPage
 from Frontend.Feature.Pages.home_page import HomePage
+from Frontend.Feature.Pages.login_page import LoginPage
 from Frontend.Feature.Pages.profil_page import ProfilPage
 from Frontend.Feature.Data.user_data import MobileUserDataProvider
 
@@ -49,6 +50,26 @@ def then(msg: str):
 
 def and_step(msg: str):
     logger.info(f"[AND] {msg}")
+
+
+def _buka_place_order(driver, tujuan: str = "Senayan City") -> BookingPage:
+    """Prasyarat UI: login bila layar login tampil, lalu buka Place Order tanpa menekan 'Pesan EVMoto'.
+
+    Peta layar CI 12 Nov 2026 (map_booking): 01_beranda -> 03_panel_naik -> 04_saran_tujuan -> 05_pilih_saran
+    -> 06_konfirmasi_lokasi_1 (Place Order, chip metode bayar 'Cash').
+    """
+    login = LoginPage(driver)
+    if login.is_login_screen_displayed(timeout=10):
+        login.input_phone_number(config.ACTIVE_PHONE)
+        login.click_submit_login()
+        login.input_otp_dev(config.ACTIVE_OTP)
+    assert HomePage(driver).is_home_screen_displayed(timeout=20), "Prasyarat gagal: Beranda tidak tampil"
+    booking_page = BookingPage(driver)
+    booking_page.open_place_order(tujuan)
+    assert booking_page.is_place_order_displayed(), (
+        f"Prasyarat gagal: layar Place Order (tombol 'Pesan EVMoto') tidak tampil setelah memilih tujuan '{tujuan}'"
+    )
+    return booking_page
 
 
 @pytest.fixture(scope="class")
@@ -113,8 +134,8 @@ class TestOvoPaymentAutomationSuite:
         [Pilar 1 - PT-02] Pemilihan Opsi Metode Pembayaran OVO di Halaman Pemesanan (UI POM).
         Pengguna dapat membuka daftar metode pembayaran dan memilih 'OVO' secara interaktif.
         """
-        booking_page = BookingPage(driver)
         given("Pengguna berada di layar pra-pemesanan perjalanan EvRide")
+        booking_page = _buka_place_order(driver)
         when("Pengguna mengetuk tombol pemilihan metode pembayaran dan memilih opsi 'OVO'")
         booking_page.select_payment_method("ovo")
         then("Metode pembayaran aktif pada booking card menampilkan 'OVO'")
@@ -228,8 +249,8 @@ class TestOvoPaymentAutomationSuite:
         Pengguna beralih: Tunai (Surcharge 0%) -> OVO (Handling Fee 1.665%) -> Tunai (Surcharge 0%).
         Ekspektasi: UI memperbarui rincian kalkulasi harga secara instan dan reaktif.
         """
-        booking_page = BookingPage(driver)
         given("Pengguna berada di layar booking EvRide")
+        booking_page = _buka_place_order(driver)
         when("Pengguna mengganti metode ke Tunai lalu ke OVO")
         booking_page.select_payment_method("cash")
         time.sleep(0.5)

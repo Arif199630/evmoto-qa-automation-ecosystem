@@ -501,15 +501,28 @@ class AdminDashboardFareCalculator:
     # Pembungkus singkat yang dipakai test_drv_booking.py (TC_DRV_BOOK_FARE_*)
     # Semua angka diambil dari konstanta QC Form Waiting Fee & Cancellation.
     # ------------------------------------------------------------------
-    def verify_ui_fare(self, ui_fare_text: str, distance_km: float):
-        """Bandingkan teks tarif di layar (mis. 'Rp 10.200') dengan argo hasil rumus. Hasil: (cocok?, pesan)."""
+    def verify_ui_fare(self, ui_fare_text: str, distance_km: float, distance_rounding: float = 0.0):
+        """Bandingkan teks tarif di layar (mis. 'Rp 10.200') dengan argo hasil rumus. Hasil: (cocok?, pesan).
+
+        distance_rounding: bila jarak dibaca dari layar yang sudah dibulatkan (mis. 'Jarak 3.88 km' = 3,875-3,885 km),
+        tarif dianggap cocok bila berada di antara argo jarak terkecil dan terbesar yang dibulatkan ke angka itu
+        (+/- Rp1 pembulatan rupiah). Tarif di luar rentang itu tetap gagal.
+        """
         digits = re.sub(r"[^0-9]", "", (ui_fare_text or "").split(",")[0])
         if not digits:
             return False, f"Tarif tidak terbaca dari layar: {ui_fare_text!r}"
-        expected = self.calculate_base_argo(distance_km)["total_argo"]
         actual = float(digits)
+        expected = self.calculate_base_argo(distance_km)["total_argo"]
         if actual == expected:
             return True, f"Cocok: {format_rupiah_exact(actual)}"
+        if distance_rounding > 0:
+            low = self.calculate_base_argo(max(0.0, distance_km - distance_rounding))["total_argo"]
+            high = self.calculate_base_argo(distance_km + distance_rounding)["total_argo"]
+            if low - 1 <= actual <= high + 1:
+                return True, (f"Cocok: {format_rupiah_exact(actual)} berada di rentang argo "
+                              f"{format_rupiah_exact(low)}-{format_rupiah_exact(high)} untuk jarak tampil {distance_km} KM")
+            return False, (f"Layar {format_rupiah_exact(actual)} di luar rentang rumus {format_rupiah_exact(low)}-"
+                           f"{format_rupiah_exact(high)} untuk jarak tampil {distance_km} KM")
         return False, f"Layar {format_rupiah_exact(actual)} vs rumus {format_rupiah_exact(expected)} untuk {distance_km} KM"
 
     def calculate_waiting_fee(self, waiting_minutes: int) -> float:
