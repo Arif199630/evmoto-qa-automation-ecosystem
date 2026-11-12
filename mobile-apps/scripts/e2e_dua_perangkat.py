@@ -25,6 +25,7 @@ from core.driver_factory import DriverFactory  # noqa: E402
 from Pages.login_page import LoginPage  # noqa: E402
 from Pages.drv_login_page import DrvLoginPage  # noqa: E402
 from Pages.booking_page import BookingPage  # noqa: E402
+from _diag_util import pesan_order  # noqa: E402
 
 e.OUT = ROOT / "reports" / "repro" / "e2e_dua_perangkat"
 PESAN = "//android.widget.Button[@content-desc='Pesan EVMoto' or @text='Pesan EVMoto']"
@@ -58,13 +59,14 @@ def main():
         e.save(du, "user", "beranda")
         BookingPage(du).open_place_order(e.TUJUAN)
         e.save(du, "user", "place_order")
-        if e.ketuk(du, PESAN, 4):
+        if pesan_order(du):
             order_dibuat = True
             for i in range(3):
                 e.save(du, "user", f"setelah_pesan_{i + 1}")
                 time.sleep(8)
         else:
-            r.append("   tombol 'Pesan EVMoto' tidak ditemukan")
+            r.append("   'Pesan EVMoto' sudah diketuk 3x tetapi layar Place Order tidak berubah")
+            e.save(du, "user", "pesan_tidak_terkirim")
 
         if e.tunggu_label(dd, ["Swipe", "Geser", "Terima", "Orderan Baru", "Pesanan Baru"], 150, 5, "driver", "order_masuk"):
             e.save(dd, "driver", "order_masuk")

@@ -81,3 +81,27 @@ def pindah_app(driver, package, udid=None, system_port=None):
     if not _layar_terbaca(baru, package, 40):
         log(f"isi layar {package} belum terbaca setelah 40 dtk")
     return baru
+
+
+TOMBOL_PESAN = "//android.widget.Button[@content-desc='Pesan EVMoto' or @text='Pesan EVMoto']"
+
+
+def pesan_order(driver, percobaan=3):
+    """Ketuk 'Pesan EVMoto' sampai layar berubah. True bila tombolnya hilang (order terkirim).
+
+    Run 43198273813: overlay merah 'PlatformException ... newLatLngBounds' menutup layar Place Order sesaat, sehingga
+    ketukan pertama tidak sampai ke tombol. Tunggu overlay hilang, ketuk, lalu periksa tombol sudah hilang.
+    """
+    for _ in range(percobaan):
+        deadline = time.time() + 20
+        while time.time() < deadline and driver.find_elements(
+                "xpath", "//*[starts-with(@content-desc,'PlatformException') or starts-with(@text,'PlatformException')]"):
+            time.sleep(1)
+        els = driver.find_elements("xpath", TOMBOL_PESAN)
+        if not els:
+            return True
+        els[0].click()
+        time.sleep(5)
+        if not driver.find_elements("xpath", TOMBOL_PESAN):
+            return True
+    return False

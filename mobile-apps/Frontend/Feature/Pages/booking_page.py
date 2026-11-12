@@ -453,9 +453,13 @@ class BookingPage(BasePage):
         while time.time() < deadline:
             for el in self.driver.find_elements(AppiumBy.XPATH, self.FIRST_SUGGESTION_WORD[1][1:].rsplit(')[1]', 1)[0]):
                 label = (el.get_attribute("content-desc") or el.get_attribute("text") or "").lower()
-                if exclude and exclude.lower() in label and not any(k in label for k in kata):
+                # format saran: '0.5km / Nama Tempat / Alamat' (dipisah baris baru); cocokkan nama tempat saja karena
+                # alamat memuat kata umum seperti 'City' (run 43197232012: 'South Jakarta City' memilih saran jemput)
+                baris = label.split("\n")
+                nama = baris[1] if len(baris) > 1 else label
+                if exclude and exclude.lower() in nama:
                     continue
-                if any(k in label for k in kata):
+                if any(k in nama for k in kata):
                     el.click()
                     time.sleep(2)
                     return

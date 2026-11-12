@@ -42,7 +42,7 @@ def main():
     from Pages.login_page import LoginPage
     from Pages.drv_login_page import DrvLoginPage
     from Pages.booking_page import BookingPage
-    from _diag_util import izinkan_lokasi, log, pindah_app
+    from _diag_util import izinkan_lokasi, log, pindah_app, pesan_order
 
     user_pkg, driver_pkg = config.APP_PACKAGE, getattr(config, "DRIVER_PACKAGE", "com.evmoto.driver.app")
     tujuan = os.getenv("E2E_TUJUAN", "Senayan City")
@@ -120,8 +120,8 @@ def main():
         BookingPage(da).open_place_order(tujuan)
         BookingPage(db).open_place_order(tujuan)
         t0 = time.time()
-        pesanan["A"] = ketuk(da, "//android.widget.Button[@content-desc='Pesan EVMoto' or @text='Pesan EVMoto']", 0.5)
-        pesanan["B"] = ketuk(db, "//android.widget.Button[@content-desc='Pesan EVMoto' or @text='Pesan EVMoto']", 0.5)
+        pesanan["A"] = pesan_order(da)
+        pesanan["B"] = pesan_order(db)
         ringkasan.append(f"   pesanan A={pesanan['A']} B={pesanan['B']}, selisih {time.time() - t0:.1f} dtk")
         save(da, "A-user", "setelah_pesan")
         save(db, "B-user", "setelah_pesan")
