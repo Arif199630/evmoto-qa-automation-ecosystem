@@ -77,6 +77,33 @@ def batalkan_driver(dd, e, nama):
     return True
 
 
+
+def jalankan_tahap(dd, du, e, r, awalan):
+    """Geser slider tahap order Driver satu per satu sampai habis; simpan layar Driver dan User di tiap tahap.
+    Mengembalikan daftar label slider yang digeser."""
+    labels = []
+    sebelumnya, ulang = None, 0
+    for tahap in range(8):
+        el = slider_driver(dd, 60)
+        if el is None:
+            r.append(f"   {awalan} tahap {tahap + 1}: slider tidak tampil dalam 60 dtk")
+            break
+        lbl = geser_el(dd, el)
+        labels.append(lbl)
+        ulang = ulang + 1 if lbl == sebelumnya else 0
+        sebelumnya = lbl
+        r.append(f"   {awalan} tahap {tahap + 1}: geser '{lbl}'")
+        e.save(dd, "driver", f"{awalan}_tahap_{tahap + 1}")
+        e.save(du, "user", f"{awalan}_tahap_{tahap + 1}")
+        if ulang >= 2:
+            r.append(f"   {awalan}: slider yang sama 3x berturut-turut, berhenti")
+            break
+    for label in ("Sudah Diterima", "Terima Pembayaran", "Selesai", "OK", "Kembali ke Beranda"):
+        if e.ketuk(dd, f"//*[@content-desc='{label}' or @text='{label}']", 3):
+            e.save(dd, "driver", f"{awalan}_ketuk_{label.replace(' ', '_')}")
+    return labels
+
+
 def main():
     e.OUT.mkdir(parents=True, exist_ok=True)
     r = e.ringkasan
@@ -86,6 +113,12 @@ def main():
         dd = DriverFactory.create_driver(is_driver_app=True, udid="emulator-5556", system_port=8201)
         du = DriverFactory.create_driver(udid="emulator-5554", system_port=8200)
         r.append("Driver: emulator-5556 | User: emulator-5554 (akun QA pool) | metode bayar: Cash")
+        lp = LoginPage(du)
+        if lp.is_login_screen_displayed(timeout=20):
+            lp.input_phone_number(config.ACTIVE_PHONE)
+            lp.click_submit_login()
+            lp.input_otp_dev(config.ACTIVE_OTP)
+            time.sleep(5)
         DrvLoginPage(dd).login_as_driver()
         time.sleep(4)
         e.tutup_popup(dd)
@@ -93,24 +126,28 @@ def main():
         if 'content-desc="Batalkan"' in xml and batalkan_driver(dd, e, "sisa_run_lalu"):
             r.append("   order aktif sisa run sebelumnya dibatalkan dari aplikasi Driver")
             xml = e.save(dd, "driver", "beranda_setelah_bersih")
-        elif "Pesanan Berjalan" in xml and e.ketuk(dd, "//*[@content-desc='Pesanan Berjalan']", 4):
-            xml2 = e.save(dd, "driver", "cek_pesanan_berjalan")
-            if "Batalkan" in xml2 and batalkan_driver(dd, e, "sisa_run_lalu"):
-                r.append("   order aktif sisa run sebelumnya dibatalkan dari aplikasi Driver")
-            dd.back()
-            time.sleep(2)
-            xml = e.save(dd, "driver", "beranda_2")
+        else:
+            # run 43201911692: order sisa tampil sebagai kartu 'Dijemput / <alamat>' di bagian Pesanan Berjalan
+            kartu = dd.find_elements("xpath", "//*[starts-with(@content-desc,'Dijemput') or starts-with(@content-desc,'Menjemput') "
+                                              "or starts-with(@content-desc,'Mengantar') or starts-with(@content-desc,'Diantar')]")
+            if kartu:
+                kartu[0].click()
+                time.sleep(6)
+                e.save(dd, "driver", "order_sisa")
+                r.append("   order sisa run sebelumnya ditemukan (sudah diterima driver): tahap perjalanan dilanjutkan")
+                e.save(du, "user", "order_sisa_awal")
+                if not jalankan_tahap(dd, du, e, r, "sisa"):
+                    if batalkan_driver(dd, e, "sisa_run_lalu"):
+                        r.append("   order sisa dibatalkan dari aplikasi Driver")
+                e.save(du, "user", "order_sisa_akhir")
+                dd.back()
+                time.sleep(3)
+                xml = e.save(dd, "driver", "beranda_2")
         if "content-desc=\"Offline\"" in xml:
             e.ketuk(dd, "//*[@content-desc='Offline' or @text='Offline']", 3)
         xml = e.save(dd, "driver", "status")
         r.append(f"   status driver: {'Online' if 'content-desc=\"Online\"' in xml else 'TIDAK Online'}")
 
-        lp = LoginPage(du)
-        if lp.is_login_screen_displayed(timeout=20):
-            lp.input_phone_number(config.ACTIVE_PHONE)
-            lp.click_submit_login()
-            lp.input_otp_dev(config.ACTIVE_OTP)
-            time.sleep(5)
         e.tutup_popup(du)
         e.save(du, "user", "beranda")
         BookingPage(du).open_place_order(e.TUJUAN)
@@ -129,21 +166,7 @@ def main():
             r.append(f"   geser terima: {e.geser(dd, ['Swipe', 'Geser', 'Terima'])}")
             e.save(dd, "driver", "setelah_terima")
             e.save(du, "user", "driver_ditemukan")
-            sebelumnya, ulang = None, 0
-            for tahap in range(8):
-                el = slider_driver(dd, 60)
-                if el is None:
-                    r.append(f"   tahap {tahap + 1}: slider tidak tampil dalam 60 dtk")
-                    break
-                lbl = geser_el(dd, el)
-                ulang = ulang + 1 if lbl == sebelumnya else 0
-                sebelumnya = lbl
-                r.append(f"   tahap {tahap + 1}: geser '{lbl}'")
-                e.save(dd, "driver", f"tahap_{tahap + 1}")
-                e.save(du, "user", f"tahap_{tahap + 1}")
-                if ulang >= 2:
-                    r.append("   slider yang sama 3x berturut-turut, berhenti")
-                    break
+            jalankan_tahap(dd, du, e, r, "order")
             for label in ("Sudah Diterima", "Terima Pembayaran", "Selesai", "OK", "Kembali ke Beranda"):
                 if e.ketuk(dd, f"//*[@content-desc='{label}' or @text='{label}']", 3):
                     e.save(dd, "driver", f"ketuk_{label.replace(' ', '_')}")
