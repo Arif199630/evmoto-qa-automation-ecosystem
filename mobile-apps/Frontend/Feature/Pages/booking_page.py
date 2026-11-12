@@ -446,6 +446,9 @@ class BookingPage(BasePage):
         saat tujuan diketik; mengetuk saran pertama membuat tujuan = titik jemput ('Titik jemput dan tujuan sama').
         """
         kata = [w.lower() for w in re.findall(r"[A-Za-z0-9]{3,}", destination)]
+        if exclude:  # kata yang juga ada di nama titik jemput (mis. 'wijaya') tidak bisa membedakan saran
+            khas = [k for k in kata if k not in exclude.lower()]
+            kata = khas or kata
         deadline = time.time() + timeout
         while time.time() < deadline:
             for el in self.driver.find_elements(AppiumBy.XPATH, self.FIRST_SUGGESTION_WORD[1][1:].rsplit(')[1]', 1)[0]):
