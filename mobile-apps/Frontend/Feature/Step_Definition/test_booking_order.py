@@ -1785,52 +1785,30 @@ class TestOrderBehaviourMatrix:
     16 Kombinasi Order Behaviour x 4 Jarak x 4 Metode Pembayaran = 256 Titik Pengujian Kombinatorial.
     """
 
+    # Titik jarak yang diuji. Angka tarif yang diharapkan TIDAK ditulis tetap di sini: dihitung dari
+    # parameter halaman Price Admin environment aktif (keputusan user: Admin adalah sumber tarif).
     DISTANCES = [
-        {
-            "tier": "Jarak Dekat",
-            "km": 1.5,
-            "start_price": 6000.0,
-            "mileage_fee": 0.0,
-            "long_distance_fee": 0.0,
-            "total_argo": 6000.0,
-            "base_argo": 6000.0,
-            "plat_fee": 0.0,
-            "subtotal": 6000.0
-        },
-        {
-            "tier": "Jarak Sedang",
-            "km": 3.5,
-            "start_price": 6000.0,
-            "mileage_fee": 4200.0,
-            "long_distance_fee": 0.0,
-            "total_argo": 10200.0,
-            "base_argo": 10200.0,
-            "plat_fee": 0.0,
-            "subtotal": 10200.0
-        },
-        {
-            "tier": "Jarak Jauh",
-            "km": 10.0,
-            "start_price": 6000.0,
-            "mileage_fee": 22400.0,
-            "long_distance_fee": 10000.0,
-            "total_argo": 38400.0,
-            "base_argo": 38400.0,
-            "plat_fee": 0.0,
-            "subtotal": 38400.0
-        },
-        {
-            "tier": "Jarak Sangat Jauh",
-            "km": 20.0,
-            "start_price": 6000.0,
-            "mileage_fee": 50400.0,
-            "long_distance_fee": 33500.0,
-            "total_argo": 89900.0,
-            "base_argo": 89900.0,
-            "plat_fee": 0.0,
-            "subtotal": 89900.0
-        },
+        {"tier": "Jarak Dekat", "km": 1.5},
+        {"tier": "Jarak Sedang", "km": 3.5},
+        {"tier": "Jarak Jauh", "km": 10.0},
+        {"tier": "Jarak Sangat Jauh", "km": 20.0},
     ]
+
+    @staticmethod
+    def _expected_argo(calc: AdminDashboardFareCalculator, km: float) -> float:
+        """Total argo yang diharapkan, dihitung terpisah dari kalkulator dengan parameter Admin:
+        tarif awal + (jarak - jarak awal) x tarif per KM + biaya jarak jauh per tier (farFrom-farTo)."""
+        if km <= calc.START_KM:
+            return float(calc.START_PRICE)
+        total = calc.START_PRICE + (km - calc.START_KM) * calc.MILEAGE_FEE
+        tiers = [
+            (calc.FAR_FROM_1, calc.FAR_TO_1, calc.FAR_FEE_1),
+            (calc.FAR_FROM_2, calc.FAR_TO_2, calc.FAR_FEE_2),
+            (calc.FAR_FROM_3, float("inf"), calc.FAR_FEE_3),
+        ]
+        for lo, hi, fee in tiers:
+            total += max(0.0, min(km, hi) - lo) * fee
+        return round(total, 2)
 
     PAYMENT_METHODS = [
         {"code": "cash", "name": "Tunai", "rate": 0.0, "is_ewallet": False},
@@ -1864,7 +1842,8 @@ class TestOrderBehaviourMatrix:
             wait_fee = float(excess_wait_min * 500.0)
             coupon_disc = float(coupon_amount) if use_coupon else 0.0
             penalty_val = float(penalty_amount) if apply_penalty else 0.0
-            expected_adj_subtotal = max(0.0, d["subtotal"] + wait_fee + penalty_val - coupon_disc)
+            expected_argo = self._expected_argo(calc, d["km"])
+            expected_adj_subtotal = round(max(0.0, expected_argo + wait_fee + penalty_val - coupon_disc), 2)
 
             for p in self.PAYMENT_METHODS:
                 res = calc.calculate_grand_total(
@@ -1878,13 +1857,16 @@ class TestOrderBehaviourMatrix:
                 )
 
                 # Validasi komponen biaya
-                assert res["start_price"] == 6000.0, f"Argo dasar / tarif awal harus Rp 6.000 ({d['tier']})"
-                assert res["total_argo"] == d["total_argo"], f"Total argo tidak sesuai untuk {d['tier']} ({p['name']})"
-                assert res["platform_fee"] == d["plat_fee"], f"Platform fee tidak sesuai untuk {d['tier']} ({p['name']})"
+                assert res["start_price"] == calc.START_PRICE, f"Tarif awal harus sama dengan Admin ({d['tier']})"
+                assert res["total_argo"] == pytest.approx(expected_argo, abs=0.01), (
+                    f"Total argo tidak sesuai untuk {d['tier']} ({p['name']}): {res['total_argo']} vs {expected_argo} "
+                    f"(tarif {calc.source})"
+                )
+                assert res["platform_fee"] == 0.0, f"Platform fee tidak sesuai untuk {d['tier']} ({p['name']})"
                 assert res["waiting_fee"] == wait_fee, f"Waiting fee tidak sesuai untuk {d['tier']} ({p['name']})"
                 assert res["coupon_discount"] == coupon_disc, f"Potongan kupon tidak sesuai untuk {d['tier']} ({p['name']})"
                 assert res["penalty_fee"] == penalty_val, f"Penalty tidak sesuai untuk {d['tier']} ({p['name']})"
-                assert res["adjusted_subtotal"] == expected_adj_subtotal, f"Adjusted subtotal tidak sesuai untuk {d['tier']} ({p['name']})"
+                assert res["adjusted_subtotal"] == pytest.approx(expected_adj_subtotal, abs=0.01), f"Adjusted subtotal tidak sesuai untuk {d['tier']} ({p['name']})"
 
                 # Validasi surcharge metode pembayaran dengan Gross-Up
                 if p["is_ewallet"] and expected_adj_subtotal > 0:
@@ -1895,7 +1877,7 @@ class TestOrderBehaviourMatrix:
                     assert res["grand_total"] == expected_grand, f"Grand total {p['name']} tidak sesuai pada {d['tier']}"
                 else:
                     assert res["charge_fee_amount"] == 0.0, f"Surcharge {p['name']} (Tunai/EvWallet) harus Rp 0"
-                    assert res["grand_total"] == expected_adj_subtotal, f"Grand total {p['name']} tidak sesuai pada {d['tier']}"
+                    assert res["grand_total"] == pytest.approx(expected_adj_subtotal, abs=0.01), f"Grand total {p['name']} tidak sesuai pada {d['tier']}"
                 jumlah_titik += 1
         return jumlah_titik
 
