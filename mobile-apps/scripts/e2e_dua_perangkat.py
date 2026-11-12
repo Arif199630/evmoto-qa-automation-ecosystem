@@ -15,7 +15,7 @@ import time
 import traceback
 from pathlib import Path
 
-os.environ["TEST_USER_POOL_INDEX"] = os.getenv("E2E_USER_POOL_INDEX", "13")
+os.environ["TEST_USER_POOL_INDEX"] = os.getenv("E2E_USER_POOL_INDEX", "11")  # 13 masih punya order aktif sisa run 43200401778
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "Frontend" / "Feature"), str(ROOT / "scripts")]
 
