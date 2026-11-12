@@ -35,7 +35,10 @@ class LoginPage(BasePage):
     TEXT_OTP_NOT_MATCH = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Kode verifikasi salah') or contains(@text, 'Kode verifikasi salah') or "
-        "contains(@content-desc, 'Incorrect verification code') or contains(@text, 'Incorrect verification code')]"
+        "contains(@content-desc, 'Incorrect verification code') or contains(@text, 'Incorrect verification code') or "
+        # Pesan yang benar-benar tampil di staging (dari server): 'kode verifikasi tidak valid', muncul ±5,7 dtk setelah
+        # OTP salah diketik dan tampil ±3 dtk (repro CI run 43140945514, 12 Nov 2026)
+        "contains(@content-desc, 'verifikasi tidak valid') or contains(@text, 'verifikasi tidak valid')]"
     )
     # snackbar_phone_not_registered = 'Nomor telepon belum terdaftar' / 'Phone number is not registered'
     TEXT_PHONE_NOT_REGISTERED = (
@@ -123,8 +126,13 @@ class LoginPage(BasePage):
         """Memeriksa apakah layar Verifikasi OTP muncul."""
         return self.is_displayed(self.TITLE_OTP, timeout=timeout)
 
-    def input_otp_dev(self, otp_code: str = os.environ.get("EVMOTO_OTP_BYPASS", ""), fast_transition: bool = True):
-        """Memasukkan kode OTP (default dev/prod: <EVMOTO_OTP_BYPASS>) secara andal di emulator maupun physical device."""
+    def input_otp_dev(self, otp_code: str = os.environ.get("EVMOTO_OTP_BYPASS", ""), fast_transition: bool = True,
+                      handle_first_login: bool = True):
+        """Memasukkan kode OTP (default dev/prod: <EVMOTO_OTP_BYPASS>) secara andal di emulator maupun physical device.
+
+        handle_first_login=False untuk OTP yang sengaja salah: jangan menunggu layar nama/Beranda (15 dtk), karena
+        pesan 'kode verifikasi tidak valid' hanya tampil ±3 detik dan akan terlewat.
+        """
         self.find(self.TITLE_OTP, timeout=15)
         field = self.find(self.FIELD_OTP, timeout=10)
         field.click()
@@ -150,7 +158,17 @@ class LoginPage(BasePage):
             self.driver.press_keycode(66)  # KEYCODE_ENTER
         except Exception:
             pass
-        self.complete_first_login_name()
+        if handle_first_login:
+            self.complete_first_login_name()
+
+    def clear_otp_field(self, digits: int = 4):
+        """Menghapus isi kolom OTP (tombol hapus per digit) sebelum percobaan berikutnya."""
+        for _ in range(digits + 1):
+            try:
+                self.driver.press_keycode(67)  # KEYCODE_DEL
+            except Exception:
+                pass
+            time.sleep(0.1)
 
     # Layar onboarding akun baru: muncul sekali setelah OTP pertama (peta layar CI 11 Nov 2026)
     TITLE_FIRST_LOGIN_NAME = (AppiumBy.XPATH, "//*[@content-desc='Masukkan nama pengguna' or @text='Masukkan nama pengguna']")

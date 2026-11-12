@@ -423,14 +423,15 @@ class TestLogin:
 
         login_page.is_otp_screen_displayed(timeout=15)
         # Input OTP salah berkali-kali
+        # Hasil yang diharapkan: setiap OTP salah ditolak (pesan tampil) dan pengguna tidak pernah masuk ke Beranda
         for attempt in range(2):
-            login_page.input_otp_dev(data["otp_wrong"])
+            if attempt:
+                login_page.clear_otp_field()
+            login_page.input_otp_dev(data["otp_wrong"], handle_first_login=False)
+            assert login_page.is_otp_not_match_error_displayed(timeout=10), (
+                f"[GAGAL PF-04] Pesan OTP salah tidak muncul pada percobaan ke-{attempt + 1}!"
+            )
             login_page.pause(1.0, 1.5, f"Percobaan input OTP salah ke-{attempt + 1}")
-
-        # Hasil yang diharapkan: setiap OTP salah ditolak dan pengguna tidak pernah masuk ke Beranda
-        assert login_page.is_otp_not_match_error_displayed(timeout=8), (
-            "[GAGAL PF-04] Pesan 'Kode verifikasi salah' tidak muncul setelah OTP salah dimasukkan berulang kali!"
-        )
         assert not HomePage(driver).is_home_screen_displayed(timeout=3), (
             "[GAGAL PF-04] Pengguna masuk ke Beranda padahal OTP yang dimasukkan salah!"
         )
@@ -456,10 +457,10 @@ class TestLogin:
         login_page.input_phone_number(data["phone"])
         login_page.click_submit_login()
 
-        login_page.input_otp_dev(data["otp_wrong"])
+        login_page.input_otp_dev(data["otp_wrong"], handle_first_login=False)
 
-        assert login_page.is_otp_not_match_error_displayed(timeout=8), (
-            "[GAGAL NT-01] Pesan 'Kode verifikasi salah. Silakan coba lagi.' tidak muncul setelah OTP salah dimasukkan!"
+        assert login_page.is_otp_not_match_error_displayed(timeout=10), (
+            "[GAGAL NT-01] Pesan OTP salah ('kode verifikasi tidak valid') tidak muncul setelah OTP salah dimasukkan!"
         )
         assert not HomePage(driver).is_home_screen_displayed(timeout=3), (
             "[GAGAL NT-01] Pengguna masuk ke Beranda padahal OTP yang dimasukkan salah!"

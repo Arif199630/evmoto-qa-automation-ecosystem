@@ -31,7 +31,9 @@ def save(driver, nama):
     global step
     step += 1
     log(f"simpan layar {step:02d}_{nama}")
+    t0 = time.time()
     xml = driver.page_source
+    index.append(f"   page source {nama}: {time.time() - t0:.1f} dtk")
     (OUT / f"{step:02d}_{nama}.xml").write_text(xml, encoding="utf-8")
     driver.save_screenshot(str(OUT / f"{step:02d}_{nama}.png"))
     index.append(f"{step:02d}_{nama}: " + " | ".join(teks(xml)[:16]).replace("&#10;", "\\n"))
@@ -58,6 +60,11 @@ def back(driver):
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     driver = DriverFactory.create_driver()
+    # Percobaan: halaman milik akun utama membuat pembacaan layar macet 240 dtk ('hogging the main UI thread').
+    # Setelan ringan UiAutomator2: lewati view yang tidak penting dan batasi kedalaman pohon layar.
+    setelan = {"ignoreUnimportantViews": True, "snapshotMaxDepth": 40, "waitForIdleTimeout": 0}
+    driver.update_settings(setelan)
+    index.append(f"setelan UiAutomator2: {setelan}")
     try:
         log("driver siap, cek layar login")
         izinkan_lokasi(driver)
