@@ -21,6 +21,7 @@ sys.path[:0] = [str(ROOT), str(ROOT / "Frontend" / "Feature")]
 from config import config  # noqa: E402
 from core.driver_factory import DriverFactory  # noqa: E402
 from Pages.login_page import LoginPage  # noqa: E402
+from core.screen_dump import dump as dump_ringan  # noqa: E402
 from _diag_util import buka_aplikasi_bersih, izinkan_lokasi, log  # noqa: E402
 
 OUT = ROOT / "reports" / "repro" / "diag_first_login"
@@ -38,7 +39,7 @@ def teks(xml):
 def bukti(driver, nama):
     global step
     step += 1
-    xml = driver.page_source
+    xml = dump_ringan(driver)
     (OUT / f"{step:02d}_{nama}.xml").write_text(xml, encoding="utf-8")
     driver.save_screenshot(str(OUT / f"{step:02d}_{nama}.png"))
     fields = [(e.get_attribute("text") or "") for e in driver.find_elements("xpath", "//android.widget.EditText")]

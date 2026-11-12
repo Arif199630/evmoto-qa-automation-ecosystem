@@ -19,6 +19,7 @@ from config.config import Config  # noqa: E402
 from core.driver_factory import DriverFactory  # noqa: E402
 from Pages.drv_login_page import DrvLoginPage  # noqa: E402
 from Pages.drv_home_page import DrvHomePage  # noqa: E402
+from core.screen_dump import dump as dump_ringan  # noqa: E402
 from _diag_util import izinkan_lokasi, log  # noqa: E402
 
 OUT = ROOT / "reports" / "repro" / "map_driver"
@@ -34,7 +35,7 @@ def save(driver, nama):
     global step
     step += 1
     log(f"simpan layar {step:02d}_{nama}")
-    xml = driver.page_source
+    xml = dump_ringan(driver)
     (OUT / f"{step:02d}_{nama}.xml").write_text(xml, encoding="utf-8")
     driver.save_screenshot(str(OUT / f"{step:02d}_{nama}.png"))
     index.append(f"{step:02d}_{nama}: " + " | ".join(teks(xml)[:24]).replace("&#10;", "\\n"))

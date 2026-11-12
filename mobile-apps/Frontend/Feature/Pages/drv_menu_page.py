@@ -472,8 +472,10 @@ class DrvMenuPage(BasePage):
 
     def is_app_version_number_displayed(self) -> bool:
         """Memeriksa ada label berisi nomor versi berformat angka.angka.angka (mis. 1.9.29) di layar."""
-        source = self.driver.page_source
-        return re.search(r'(?:content-desc|text)="[^"]*\bv?\d+\.\d+\.\d+', source) is not None
+        # page_source bisa macet di emulator CI: cari label versi lewat pencarian elemen biasa
+        labels = [(el.get_attribute("content-desc") or el.get_attribute("text") or "")
+                  for el in self.driver.find_elements(AppiumBy.XPATH, "//*[contains(@content-desc, '.') or contains(@text, '.')]")]
+        return any(re.search(r"\bv?\d+\.\d+\.\d+", label) for label in labels)
 
     def is_feedback_form_displayed(self) -> bool:
         """Memeriksa form masukan terbuka: kolom input dan tombol Kirim sama-sama tampil."""

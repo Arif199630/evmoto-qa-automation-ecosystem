@@ -18,6 +18,7 @@ sys.path[:0] = [str(ROOT), str(ROOT / "Frontend" / "Feature")]
 from config import config  # noqa: E402
 from core.driver_factory import DriverFactory  # noqa: E402
 from Pages.login_page import LoginPage  # noqa: E402
+from core.screen_dump import dump as dump_ringan  # noqa: E402
 from _diag_util import buka_aplikasi_bersih, izinkan_lokasi  # noqa: E402
 
 OUT = ROOT / "reports" / "repro" / "otp_salah"
@@ -55,7 +56,7 @@ def main():
         for i in range(20):
             if izinkan_lokasi(driver):
                 summary.append(f"  +{time.time() - t0:4.1f} dtk: dialog izin lokasi Android muncul dan diketuk (bukan bagian aplikasi)")
-            xml = driver.page_source
+            xml = dump_ringan(driver)
             items = teks(xml)
             for t in items:
                 seen.setdefault(t, round(time.time() - t0, 1))

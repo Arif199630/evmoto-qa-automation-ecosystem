@@ -16,6 +16,7 @@ sys.path[:0] = [str(ROOT), str(ROOT / "Frontend" / "Feature")]
 from config import config  # noqa: E402
 from core.driver_factory import DriverFactory  # noqa: E402
 from Pages.login_page import LoginPage  # noqa: E402
+from core.screen_dump import dump as dump_ringan  # noqa: E402
 from _diag_util import izinkan_lokasi, log  # noqa: E402
 
 OUT = ROOT / "reports" / "repro" / "map_activity"
@@ -32,7 +33,7 @@ def save(driver, nama):
     step += 1
     log(f"simpan layar {step:02d}_{nama}")
     t0 = time.time()
-    xml = driver.page_source
+    xml = dump_ringan(driver)
     index.append(f"   page source {nama}: {time.time() - t0:.1f} dtk")
     (OUT / f"{step:02d}_{nama}.xml").write_text(xml, encoding="utf-8")
     driver.save_screenshot(str(OUT / f"{step:02d}_{nama}.png"))

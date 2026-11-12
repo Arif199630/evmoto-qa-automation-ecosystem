@@ -227,7 +227,9 @@ def pytest_runtest_makereport(item, call):
             target_dir = getattr(config, "SCREENSHOTS_DIR", getattr(config, "SCREENSHOTSDIR", None))
             if target_dir:
                 try:
-                    (target_dir / f"{item.name}_FAILED.xml").write_text(driver_instance.page_source or "", encoding="utf-8")
+                    # page_source macet 240 dtk di layar berpeta (CI 12 Nov 2026): pakai dump ringan
+                    from core.screen_dump import dump
+                    (target_dir / f"{item.name}_FAILED.xml").write_text(dump(driver_instance), encoding="utf-8")
                 except Exception as e:
                     logger.warning(f"Gagal menyimpan page source: {e}")
             target_dir = getattr(config, "SCREENSHOTS_DIR", getattr(config, "SCREENSHOTSDIR", None))
