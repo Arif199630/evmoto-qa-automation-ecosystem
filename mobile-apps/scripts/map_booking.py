@@ -95,9 +95,14 @@ def main():
         time.sleep(6)
         save(driver, "beranda")
         gulir(driver, "beranda", 2)
-        # Alur pemesanan: kolom pencarian tujuan
-        if tap(driver, "//*[contains(@hint, 'mau kemana') or contains(@text, 'mau kemana') or contains(@content-desc, 'mau kemana')]",
-               "form_tujuan", 3):
+        # Popup 'Pemberitahuan Jam Operasional' (tombol Lanjutkan) menutupi Beranda saat dibuka
+        tap(driver, "//*[@content-desc='Lanjutkan']", "tutup_popup_jam_operasional", 2)
+        # Alur pemesanan: ketukan pertama pada kolom tujuan hanya menaikkan panel (peta CI 12 Nov 2026), ketuk lagi
+        kolom = "//*[contains(@hint, 'mau kemana') or contains(@text, 'mau kemana') or contains(@content-desc, 'mau kemana')]"
+        tap(driver, kolom, "panel_naik", 2)
+        if not driver.find_elements("xpath", "//android.widget.EditText"):
+            tap(driver, kolom, "form_tujuan_ketuk_kedua", 3)
+        if driver.find_elements("xpath", "//android.widget.EditText"):
             fields = driver.find_elements("xpath", "//android.widget.EditText")
             index.append(f"   kolom di form tujuan: {[(f.get_attribute('hint') or f.get_attribute('text')) for f in fields]}")
             if fields:
