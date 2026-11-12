@@ -98,12 +98,13 @@ def main():
     d = DriverFactory.create_driver(no_reset=True)
     try:
         lp = LoginPage(d)
+        phone = os.getenv(os.getenv("TARIF_PHONE_VAR", "") or "_", "") or config.ACTIVE_PHONE
         if lp.is_login_screen_displayed(timeout=20):
-            lp.input_phone_number(config.ACTIVE_PHONE)
+            lp.input_phone_number(phone)
             lp.click_submit_login()
             lp.input_otp_dev(config.ACTIVE_OTP)
             time.sleep(5)
-        ringkasan.append(f"akun utama, pickup '{PICKUP}', perangkat emulator CI, tanpa menekan 'Pesan EVMoto'")
+        ringkasan.append(f"akun {phone[:4]}****{phone[-2:]}, pickup '{PICKUP}', perangkat emulator CI, tanpa menekan 'Pesan EVMoto'")
         for kategori, lo, hi, tujuan_list in TIERS:
             km = None
             for tujuan in tujuan_list:
