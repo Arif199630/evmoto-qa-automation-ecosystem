@@ -38,7 +38,7 @@ def main():
     from Pages.login_page import LoginPage
     from Pages.drv_login_page import DrvLoginPage
     from Pages.booking_page import BookingPage
-    from _diag_util import izinkan_lokasi, log
+    from _diag_util import izinkan_lokasi, log, pindah_app
 
     user_pkg, driver_pkg = config.APP_PACKAGE, getattr(config, "DRIVER_PACKAGE", "com.evmoto.driver.app")
     tujuan = os.getenv("E2E_TUJUAN", "Senayan City")
@@ -64,9 +64,7 @@ def main():
         return xml
 
     def ke(d, pkg):
-        d.activate_app(pkg)
-        time.sleep(3)
-        izinkan_lokasi(d)
+        return pindah_app(d, pkg, udid="emulator-5554", system_port=8200)
 
     def ketuk(d, xpath, tunggu=2.0):
         els = d.find_elements("xpath", xpath)
@@ -110,7 +108,7 @@ def main():
         ketuk(da, "//*[@content-desc='Offline' or @text='Offline']", 3)
         save(da, "A-driver", "status_online")
         # User A dan User B login, lalu memesan hampir bersamaan
-        ke(da, user_pkg)
+        da = ke(da, user_pkg)
         login_user(da, phone_a)
         login_user(db, phone_b)
         save(da, "A-user", "beranda")
@@ -124,7 +122,7 @@ def main():
         save(da, "A-user", "setelah_pesan")
         save(db, "B-user", "setelah_pesan")
         # Driver menerima satu pesanan
-        ke(da, driver_pkg)
+        da = ke(da, driver_pkg)
         diterima = None
         for _ in range(20):
             xml = save(da, "A-driver", "cek_order_masuk")
@@ -140,14 +138,14 @@ def main():
             time.sleep(6)
         ringkasan.append("   driver menerima pesanan" if diterima else "   tidak ada pesanan masuk ke driver dalam ±2 menit")
         # Status kedua user setelah driver menerima: hanya satu yang boleh mendapat driver
-        ke(da, user_pkg)
+        da = ke(da, user_pkg)
         xa = save(da, "A-user", "status_setelah_driver_terima")
         xb = save(db, "B-user", "status_setelah_driver_terima")
         dapat = [n for n, x in (("A", xa), ("B", xb)) if re.search(r"B 9099|testdr|Driver menuju|sedang menuju|dalam perjalanan", x)]
         ringkasan.append(f"HASIL race condition: user yang mendapat driver = {dapat or 'tidak ada'} "
                          f"({'BENAR: hanya satu' if len(dapat) == 1 else 'PERLU DICEK' if not dapat else 'SALAH: lebih dari satu user mendapat driver yang sama'})")
         # Driver sibuk: selama 60 dtk, pesanan user lain tidak boleh ditawarkan ke driver ini
-        ke(da, driver_pkg)
+        da = ke(da, driver_pkg)
         tawaran = 0
         for _ in range(6):
             xml = save(da, "A-driver", "selama_mengantar")
@@ -162,13 +160,13 @@ def main():
             try:
                 if d is not None and pesanan.get(key):
                     if dev.startswith("A"):
-                        ke(d, user_pkg)
+                        d = da = ke(d, user_pkg)
                     batalkan(d, dev)
             except Exception:
                 pass
         try:
             if da is not None:
-                ke(da, driver_pkg)
+                da = ke(da, driver_pkg)
                 ketuk(da, "//*[@content-desc='Online' or @text='Online']", 2)
                 save(da, "A-driver", "pembersihan_offline")
         except Exception:

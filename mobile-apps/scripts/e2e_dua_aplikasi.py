@@ -22,7 +22,7 @@ from core.driver_factory import DriverFactory  # noqa: E402
 from core.screen_dump import dump as dump_ringan  # noqa: E402
 from Pages.login_page import LoginPage  # noqa: E402
 from Pages.drv_login_page import DrvLoginPage  # noqa: E402
-from _diag_util import izinkan_lokasi, log  # noqa: E402
+from _diag_util import pindah_app, izinkan_lokasi, log  # noqa: E402
 
 OUT = ROOT / "reports" / "repro" / "e2e_dua_aplikasi"
 USER_PKG = config.APP_PACKAGE
@@ -52,9 +52,7 @@ def save(d, app, nama):
 
 
 def ke(d, pkg):
-    d.activate_app(pkg)
-    time.sleep(3)
-    izinkan_lokasi(d)
+    return pindah_app(d, pkg)
 
 
 def ketuk(d, xpath, tunggu=2.0):
@@ -116,7 +114,7 @@ def main():
         save(d, "driver", "status_online")
 
         # 2. User memesan (Cash) dari titik yang sama
-        ke(d, USER_PKG)
+        d = ke(d, USER_PKG)
         login = LoginPage(d)
         if login.is_login_screen_displayed(timeout=15):
             login.input_phone_number(config.ACTIVE_PHONE)
@@ -136,15 +134,15 @@ def main():
             ringkasan.append("   tombol 'Pesan EVMoto' tidak ditemukan")
 
         # 3. Driver menerima order
-        ke(d, DRIVER_PKG)
+        d = ke(d, DRIVER_PKG)
         save(d, "driver", "menunggu_order")
         if tunggu_label(d, ["Swipe", "Geser", "Terima", "Orderan Baru", "Pesanan Baru"], 120, 6, "driver", "order_masuk"):
             save(d, "driver", "order_masuk")
             ringkasan.append(f"   geser terima: {geser(d, ['Swipe', 'Geser', 'Terima'])}")
             save(d, "driver", "setelah_terima")
-            ke(d, USER_PKG)
+            d = ke(d, USER_PKG)
             save(d, "user", "driver_ditemukan")
-            ke(d, DRIVER_PKG)
+            d = ke(d, DRIVER_PKG)
             # 4. Tahap perjalanan driver: berangkat/tiba/mulai/selesai (label slider dibaca dari layar)
             for tahap in range(6):
                 lbl = geser(d, ["Geser", "Swipe", "Tiba", "Mulai", "Selesai", "Berangkat", "Antar"])
@@ -152,14 +150,14 @@ def main():
                     break
                 save(d, "driver", f"tahap_{tahap + 1}")
                 ringkasan.append(f"   tahap {tahap + 1}: geser '{lbl}'")
-                ke(d, USER_PKG)
+                d = ke(d, USER_PKG)
                 save(d, "user", f"tahap_{tahap + 1}")
-                ke(d, DRIVER_PKG)
+                d = ke(d, DRIVER_PKG)
             save(d, "driver", "akhir_perjalanan")
             for label in ("Sudah Diterima", "Terima Pembayaran", "Selesai", "OK"):
                 if ketuk(d, f"//*[@content-desc='{label}' or @text='{label}']", 3):
                     save(d, "driver", f"ketuk_{label.replace(' ', '_')}")
-            ke(d, USER_PKG)
+            d = ke(d, USER_PKG)
             save(d, "user", "akhir_perjalanan")
             order_dibuat = False if any("Selesai" in r or "Penilaian" in r for r in ringkasan[-3:]) else order_dibuat
     except Exception as e:
@@ -171,11 +169,11 @@ def main():
     finally:
         try:
             if order_dibuat:
-                ke(d, USER_PKG)
+                d = ke(d, USER_PKG)
                 for label in ("Batalkan", "Batalkan Pesanan", "Ya, Batalkan", "Ya"):
                     ketuk(d, f"//*[contains(@content-desc, '{label}') or contains(@text, '{label}')]", 2)
                 save(d, "user", "pembersihan_batal")
-            ke(d, DRIVER_PKG)
+            d = ke(d, DRIVER_PKG)
             ketuk(d, "//*[@content-desc='Online' or @text='Online']", 2)
             save(d, "driver", "pembersihan_offline")
         except Exception as e:

@@ -46,3 +46,47 @@ def buka_aplikasi_bersih(driver, package: str):
 
 def log(msg: str):
     print(f"[diag {time.strftime('%H:%M:%S')}] {msg}", flush=True)
+
+
+ISI_LAYAR = ("//*[(string-length(@content-desc)>0 and not(starts-with(@content-desc,'Ping')) "
+             "and not(starts-with(@content-desc,'PlatformException'))) or string-length(@text)>0 "
+             "or contains(@class,'EditText')]")
+
+
+def _layar_terbaca(driver, detik):
+    deadline = time.time() + detik
+    while time.time() < deadline:
+        izinkan_lokasi(driver)
+        if len(driver.find_elements("xpath", ISI_LAYAR)) >= 2:
+            return True
+        time.sleep(2)
+    return False
+
+
+def pindah_app(driver, package, udid=None, system_port=None):
+    """Bawa aplikasi `package` ke depan dan pastikan isi layarnya terbaca. Mengembalikan driver yang dipakai.
+
+    Bukti run 43180690535: setelah activate_app dari sesi aplikasi Driver, layar login aplikasi User hanya
+    terbaca sebagai overlay 'Ping : Disconnected'. Urutannya: aktifkan + enableMultiWindows; bila tetap kosong,
+    sesi ditutup dan dibuat ulang untuk aplikasi itu dengan noReset (data dan login aplikasi tidak dihapus).
+    """
+    driver.activate_app(package)
+    time.sleep(3)
+    try:
+        driver.update_settings({"enableMultiWindows": True})
+    except Exception:
+        pass
+    if _layar_terbaca(driver, 30):
+        return driver
+    log(f"isi layar {package} tidak terbaca, sesi dibuat ulang (noReset)")
+    from config import config
+    from core.driver_factory import DriverFactory
+    try:
+        driver.quit()
+    except Exception:
+        pass
+    is_driver_app = package != config.APP_PACKAGE
+    baru = DriverFactory.create_driver(no_reset=True, is_driver_app=is_driver_app, udid=udid, system_port=system_port)
+    baru.activate_app(package)
+    _layar_terbaca(baru, 40)
+    return baru
