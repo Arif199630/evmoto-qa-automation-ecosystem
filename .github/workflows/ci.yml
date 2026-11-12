@@ -13,6 +13,9 @@ on:
       file_filter:
         description: "Regex nama file test yang dijalankan, mis. ^test_(login|drv_login)[.]py - kosongkan untuk semua"
         default: ""
+      k_filter:
+        description: "Opsional: ekspresi pytest -k untuk menjalankan test tertentu saja, mis. TC_FARE_UI"
+        default: ""
       lanjutkan_dari:
         description: "Nomor run yang di-pause untuk dilanjutkan (file test yang sudah selesai di sana tidak diulang). Kosongkan untuk run baru."
         default: ""
@@ -115,6 +118,7 @@ jobs:
       INSTALL_APK: "0"
       RESUME_DIR: sebelumnya
       FILE_INCLUDE: ${{ inputs.file_filter }}
+      PYTEST_K: ${{ inputs.k_filter }}
       # Subsidi jam sibuk & Dispatch batch diuji di STAGING (izin user 11 Nov 2026; fitur belum dipakai resmi).
       # Test menyimpan snapshot konfigurasi lalu memulihkannya; staging_guard menolak host production.
       ALLOW_ADMIN_CONFIG_WRITE: "1"

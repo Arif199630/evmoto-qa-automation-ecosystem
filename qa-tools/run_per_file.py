@@ -19,6 +19,8 @@ from pathlib import Path
 
 project, tests_dir, out_dir, buckets = Path(sys.argv[1]).resolve(), sys.argv[2], Path(sys.argv[3]).resolve(), int(sys.argv[4])
 extra = sys.argv[5:]
+if os.getenv("PYTEST_K"):  # jalankan test tertentu saja (input k_filter di workflow)
+    extra += ["-k", os.getenv("PYTEST_K")]
 out_dir.mkdir(parents=True, exist_ok=True)
 
 include = re.compile(os.getenv("FILE_INCLUDE", ".*"))
@@ -33,7 +35,11 @@ def collect(path):
     """Node id semua test di satu file (tanpa menjalankannya)."""
     proc = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q", "-o", "addopts=", "-p", "no:cacheprovider",
                            str(path.relative_to(project))], cwd=project, capture_output=True, text=True, env=os.environ.copy())
-    return [line.strip() for line in proc.stdout.splitlines() if "::" in line and not line.startswith(("<", "="))]
+    nodes = [line.strip() for line in proc.stdout.splitlines() if "::" in line and not line.startswith(("<", "="))]
+    k = os.getenv("PYTEST_K")
+    if k:  # hanya unit yang berisi test terpilih (pencocokan sederhana pada nama node)
+        nodes = [n for n in nodes if all(part.strip() in n for part in k.split(" and "))]
+    return nodes
 
 
 def device_of_tests(path):

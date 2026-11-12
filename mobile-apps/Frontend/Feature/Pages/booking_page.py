@@ -407,12 +407,31 @@ class BookingPage(BasePage):
         self.click(self.BTN_PICKUP_CONFIRM, label="Tombol 'Pilih Lokasi' (Lokasi Penjemputan)")
         return True
 
-    def open_place_order(self, destination: str):
+    # Kolom titik jemput di form rute: EditText pertama selain kolom tujuan (peta layar CI 12 Nov 2026: 03_panel_naik)
+    FIELD_PICKUP = (AppiumBy.XPATH, "(//android.widget.EditText[not(@hint='Masukkan tujuan') and not(@text='Masukkan tujuan')])[1]")
+
+    def set_pickup(self, pickup: str):
+        """Ganti titik jemput di form rute dengan hasil pencarian alamat pertama (mis. 'Ecgo Evmoto Wijaya')."""
+        field = self.find_element(self.FIELD_PICKUP, timeout=10)
+        field.click()
+        time.sleep(0.5)
+        field.clear()
+        field.send_keys(pickup)
+        time.sleep(3)
+        self.click(self.FIRST_SUGGESTION_WORD, label=f"Saran titik jemput '{pickup}'")
+        time.sleep(3)
+        # Bila aplikasi langsung meminta konfirmasi titik jemput, konfirmasi dulu sebelum mengisi tujuan
+        if self.is_displayed(self.TEXT_PICKUP_CONFIRM_TITLE, timeout=3) and not self.driver.find_elements(*self.FIELD_DESTINATION):
+            self.confirm_pickup_location(timeout=3)
+
+    def open_place_order(self, destination: str, pickup: str = None):
         """Beranda -> form rute -> ketik tujuan -> saran pertama -> 'Pilih Lokasi' (peta layar CI 12 Nov 2026: 01 -> 06).
 
         Tidak menekan 'Pesan EVMoto'. Pemanggil wajib memastikan sendiri is_place_order_displayed().
         """
         self.open_pickup_section()
+        if pickup:
+            self.set_pickup(pickup)
         self.enter_destination(destination)
         self.select_first_suggestion()
         self.confirm_pickup_location()

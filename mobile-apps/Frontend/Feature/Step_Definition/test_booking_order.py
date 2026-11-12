@@ -2298,6 +2298,9 @@ class TestOrderBehaviourMatrix:
 # Aturan dikonfirmasi user 12 Nov 2026: biaya jarak jauh (farFee) wajib ikut dihitung di tarif.
 # Titik jemput = lokasi GPS emulator CI (Jl. Wijaya I, Jakarta Selatan). Tiap kategori punya beberapa tujuan cadangan;
 # tujuan pertama yang jaraknya masuk rentang kategori dipakai. Tidak pernah menekan 'Pesan EVMoto'.
+# Titik jemput: kantor pusat ECGO EVMOTO (dikonfirmasi user 12 Nov 2026: Ecgo Evmoto Wijaya, Jl. Wijaya I No.67,
+# Petogogan, Kebayoran Baru), dipilih lewat kolom jemput aplikasi. Bisa diganti lewat env EVMOTO_TEST_PICKUP.
+FARE_PICKUP = os.getenv("EVMOTO_TEST_PICKUP", "Ecgo Evmoto Wijaya")
 FARE_TIERS = [
     ("Dekat", 0.0, 1.99, ["Blok M Plaza", "Blok M Square", "Taman Langsat"]),
     ("Sedang", 1.99, 6.0, ["Senayan City", "Gandaria City", "Pondok Indah Mall"]),
@@ -2333,7 +2336,7 @@ class TestFarePerDistanceTierOnApp:
         jarak = None
         for tujuan in tujuan_list:
             self._kembali_ke_beranda(driver, home_page)
-            booking_page.open_place_order(tujuan)
+            booking_page.open_place_order(tujuan, pickup=FARE_PICKUP)
             if not booking_page.is_place_order_displayed(timeout=10):
                 dicoba.append(f"{tujuan}: layar Place Order tidak tampil")
                 continue
@@ -2350,7 +2353,11 @@ class TestFarePerDistanceTierOnApp:
         fares = booking_page._service_card_fares()
         assert fares, "Nominal tarif tidak tampil di kartu layanan Place Order"
         sebelum_kupon, setelah_kupon = max(fares), min(fares)
-        logger.info(f"[{tier}] jarak {jarak} KM | argo {sebelum_kupon} | setelah kupon {setelah_kupon}")
+        labels = [(e.get_attribute("content-desc") or "") for e in
+                  driver.find_elements(AppiumBy.XPATH, "//android.widget.ImageView[string-length(@content-desc) > 2]")[:4]]
+        bayar = [(e.get_attribute("content-desc") or "") for e in driver.find_elements(*booking_page.BTN_PAYMENT_METHOD)]
+        logger.info(f"[{tier}] jemput/tujuan {labels[:2]} | jarak {jarak} KM | metode bayar {bayar} | "
+                    f"argo {sebelum_kupon} | setelah kupon {setelah_kupon}")
 
         then("Argo sebelum kupon sesuai rumus Price Admin (termasuk biaya jarak jauh)")
         ok, pesan = fare_calculator.verify_ui_fare(f"Rp{sebelum_kupon}", distance_km=jarak, distance_rounding=0.005)
