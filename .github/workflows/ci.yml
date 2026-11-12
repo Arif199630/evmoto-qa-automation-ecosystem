@@ -175,6 +175,9 @@ jobs:
             cat bukti/cek_jaringan.txt
             adb logcat -c || true
             nohup adb logcat -v time > bukti/logcat.txt 2>&1 &
+            # GPS emulator bawaan ada di California (Vista Del Lago Rd): aplikasi menolak 'Diluar Area Layanan'.
+            # Set ke area layanan EvMoto (Jl. Wijaya I, Petogogan, Kebayoran Baru, Jakarta Selatan). Urutan: bujur lintang.
+            adb emu geo fix 106.8037 -6.2449 || true
             nohup appium --address 127.0.0.1 --port 4723 --log-level warn > appium.log 2>&1 &
             sleep 15
             if [ "${{ inputs.suites }}" = "peta" ]; then python mobile-apps/scripts/dump_screens.py user; python mobile-apps/scripts/dump_screens.py driver; elif [ "${{ inputs.suites }}" = "repro" ]; then python mobile-apps/scripts/reproduce_register.py; elif [ "${{ inputs.suites }}" = "diag" ]; then python mobile-apps/scripts/repro_otp_salah.py; python mobile-apps/scripts/map_activity.py; python mobile-apps/scripts/diag_first_login.py; elif [ "${{ inputs.suites }}" = "petadriver" ]; then python mobile-apps/scripts/map_driver.py; elif [ "${{ inputs.suites }}" = "skrip" ]; then SKRIP="$FILE_INCLUDE"; echo "$SKRIP" | grep -Eq '^[a-z_]+[.]py$' && python "mobile-apps/scripts/$SKRIP"; else python qa-tools/run_all.py --suite mobile cross; fi

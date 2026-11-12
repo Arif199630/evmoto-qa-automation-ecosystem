@@ -67,5 +67,13 @@ class DriverFactory:
             driver.update_settings({"waitForIdleTimeout": int(os.getenv("APPIUM_WAIT_FOR_IDLE_MS", "100"))})
         except Exception as e:
             logger.warning(f"Gagal mengatur waitForIdleTimeout: {e}")
+        # Lokasi uji di dalam area layanan EvMoto (default: Jl. Wijaya I, Petogogan, Jakarta Selatan). Tanpa ini emulator
+        # memakai GPS bawaan California dan aplikasi menolak pesanan 'Diluar Area Layanan' (peta layar CI 12 Nov 2026).
+        if os.getenv("EVMOTO_SET_TEST_LOCATION", "1") == "1":
+            try:
+                driver.set_location(float(os.getenv("EVMOTO_TEST_LAT", "-6.2449")),
+                                    float(os.getenv("EVMOTO_TEST_LNG", "106.8037")), 10)
+            except Exception as e:
+                logger.warning(f"Gagal mengatur lokasi uji: {e}")
         logger.info(f"Driver berhasil diinisialisasi untuk package '{target_pkg}' pada '{config.DEVICE_NAME}'.")
         return driver
