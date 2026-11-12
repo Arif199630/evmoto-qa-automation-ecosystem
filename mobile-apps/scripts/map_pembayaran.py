@@ -23,7 +23,7 @@ from _diag_util import izinkan_lokasi, log  # noqa: E402
 OUT = ROOT / "reports" / "repro" / "map_pembayaran"
 index = []
 step = 0
-DILARANG = re.compile(r"(?i)isi ulang sekarang|bayar|konfirmasi|kirim|lanjutkan pembayaran|tautkan sekarang|hubungkan sekarang")
+DILARANG = re.compile(r"(?i)isi ulang sekarang|^bayar|bayar sekarang|konfirmasi|kirim|lanjutkan pembayaran|tautkan sekarang|hubungkan sekarang")
 
 
 def teks(xml):
@@ -95,8 +95,9 @@ def main():
         from Pages.booking_page import BookingPage
         bp = BookingPage(d)
         bp.open_place_order("Senayan City")
+        time.sleep(4)  # tunggu kartu tarif termuat sebelum mengetuk metode bayar
         save(d, "place_order")
-        if tap(d, "//android.widget.ImageView[@content-desc='Cash']", "metode_pembayaran", 3):
+        if tap(d, "//android.widget.ImageView[@content-desc='Cash']", "metode_pembayaran", 4):
             size = d.get_window_size()
             d.swipe(size["width"] // 2, int(size["height"] * 0.8), size["width"] // 2, int(size["height"] * 0.3), 600)
             time.sleep(1.5)
