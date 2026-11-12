@@ -93,8 +93,7 @@ def main():
             login.click_submit_login()
             login.input_otp_dev(config.ACTIVE_OTP)
         time.sleep(6)
-        save(driver, "beranda")
-        gulir(driver, "beranda", 2)
+        save(driver, "beranda")  # tanpa menggulir: gulir menutup panel tujuan (peta CI 12 Nov 2026)
         # Popup 'Pemberitahuan Jam Operasional' (tombol Lanjutkan) menutupi Beranda saat dibuka
         tap(driver, "//*[@content-desc='Lanjutkan']", "tutup_popup_jam_operasional", 2)
         # Alur pemesanan: ketukan pertama pada kolom tujuan hanya menaikkan panel (peta CI 12 Nov 2026), ketuk lagi
@@ -124,6 +123,9 @@ def main():
                 fields[-1].send_keys("Senayan City")
                 time.sleep(4)
                 save(driver, "saran_tujuan")
+                index.append("   lokasi jemput di form: " + " | ".join(
+                    (e.get_attribute("content-desc") or e.get_attribute("text") or "")[:50]
+                    for e in driver.find_elements("xpath", "//*[contains(@class,'View') and string-length(@content-desc) > 3]")[:6]))
                 tap(driver, "(//*[contains(@content-desc, 'Senayan') or contains(@text, 'Senayan')])[last()]", "pilih_saran", 6)
                 gulir(driver, "place_order", 1)
                 tap(driver, "//*[contains(@content-desc, 'Tunai') or contains(@content-desc, 'Pembayaran') or contains(@content-desc, 'Cash')]",
