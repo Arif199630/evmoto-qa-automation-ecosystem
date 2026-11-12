@@ -101,6 +101,8 @@ jobs:
     env:
       SHARD_INDEX: ${{ matrix.shard }}
       SHARD_TOTAL: 16
+      # Halaman 'Cara Penggunaan Aplikasi' Driver dua kali membuat emulator CI mati (12 Nov 2026): menu Driver dijalankan terakhir
+      RUN_LAST: "^test_drv_menu"
       # Percepatan tanpa melewatkan test: file besar dipecah per 8 test lalu dibagi rata ke 16 emulator,
       # jeda 'manusia' 3 detik per klik dimatikan, jeda setelah tiap test 1 detik.
       CHUNK_SIZE: "8"

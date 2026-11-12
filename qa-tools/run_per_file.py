@@ -126,7 +126,10 @@ if shard_total > 1 and os.getenv("ACCOUNT_SHARDING") == "1" and shard_total >= 3
 elif shard_total > 1:
     units = balance(units, shard_total)[int(os.getenv("SHARD_INDEX", "0"))]
 
-units.sort(key=lambda u: -u[3])
+# RUN_LAST: unit yang namanya cocok dijalankan paling akhir (mis. layar yang pernah membuat emulator CI mati),
+# supaya bila emulator mati, unit lain sudah selesai lebih dulu.
+run_last = re.compile(os.getenv("RUN_LAST") or "^$")
+units.sort(key=lambda u: (bool(run_last.search(u[0])), -u[3]))
 if os.getenv("DRY_RUN") == "1":  # hanya tampilkan rencana pembagian, tidak menjalankan test
     print(f"{sum(u[3] for u in units)} test dalam {len(units)} unit: " + ", ".join(u[0] for u in units))
     sys.exit(0)
