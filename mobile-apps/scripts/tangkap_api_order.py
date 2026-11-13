@@ -193,6 +193,8 @@ def main():
         except Exception as ex:
             traceback.print_exc()
             ringkasan.append(f"ambil Chucker gagal: {type(ex).__name__}: {str(ex)[:200]}")
+        for f in list(OUT.glob("chucker.db*")) + list(OUT.glob("transaksi.json")):
+            f.unlink()  # database mentah dan file terbuka tidak boleh ikut artifact (repo public)
         text = sensor("\n".join(ringkasan))
         (OUT / "ringkasan.txt").write_text(text, encoding="utf-8")
         print(text)
