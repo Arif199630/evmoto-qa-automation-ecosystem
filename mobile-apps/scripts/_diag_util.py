@@ -99,9 +99,23 @@ def pesan_order(driver, percobaan=3):
             time.sleep(1)
         els = driver.find_elements("xpath", TOMBOL_PESAN)
         if not els:
-            return True
+            # run 43348861484: User B masih di form rute (tanpa tombol), bukan berarti order terkirim
+            return bool(driver.find_elements("xpath", MENUNGGU_DRIVER))
         els[0].click()
         time.sleep(5)
-        if not driver.find_elements("xpath", TOMBOL_PESAN):
+        if driver.find_elements("xpath", MENUNGGU_DRIVER) or not driver.find_elements("xpath", TOMBOL_PESAN):
+            return bool(driver.find_elements("xpath", MENUNGGU_DRIVER)) or _tunggu(driver, MENUNGGU_DRIVER, 10)
+    return False
+
+
+MENUNGGU_DRIVER = ("//*[contains(@content-desc,'Menunggu Konfirmasi Driver') or contains(@text,'Menunggu Konfirmasi Driver') "
+                   "or contains(@content-desc,'Segera Bertemu') or contains(@content-desc,'Mencari Driver')]")
+
+
+def _tunggu(driver, xpath, detik):
+    deadline = time.time() + detik
+    while time.time() < deadline:
+        if driver.find_elements("xpath", xpath):
             return True
+        time.sleep(1)
     return False

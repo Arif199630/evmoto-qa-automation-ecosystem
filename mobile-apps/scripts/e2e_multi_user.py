@@ -100,6 +100,7 @@ def main():
         save(d, dev, "pembersihan_batal")
 
     dv = da = db = None
+    diterima_global = {}
     pesanan = {"A": False, "B": False}
     try:
         dv = DriverFactory.create_driver(is_driver_app=True, udid="emulator-5558", system_port=8202)
@@ -117,8 +118,16 @@ def main():
         login_user(db, phone_b)
         save(da, "A-user", "beranda")
         save(db, "B-user", "beranda")
-        BookingPage(da).open_place_order(tujuan)
-        BookingPage(db).open_place_order(tujuan)
+        for nama, d_ in (("A", da), ("B", db)):
+            BookingPage(d_).open_place_order(tujuan)
+            if not d_.find_elements("xpath", "//android.widget.Button[@content-desc='Pesan EVMoto']"):
+                # run 43348861484: User B tertahan di form rute; ulangi dari Beranda sekali
+                ringkasan.append(f"   User {nama}: Place Order belum tampil, diulang")
+                d_.terminate_app(user_pkg)
+                d_.activate_app(user_pkg)
+                time.sleep(5)
+                ketuk(d_, "//*[@content-desc='Lanjutkan' or @text='Lanjutkan']", 1.5)
+                BookingPage(d_).open_place_order(tujuan)
         t0 = time.time()
         pesanan["A"] = pesan_order(da)
         pesanan["B"] = pesan_order(db)
@@ -139,13 +148,19 @@ def main():
                     diterima = save(dv, "driver", "setelah_terima")
                 break
             time.sleep(6)
+        diterima_global["ya"] = bool(diterima)
         ringkasan.append("   driver menerima pesanan" if diterima else "   tidak ada pesanan masuk ke driver dalam ±2 menit")
         # Status kedua user setelah driver menerima: hanya satu yang boleh mendapat driver
         xa = save(da, "A-user", "status_setelah_driver_terima")
         xb = save(db, "B-user", "status_setelah_driver_terima")
         dapat = [n for n, x in (("A", xa), ("B", xb)) if re.search(r"B 9099|testdr|Driver menuju|sedang menuju|dalam perjalanan", x)]
-        ringkasan.append(f"HASIL race condition: user yang mendapat driver = {dapat or 'tidak ada'} "
-                         f"({'BENAR: hanya satu' if len(dapat) == 1 else 'PERLU DICEK' if not dapat else 'SALAH: lebih dari satu user mendapat driver yang sama'})")
+        diterima_global["dapat"] = dapat
+        if not (pesanan["A"] and pesanan["B"]):
+            ringkasan.append(f"HASIL race condition: TIDAK VALID, order terkirim A={pesanan['A']} B={pesanan['B']} "
+                             f"(butuh dua order aktif bersamaan); user yang mendapat driver = {dapat or 'tidak ada'}")
+        else:
+            ringkasan.append(f"HASIL race condition: user yang mendapat driver = {dapat or 'tidak ada'} "
+                             f"({'BENAR: hanya satu' if len(dapat) == 1 else 'PERLU DICEK' if not dapat else 'SALAH: lebih dari satu user mendapat driver yang sama'})")
         # Driver sibuk: selama 60 dtk, pesanan user lain tidak boleh ditawarkan ke driver ini
         tawaran = 0
         for _ in range(6):
@@ -161,6 +176,21 @@ def main():
         traceback.print_exc()
         ringkasan.append(f"langkah gagal: {type(e).__name__}: {str(e)[:220]}")
     finally:
+        if diterima_global.get("ya"):
+            try:
+                import e2e_dua_perangkat as ep
+                ep.e.OUT = OUT
+                try:
+                    dv.find_elements("xpath", "//*")
+                except Exception:
+                    dv = DriverFactory.create_driver(no_reset=True, is_driver_app=True, udid="emulator-5558", system_port=8202)
+                if ep.buka_order_driver(dv, ep.e) or ep.slider_driver(dv, 10) is not None:
+                    pemenang = da if "A" in diterima_global.get("dapat", ["A"]) else db
+                    ep.jalankan_tahap(dv, pemenang, ep.e, ringkasan, "bersih")
+                    ringkasan.append("   pembersihan: order yang diterima diselesaikan lewat Driver (Cash)")
+                    pesanan = {"A": False, "B": False} if len(diterima_global.get("dapat", [])) <= 1 else pesanan
+            except Exception as ex:
+                ringkasan.append(f"   pembersihan lewat Driver gagal: {type(ex).__name__}: {str(ex)[:120]}")
         for d, dev, key in ((da, "A-user", "A"), (db, "B-user", "B")):
             try:
                 if d is not None and pesanan.get(key):
