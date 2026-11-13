@@ -145,14 +145,25 @@ def jalankan_tahap(dd, du, e, r, awalan):
     return labels or (["pembayaran"] if bayar else [])
 
 
+def buat_sesi(**kw):
+    """Sesi Appium dengan satu kali ulang (run 43350861198: adbExec 'settings delete global hidden_api_policy...'
+    gagal di emulator-5556 yang baru selesai boot)."""
+    try:
+        return DriverFactory.create_driver(**kw)
+    except Exception as ex:
+        print(f"[e2e] sesi {kw.get('udid')} gagal ({type(ex).__name__}), diulang 30 dtk lagi", flush=True)
+        time.sleep(30)
+        return DriverFactory.create_driver(**kw)
+
+
 def main():
     e.OUT.mkdir(parents=True, exist_ok=True)
     r = e.ringkasan
     dd = du = None
     order_dibuat = False
     try:
-        dd = DriverFactory.create_driver(is_driver_app=True, udid="emulator-5556", system_port=8201)
-        du = DriverFactory.create_driver(udid="emulator-5554", system_port=8200)
+        dd = buat_sesi(is_driver_app=True, udid="emulator-5556", system_port=8201)
+        du = buat_sesi(udid="emulator-5554", system_port=8200)
         r.append("Driver: emulator-5556 | User: emulator-5554 (akun QA pool) | metode bayar: Cash")
         lp = LoginPage(du)
         if lp.is_login_screen_displayed(timeout=20):
