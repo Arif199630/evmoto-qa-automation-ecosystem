@@ -37,6 +37,9 @@ PESAN = "//android.widget.Button[@content-desc='Pesan EVMoto' or @text='Pesan EV
 SLIDER = ("//android.widget.ImageView[@clickable='true' and string-length(@content-desc)>0 and "
           "not(contains(@content-desc,'Batalkan'))]")
 
+BAYAR = ("//*[@content-desc='Sudah Terima Pembayaran' or @text='Sudah Terima Pembayaran' or "
+         "@content-desc='Menunggu Pembayaran (Cash)' or starts-with(@content-desc,'Menunggu Pembayaran')]")
+
 
 def slider_driver(dd, detik=60):
     """Slider tahap order di aplikasi Driver (mis. ImageView 'Mengantar penumpang' di bagian bawah, lebar > 200 px).
@@ -84,7 +87,8 @@ def batalkan_driver(dd, e, nama):
 def buka_order_driver(dd, e):
     """Buka order aktif dari bagian 'Pesanan Berjalan' di Beranda Driver. True bila layar order (slider/Batalkan) tampil."""
     xp = ("//*[starts-with(@content-desc,'Pesanan Reguler') or starts-with(@content-desc,'Dijemput') or "
-          "starts-with(@content-desc,'Menjemput') or starts-with(@content-desc,'Mengantar') or starts-with(@content-desc,'Diantar')]")
+          "starts-with(@content-desc,'Menjemput') or starts-with(@content-desc,'Mengantar') or starts-with(@content-desc,'Diantar') or "
+          "starts-with(@content-desc,'Menunggu Pembayaran')]")
     if not dd.find_elements("xpath", xp):
         return False
     size = dd.get_window_size()
@@ -96,7 +100,8 @@ def buka_order_driver(dd, e):
         dd.execute_script("mobile: clickGesture", {"x": x, "y": y})
         time.sleep(8)
         e.save(dd, "driver", "order_sisa")
-        if slider_driver(dd, 20) is not None or dd.find_elements("xpath", "//*[@content-desc='Batalkan']"):
+        if (dd.find_elements("xpath", BAYAR) or slider_driver(dd, 20) is not None
+                or dd.find_elements("xpath", "//*[@content-desc='Batalkan']")):
             return True
         dd.back()
         time.sleep(2)
@@ -109,6 +114,8 @@ def jalankan_tahap(dd, du, e, r, awalan):
     labels = []
     sebelumnya, ulang = None, 0
     for tahap in range(8):
+        if dd.find_elements("xpath", BAYAR):
+            break  # sudah di layar pembayaran (run 43346173520: setelah 'Selesai mengantar penumpang')
         el = slider_driver(dd, 60)
         if el is None:
             r.append(f"   {awalan} tahap {tahap + 1}: slider tidak tampil dalam 60 dtk")
@@ -123,10 +130,19 @@ def jalankan_tahap(dd, du, e, r, awalan):
         if ulang >= 2:
             r.append(f"   {awalan}: slider yang sama 3x berturut-turut, berhenti")
             break
-    for label in ("Sudah Diterima", "Terima Pembayaran", "Selesai", "OK", "Kembali ke Beranda"):
-        if e.ketuk(dd, f"//*[@content-desc='{label}' or @text='{label}']", 3):
-            e.save(dd, "driver", f"{awalan}_ketuk_{label.replace(' ', '_')}")
-    return labels
+    # Pembayaran Cash: invoice Driver 'Menunggu Pembayaran (Cash)' -> 'Selesai' -> 'Sudah Terima Pembayaran' -> konfirmasi
+    bayar = False
+    for label in ("Selesai", "Sudah Terima Pembayaran", "Ya", "Konfirmasi", "Ya, Sudah", "OK", "Kembali ke Beranda"):
+        if e.ketuk(dd, f"//*[@content-desc='{label}' or @text='{label}']", 4):
+            e.save(dd, "driver", f"{awalan}_ketuk_{label.replace(' ', '_').replace(',', '')}")
+            if label == "Sudah Terima Pembayaran":
+                bayar = True
+                r.append(f"   {awalan}: driver menekan 'Sudah Terima Pembayaran' (Cash)")
+    if bayar:
+        time.sleep(4)
+        e.save(du, "user", f"{awalan}_setelah_bayar")
+        e.save(dd, "driver", f"{awalan}_setelah_bayar")
+    return labels or (["pembayaran"] if bayar else [])
 
 
 def main():
@@ -192,9 +208,6 @@ def main():
             e.save(dd, "driver", "setelah_terima")
             e.save(du, "user", "driver_ditemukan")
             jalankan_tahap(dd, du, e, r, "order")
-            for label in ("Sudah Diterima", "Terima Pembayaran", "Selesai", "OK", "Kembali ke Beranda"):
-                if e.ketuk(dd, f"//*[@content-desc='{label}' or @text='{label}']", 3):
-                    e.save(dd, "driver", f"ketuk_{label.replace(' ', '_')}")
             e.save(dd, "driver", "akhir")
             xml = e.save(du, "user", "akhir")
             if any(k in xml for k in ("Penilaian", "penilaian", "Selesai", "Perjalanan selesai")):
