@@ -200,6 +200,9 @@ def main():
         xml = e.save(dd, "driver", "status")
         r.append(f"   status driver: {'Online' if 'content-desc=\"Online\"' in xml else 'TIDAK Online'}")
 
+        if os.getenv("E2E_ORDER_BARU", "1") == "0":
+            r.append("   E2E_ORDER_BARU=0: hanya membersihkan order sisa, tanpa order baru")
+            return
         e.tutup_popup(du)
         e.save(du, "user", "beranda")
         BookingPage(du).open_place_order(e.TUJUAN)
@@ -216,7 +219,21 @@ def main():
         if e.tunggu_label(dd, ["Swipe", "Geser", "Terima", "Orderan Baru", "Pesanan Baru"], 150, 5, "driver", "order_masuk"):
             e.save(dd, "driver", "order_masuk")
             r.append(f"   geser terima: {e.geser(dd, ['Swipe', 'Geser', 'Terima'])}")
-            e.save(dd, "driver", "setelah_terima")
+            try:
+                e.save(dd, "driver", "setelah_terima")
+            except Exception as ex:
+                # run 43354147830: UiAutomator2 Driver berhenti tepat setelah menerima order (layar peta berat);
+                # sesi dibuat ulang lalu order dibuka lagi dari Beranda supaya tidak tertinggal aktif di staging
+                r.append(f"   sesi Driver berhenti setelah terima ({type(ex).__name__}), dibuat ulang")
+                try:
+                    dd.quit()
+                except Exception:
+                    pass
+                dd = buat_sesi(no_reset=True, is_driver_app=True, udid="emulator-5556", system_port=8201)
+                time.sleep(6)
+                e.save(dd, "driver", "setelah_terima_sesi_baru")
+                if slider_driver(dd, 20) is None:
+                    buka_order_driver(dd, e)
             e.save(du, "user", "driver_ditemukan")
             jalankan_tahap(dd, du, e, r, "order")
             e.save(dd, "driver", "akhir")
