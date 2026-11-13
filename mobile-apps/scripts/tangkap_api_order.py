@@ -5,7 +5,9 @@ Tangkap request API yang dipakai aplikasi User saat memesan dan membatalkan orde
 
 Akun: User dengan GoPay tertaut (GOPAY_TEST_PHONE), karena akun QA pool dan akun utama dipakai job regression.
 Metode bayar diganti ke Cash sebelum memesan. Order dibatalkan dari aplikasi sebelum ada driver yang menerima.
-Keluaran (tanpa token, nomor disensor): reports/repro/tangkap_api_order/transaksi.json, ringkasan.txt, screenshot.
+Repo CI ini public: detail request (transaksi.json) dienkripsi dengan sertifikat qa-tools/artifact_cert.pem
+(kunci privat hanya di laptop QA) menjadi transaksi.json.enc; file terbuka dihapus. Log dan ringkasan.txt hanya
+memuat jumlah transaksi. Token dan nomor tetap disensor sebelum dienkripsi.
 """
 import json
 import os
@@ -180,12 +182,14 @@ def main():
             pass
         try:
             trx = ambil_chucker()
-            (OUT / "transaksi.json").write_text(json.dumps(trx, ensure_ascii=False, indent=1), encoding="utf-8")
-            ringkasan.append(f"transaksi HTTP tercatat: {len(trx)}")
-            for t in trx:
-                p = t.get("path") or t.get("url", "")
-                if re.search(r"(?i)order|fare|price|cancel|trip|booking", p):
-                    ringkasan.append(f"   {t.get('method')} {p} -> {t.get('responseCode')} | body: {str(t.get('requestBody'))[:300]}")
+            polos = OUT / "transaksi.json"
+            polos.write_text(json.dumps(trx, ensure_ascii=False, indent=1), encoding="utf-8")
+            cert = ROOT.parent / "qa-tools" / "artifact_cert.pem"
+            r = subprocess.run(["openssl", "smime", "-encrypt", "-aes256", "-binary", "-outform", "DER",
+                                "-in", str(polos), "-out", str(OUT / "transaksi.json.enc"), str(cert)], capture_output=True)
+            polos.unlink()
+            ringkasan.append(f"transaksi HTTP tercatat: {len(trx)}; terenkripsi: {r.returncode == 0}; "
+                             f"terkait order: {sum(1 for t in trx if re.search(r'(?i)order', str(t.get('path') or t.get('url'))))}")
         except Exception as ex:
             traceback.print_exc()
             ringkasan.append(f"ambil Chucker gagal: {type(ex).__name__}: {str(ex)[:200]}")
