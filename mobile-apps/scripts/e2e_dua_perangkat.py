@@ -15,7 +15,10 @@ import time
 import traceback
 from pathlib import Path
 
-os.environ["TEST_USER_POOL_INDEX"] = os.getenv("E2E_USER_POOL_INDEX", "11")  # 13 masih punya order aktif sisa run 43200401778
+# e2e_dua_aplikasi (diimpor di bawah) mengisi TEST_USER_POOL_INDEX dari E2E_USER_POOL_INDEX, jadi akun diatur di sini.
+# Pool 13 = pemilik order sisa run 43200401778 yang masih aktif; order itu diselesaikan dulu sebelum order baru.
+os.environ["E2E_USER_POOL_INDEX"] = os.getenv("E2E_USER_POOL_INDEX", "13")
+os.environ["TEST_USER_POOL_INDEX"] = os.environ["E2E_USER_POOL_INDEX"]
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "Frontend" / "Feature"), str(ROOT / "scripts")]
 
@@ -78,6 +81,28 @@ def batalkan_driver(dd, e, nama):
 
 
 
+def buka_order_driver(dd, e):
+    """Buka order aktif dari bagian 'Pesanan Berjalan' di Beranda Driver. True bila layar order (slider/Batalkan) tampil."""
+    xp = ("//*[starts-with(@content-desc,'Pesanan Reguler') or starts-with(@content-desc,'Dijemput') or "
+          "starts-with(@content-desc,'Menjemput') or starts-with(@content-desc,'Mengantar') or starts-with(@content-desc,'Diantar')]")
+    if not dd.find_elements("xpath", xp):
+        return False
+    size = dd.get_window_size()
+    dd.swipe(size["width"] // 2, int(size["height"] * 0.70), size["width"] // 2, int(size["height"] * 0.30), 700)
+    time.sleep(2)
+    for el in dd.find_elements("xpath", xp)[:3]:
+        rc = el.rect
+        x, y = rc["x"] + rc["width"] // 2, rc["y"] + min(rc["height"] // 2, 40)
+        dd.execute_script("mobile: clickGesture", {"x": x, "y": y})
+        time.sleep(8)
+        e.save(dd, "driver", "order_sisa")
+        if slider_driver(dd, 20) is not None or dd.find_elements("xpath", "//*[@content-desc='Batalkan']"):
+            return True
+        dd.back()
+        time.sleep(2)
+    return False
+
+
 def jalankan_tahap(dd, du, e, r, awalan):
     """Geser slider tahap order Driver satu per satu sampai habis; simpan layar Driver dan User di tiap tahap.
     Mengembalikan daftar label slider yang digeser."""
@@ -127,19 +152,19 @@ def main():
             r.append("   order aktif sisa run sebelumnya dibatalkan dari aplikasi Driver")
             xml = e.save(dd, "driver", "beranda_setelah_bersih")
         else:
-            # run 43201911692: order sisa tampil sebagai kartu 'Dijemput / <alamat>' di bagian Pesanan Berjalan
-            kartu = dd.find_elements("xpath", "//*[starts-with(@content-desc,'Dijemput') or starts-with(@content-desc,'Menjemput') "
-                                              "or starts-with(@content-desc,'Mengantar') or starts-with(@content-desc,'Diantar')]")
-            if kartu:
-                kartu[0].click()
-                time.sleep(6)
-                e.save(dd, "driver", "order_sisa")
+            # run 43344779294: kartu 'Pesanan Reguler / Dijemput ...' ada di bawah layar (tertutup snackbar dan menu),
+            # jadi Beranda digulir dulu lalu kartu diketuk di tengahnya; berhasil bila slider tahap atau 'Batalkan' tampil.
+            if buka_order_driver(dd, e):
                 r.append("   order sisa run sebelumnya ditemukan (sudah diterima driver): tahap perjalanan dilanjutkan")
+                e.tutup_popup(du)
+                e.ketuk(du, "//*[starts-with(@content-desc,'Sedang berjalan')]", 4)
                 e.save(du, "user", "order_sisa_awal")
                 if not jalankan_tahap(dd, du, e, r, "sisa"):
                     if batalkan_driver(dd, e, "sisa_run_lalu"):
                         r.append("   order sisa dibatalkan dari aplikasi Driver")
                 e.save(du, "user", "order_sisa_akhir")
+                du.back()
+                time.sleep(2)
                 dd.back()
                 time.sleep(3)
                 xml = e.save(dd, "driver", "beranda_2")
