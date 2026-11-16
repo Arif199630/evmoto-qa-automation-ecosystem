@@ -1179,7 +1179,7 @@ class TestSpecializedUserBookingSuite:
 class TestEvMotoFarePricingEngineSuite:
     """
     Suite Pengujian Khusus Perhitungan Harga EvMoto Berdasarkan 6 Kondisi Bisnis:
-    1. Harga Normal: Jarak Dekat (<= 2 KM: Rp 6.000), Jarak Sedang (3.5 KM: Rp 10.200), Jarak Jauh (10.0 KM: Rp 38.400)
+    1. Harga Normal: Jarak Dekat (<= 2 KM: Rp 6.000), Jarak Sedang (3.5 KM: Rp 10.200), Jarak Jauh (10.0 KM: Rp 28.400, tanpa biaya jarak jauh)
     2. Platform Fee (10%): Seamless di sisi User Apps (+ Rp 1.020 pada rute 3.5 KM -> Rp 11.220)
     3. Waiting Fee: Waktu tunggu > 15 menit dikenakan Rp 500 / menit (misal 20 menit = 5 x 500 = + Rp 2.500)
     4. Kupon Diskon Rp 5.000: Memotong subtotal tagihan (- Rp 5.000)
@@ -1197,7 +1197,7 @@ class TestEvMotoFarePricingEngineSuite:
         Deskripsi: Menguji validitas perhitungan tarif argo dasar sesuai ketentuan operasional:
           - Jarak Dekat (1.5 KM <= 2.0 KM): Tarif minimum Rp 6.000
           - Jarak Sedang (3.5 KM): Rp 6.000 + (1.5 KM x Rp 2.800) = Rp 10.200
-          - Jarak Jauh (10.0 KM): Rp 6.000 + (8.0 KM x Rp 2.800 = Rp 22.400) + FarFee (4.0 KM x Rp 2.500 = Rp 10.000) = Rp 38.400
+          - Jarak Jauh (10.0 KM): Rp 6.000 + (8.0 KM x Rp 2.800 = Rp 22.400) = Rp 28.400 (tanpa biaya jarak jauh)
         Ekspektasi: Seluruh nilai argo terhitung persis tanpa pembulatan sesuai formula Dashboard Production.
         """
         calc = AdminDashboardFareCalculator()
@@ -1216,10 +1216,10 @@ class TestEvMotoFarePricingEngineSuite:
 
         and_step("Pengguna memilih rute Jarak Jauh (10.0 KM)")
         res_jauh = calc.calculate_base_argo(10.0)
-        then("Tarif terhitung persis Rp 38.400 (Base Rp 6.000 + Mileage Rp 22.400 + FarFee Rp 10.000)")
-        assert res_jauh["total_argo"] == 38400.0
-        assert res_jauh["formatted_argo"] == "Rp 38.400"
-        assert res_jauh["long_distance_charge"] == 10000.0
+        then("Tarif terhitung persis Rp 28.400 (Base Rp 6.000 + Mileage Rp 22.400, tanpa biaya jarak jauh)")
+        assert res_jauh["total_argo"] == 28400.0
+        assert res_jauh["formatted_argo"] == "Rp 28.400"
+        assert res_jauh["long_distance_charge"] == 0.0
 
     @pytest.mark.booking
     @pytest.mark.pilar1
@@ -1787,13 +1787,13 @@ class TestOrderBehaviourMatrix:
     Mencakup Rincian Tarif Perjalanan Resmi:
       - Tarif Dasar / Argo Awal (Start Price) : Rp 6.000 (Konstan untuk radius 0 - 2.0 KM pertama)
       - Tarif Jarak Reguler (Mileage Fee)     : Rp 2.800 / KM (untuk jarak > 2.0 KM)
-      - Biaya Jarak Jauh (Long Distance Fee)  : Tier 1 (+Rp 2.500/KM 6-15 KM), Tier 2 (+Rp 2.200/KM 15-100 KM)
+      - Biaya Jarak Jauh (Long Distance Fee)  : TIDAK dikenakan di tarif User (dikonfirmasi user 16 Nov 2026)
     
     4 Kategori Jarak Operasional Resmi:
       - Jarak Dekat       : 1.5 KM -> Argo Dasar Rp 6.000 + Jarak Rp 0 = Total Argo Rp 6.000 (Plat Fee Rp 600 -> Subtotal Rp 6.600)
       - Jarak Sedang      : 3.5 KM -> Argo Dasar Rp 6.000 + Jarak (1.5 KM x Rp 2.800 = Rp 4.200) = Total Argo Rp 10.200 (Plat Fee Rp 1.020 -> Subtotal Rp 11.220)
-      - Jarak Jauh        : 10.0 KM -> Argo Dasar Rp 6.000 + Jarak Rp 22.400 + Long Dist Rp 10.000 = Total Argo Rp 38.400 (Plat Fee Rp 3.840 -> Subtotal Rp 42.240)
-      - Jarak Sangat Jauh : 20.0 KM -> Argo Dasar Rp 6.000 + Jarak Rp 50.400 + Long Dist Rp 33.500 = Total Argo Rp 89.900 (Plat Fee Rp 8.990 -> Subtotal Rp 98.890)
+      - Jarak Jauh        : 10.0 KM -> Argo Dasar Rp 6.000 + Jarak Rp 22.400 = Total Argo Rp 28.400 (Plat Fee Rp 2.840 -> Subtotal Rp 31.240)
+      - Jarak Sangat Jauh : 20.0 KM -> Argo Dasar Rp 6.000 + Jarak Rp 50.400 = Total Argo Rp 56.400 (Plat Fee Rp 5.640 -> Subtotal Rp 62.040)
     
     Mencakup Seluruh 4 Metode Pembayaran Resmi EvMoto:
       1. Tunai (Cash)                  : Surcharge 0% (Biaya Tambahan Rp 0)
@@ -1816,7 +1816,7 @@ class TestOrderBehaviourMatrix:
     @staticmethod
     def _expected_argo(calc: AdminDashboardFareCalculator, km: float) -> float:
         """Total argo yang diharapkan, dihitung terpisah dari kalkulator dengan parameter Admin:
-        tarif awal + (jarak - jarak awal) x tarif per KM + biaya jarak jauh per tier (farFrom-farTo)."""
+        tarif awal + (jarak - jarak awal) x tarif per KM (biaya jarak jauh hanya bila calc.PAKAI_FAR_FEE)."""
         if km <= calc.START_KM:
             return float(calc.START_PRICE)
         total = calc.START_PRICE + (km - calc.START_KM) * calc.MILEAGE_FEE
@@ -1825,7 +1825,7 @@ class TestOrderBehaviourMatrix:
             (calc.FAR_FROM_2, calc.FAR_TO_2, calc.FAR_FEE_2),
             (calc.FAR_FROM_3, float("inf"), calc.FAR_FEE_3),
         ]
-        for lo, hi, fee in tiers:
+        for lo, hi, fee in (tiers if calc.PAKAI_FAR_FEE else []):
             total += max(0.0, min(km, hi) - lo) * fee
         return round(total, 2)
 
@@ -1850,7 +1850,7 @@ class TestOrderBehaviourMatrix:
         """
         Helper komprehensif validasi 4 Jarak x 4 Metode Pembayaran (16 verifikasi per skenario):
         - Tarif Dasar (Start Price) wajib Rp 6.000 untuk 2 KM pertama.
-        - Total Argo = Start Price Rp 6.000 + Mileage Fee + Long Distance Fee.
+        - Total Argo = Start Price Rp 6.000 + Mileage Fee (tanpa biaya jarak jauh).
         - Tunai & EvWallet: Surcharge 0%, Grand Total = Adjusted Subtotal.
         - GoPay (2%) & OVO (1.665%): Formula Gross-Up: Grand Total = math.ceil(Adjusted Subtotal * (100 / (100 - Fee Rate))).
         Mengembalikan jumlah titik (jarak x metode bayar) yang sudah lolos verifikasi.
@@ -1911,10 +1911,7 @@ class TestOrderBehaviourMatrix:
         Deskripsi: Menguji pesanan instan reguler tanpa promo/fee tambahan pada seluruh metode pembayaran (Tunai, EvWallet, GoPay, OVO).
         Formula  : Tunai/EvWallet (0%): Grand Total = Subtotal. GoPay/OVO (2%): Grand Total = Subtotal + 2%.
         Ekspektasi:
-          - Dekat       : Tunai/EvWallet Rp 6.600 | GoPay/OVO Rp 6.732
-          - Sedang      : Tunai/EvWallet Rp 11.220 | GoPay/OVO Rp 11.444,4
-          - Jauh        : Tunai/EvWallet Rp 42.240 | GoPay/OVO Rp 43.084,8
-          - Sangat Jauh : Tunai/EvWallet Rp 98.890 | GoPay/OVO Rp 100.867,8
+          - Nilai per jarak dihitung _verify_combo dari parameter Price Admin (tanpa biaya jarak jauh, aturan 16 Nov 2026)
         """
         calc = fare_calculator
         given("Pengguna melakukan Normal Booking untuk 4 jarak dan 4 metode pembayaran")
@@ -2079,10 +2076,7 @@ class TestOrderBehaviourMatrix:
         Deskripsi: Menguji penalti denda Rp 5.000 yang saling offset dengan kupon diskon Rp 5.000 pada seluruh metode pembayaran.
         Formula  : Adjusted Subtotal = Subtotal + Penalty Rp 5.000 - Kupon Rp 5.000 = Subtotal.
         Ekspektasi:
-          - Dekat       : Tunai/EvWallet Rp 6.600 | GoPay/OVO Rp 6.732
-          - Sedang      : Tunai/EvWallet Rp 11.220 | GoPay/OVO Rp 11.444,4
-          - Jauh        : Tunai/EvWallet Rp 42.240 | GoPay/OVO Rp 43.084,8
-          - Sangat Jauh : Tunai/EvWallet Rp 98.890 | GoPay/OVO Rp 100.867,8
+          - Nilai per jarak dihitung _verify_combo dari parameter Price Admin (tanpa biaya jarak jauh, aturan 16 Nov 2026)
         """
         calc = fare_calculator
         given("Pengguna Normal Booking dengan Penalty Rp 5.000 dioffset Kupon Rp 5.000 (4 metode pembayaran)")
@@ -2103,10 +2097,7 @@ class TestOrderBehaviourMatrix:
         Deskripsi: Menguji pemesanan terjadwal reguler tanpa promo/fee tambahan pada seluruh metode pembayaran.
         Formula  : Tunai/EvWallet (0%): Grand Total = Subtotal. GoPay/OVO (2%): Grand Total = Subtotal + 2%.
         Ekspektasi:
-          - Dekat       : Tunai/EvWallet Rp 6.600 | GoPay/OVO Rp 6.732
-          - Sedang      : Tunai/EvWallet Rp 11.220 | GoPay/OVO Rp 11.444,4
-          - Jauh        : Tunai/EvWallet Rp 42.240 | GoPay/OVO Rp 43.084,8
-          - Sangat Jauh : Tunai/EvWallet Rp 98.890 | GoPay/OVO Rp 100.867,8
+          - Nilai per jarak dihitung _verify_combo dari parameter Price Admin (tanpa biaya jarak jauh, aturan 16 Nov 2026)
         """
         calc = fare_calculator
         given("Pengguna menjadwalkan Advance Booking untuk 4 tingkatan jarak (4 metode pembayaran)")
@@ -2271,10 +2262,7 @@ class TestOrderBehaviourMatrix:
         Deskripsi: Menguji pesanan terjadwal dengan penalti denda Rp 5.000 yang saling offset dengan kupon diskon Rp 5.000.
         Formula  : Adjusted Subtotal = Subtotal + Penalty Rp 5.000 - Kupon Rp 5.000 = Subtotal.
         Ekspektasi:
-          - Dekat       : Tunai/EvWallet Rp 6.600 | GoPay/OVO Rp 6.732
-          - Sedang      : Tunai/EvWallet Rp 11.220 | GoPay/OVO Rp 11.444,4
-          - Jauh        : Tunai/EvWallet Rp 42.240 | GoPay/OVO Rp 43.084,8
-          - Sangat Jauh : Tunai/EvWallet Rp 98.890 | GoPay/OVO Rp 100.867,8
+          - Nilai per jarak dihitung _verify_combo dari parameter Price Admin (tanpa biaya jarak jauh, aturan 16 Nov 2026)
         """
         calc = fare_calculator
         given("Pesanan Advance Booking dengan Penalty Rp 5.000 dioffset Kupon Rp 5.000 (4 metode pembayaran)")
@@ -2295,7 +2283,8 @@ class TestOrderBehaviourMatrix:
 # ==============================================================================
 # TestOrderBehaviourMatrix di atas hanya menguji rumus kalkulator (tanpa aplikasi). Kelas ini membuka aplikasi User
 # asli untuk tiap kategori jarak dan membandingkan tarif di layar Place Order dengan konfigurasi Price Admin aktif.
-# Aturan dikonfirmasi user 12 Nov 2026: biaya jarak jauh (farFee) wajib ikut dihitung di tarif.
+# Aturan dikonfirmasi user 16 Nov 2026: tarif User = startPrice + (jarak - startKm) x mileageFee, TANPA biaya jarak
+# jauh (farFee); contoh 8,81 km -> Rp23.735. (Aturan 12 Nov yang memasukkan farFee dicabut.)
 # Titik jemput = lokasi GPS emulator CI (Jl. Wijaya I, Jakarta Selatan). Tiap kategori punya beberapa tujuan cadangan;
 # tujuan pertama yang jaraknya masuk rentang kategori dipakai. Tidak pernah menekan 'Pesan EVMoto'.
 # Titik jemput: kantor pusat ECGO EVMOTO (dikonfirmasi user 12 Nov 2026: Ecgo Evmoto Wijaya, Jl. Wijaya I No.67,
@@ -2328,7 +2317,7 @@ class TestFarePerDistanceTierOnApp:
         [Pilar 1 - Positive True] Tarif di layar Place Order sesuai Price Admin untuk kategori jarak {tier}.
         Ekspektasi:
           1. Jarak yang tampil masuk rentang kategori (bila tidak ada tujuan yang cocok: data uji, bukan bug).
-          2. Argo sebelum kupon = startPrice + (jarak - startKm) x mileageFee + biaya jarak jauh per tier (farFee).
+          2. Argo sebelum kupon = startPrice + (jarak - startKm) x mileageFee (tanpa biaya jarak jauh).
           3. Harga setelah kupon = argo - nominal 'Diskon Rp …' yang tampil.
         """
         given(f"Pengguna di Beranda dengan titik jemput area layanan, kategori jarak {tier} ({min_km}-{max_km} KM)")
@@ -2370,7 +2359,7 @@ class TestFarePerDistanceTierOnApp:
                      f"jarak {jarak} km | metode bayar: {', '.join(bayar) or '-'} | argo sebelum kupon Rp{sebelum_kupon} | "
                      f"setelah kupon Rp{setelah_kupon}\n")
 
-        then("Argo sebelum kupon sesuai rumus Price Admin (termasuk biaya jarak jauh)")
+        then("Argo sebelum kupon sesuai rumus Price Admin (tanpa biaya jarak jauh)")
         ok, pesan = fare_calculator.verify_ui_fare(f"Rp{sebelum_kupon}", distance_km=jarak, distance_rounding=0.005)
         assert ok, f"[{tier}] Tarif di layar tidak sesuai Price Admin: {pesan}"
 

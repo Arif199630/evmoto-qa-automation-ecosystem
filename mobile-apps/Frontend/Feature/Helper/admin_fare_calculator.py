@@ -71,6 +71,10 @@ class AdminDashboardFareCalculator:
     OVO_CHARGE_RATE = 0.01665 # 1.665% Handling Fee untuk OVO
     EWALLET_CHARGE_RATE = 0.02# Default fallback Charge fee e-wallet
 
+    # Tarif User TIDAK memakai biaya jarak jauh (farFee): tarif = startPrice + (jarak - startKm) x mileageFee
+    # (dikonfirmasi user 16 Nov 2026, contoh 8,81 km -> Rp23.735). Parameter far fee tetap dibaca dari Admin
+    # tetapi hanya dipakai bila PAKAI_FAR_FEE = True.
+    PAKAI_FAR_FEE = False
     # Konfigurasi Long Distance Fee resmi Dashboard Admin Production (ID 1626 / 1619)
     FAR_FROM_1 = 6.0          # Batas awal Jarak Jauh Tier 1 (6.0 KM)
     FAR_TO_1 = 15.0           # Batas akhir Jarak Jauh Tier 1 (15.0 KM)
@@ -130,7 +134,7 @@ class AdminDashboardFareCalculator:
         Kondisi 1: Menghitung Tarif Argo Normal berdasarkan jarak persis Dashboard Admin Production:
         - Jarak Dekat (<= 2.0 KM)  : Rp 6.000 (Tarif Awal Minimum)
         - Jarak Sedang (2.0 - 6 KM): Rp 6.000 + (Jarak - 2.0) * Rp 2.800
-        - Jarak Jauh (> 6.0 KM)    : Rp 6.000 + (Jarak - 2.0) * Rp 2.800 + Long Distance Surcharge (Rp 2.500/KM untuk 6-15 KM)
+        - Jarak Jauh (> 6.0 KM)    : Rp 6.000 + (Jarak - 2.0) * Rp 2.800, tanpa biaya jarak jauh (PAKAI_FAR_FEE = False)
         """
         distance_float = float(distance_km)
         if distance_float <= self.START_KM:
@@ -148,7 +152,9 @@ class AdminDashboardFareCalculator:
             mileage_charge = additional_km * self.MILEAGE_FEE
             category = "Jarak Jauh (> 6.0 KM - Sesuai Dashboard Production)"
 
-            if distance_float <= self.FAR_TO_1:  # 6.0 s/d 15.0 KM
+            if not self.PAKAI_FAR_FEE:
+                long_distance_charge = 0.0
+            elif distance_float <= self.FAR_TO_1:  # 6.0 s/d 15.0 KM
                 far_km_tier1 = distance_float - self.FAR_FROM_1
                 long_distance_charge = far_km_tier1 * self.FAR_FEE_1
             elif distance_float <= self.FAR_TO_2:  # 15.0 s/d 100.0 KM

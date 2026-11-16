@@ -3,10 +3,9 @@ Tarif di layar Place Order aplikasi User per kategori jarak x metode bayar (stag
 Pickup: kantor pusat (EVMOTO_TEST_PICKUP, default 'Ecgo Evmoto Wijaya'). Metode: Cash, Saldo EVMoto, OVO
 (GoPay hanya bila tertaut). TIDAK menekan 'Pesan EVMoto': hanya membaca tarif lalu kembali.
 
-Harapan dihitung dari parameter Admin Price staging (User): tarif awal 6000 s.d. 1,99 km, 2600/km, biaya jarak
-jauh 3300/km (6-19,99 km), 3000/km (19,99-100 km), 3500/km (>100 km). E-wallet: gross-up
-ceil(x * 100 / (100 - rate)), GoPay 2%, OVO 1,665%. Kolom 'rumus_aplikasi' = 6000 + (d-1,99) x 2600 tanpa biaya
-jarak jauh (pola yang terlihat di bug #2), sebagai pembanding.
+Harapan dihitung dari parameter Admin Price staging (User): tarif awal 6000 s.d. 1,99 km, lalu 2600/km, TANPA biaya
+jarak jauh (dikonfirmasi user 16 Nov 2026: 8,81 km -> Rp23.735). E-wallet: gross-up ceil(x * 100 / (100 - rate)),
+GoPay 2%, OVO 1,665%. Kolom 'rumus_aplikasi' sama dengan harapan (dipertahankan agar format hasil.tsv tetap).
 Hasil: reports/repro/tarif_metode_bayar/NN_<kategori>_<metode>.xml|.png, hasil.tsv, ringkasan.txt
 """
 import math
@@ -44,10 +43,7 @@ ringkasan = []
 def argo_admin(km):
     if km <= 1.99:
         return 6000.0
-    total = 6000 + (km - 1.99) * 2600
-    for lo, hi, fee in ((6.0, 19.99, 3300), (19.99, 100.0, 3000), (100.0, float("inf"), 3500)):
-        total += max(0.0, min(km, hi) - lo) * fee
-    return total
+    return 6000 + (km - 1.99) * 2600  # tanpa biaya jarak jauh (keputusan user 16 Nov 2026)
 
 
 def rumus_aplikasi(km):
@@ -196,7 +192,7 @@ def main():
                 elif lo_h <= sebelum <= hi_h:
                     status = "SESUAI"
                 else:
-                    status = f"TIDAK SESUAI (selisih {sebelum - harap:,.0f})"
+                    status = f"BERBEDA dari rumus (selisih {sebelum - harap:,.0f}; belum diverifikasi, bukan otomatis bug)"
                 rows.append(f"{kategori}\t{tujuan}\t{km}\t{terpilih}\t{sebelum}\t{bayar}\t{disk}\t{harap:.0f}\t{app:.0f}\t{status}")
                 log(rows[-1])
         # kembalikan pilihan ke OVO (metode utama akun ini sebelum test)
