@@ -150,15 +150,15 @@ class TestOvoPaymentAutomationSuite:
         Formula: math.ceil(harga order awal * (100 / (100 - 1.665)))
           1. Dekat (1.5 KM)       : Argo Rp 6.000 -> OVO 1.665% (Fee Rp 102) -> GT: Rp 6.102
           2. Sedang (3.5 KM)      : Argo Rp 10.200 -> OVO 1.665% (Fee Rp 173) -> GT: Rp 10.373
-          3. Jauh (10.0 KM)       : Argo Rp 28.400 -> OVO 1.665% (Fee Rp 481) -> GT: Rp 28.881
-          4. Sangat Jauh (20.0 KM): Argo Rp 56.400 -> OVO 1.665% (Fee Rp 955) -> GT: Rp 57.355
+          3. Jauh (10.0 KM)       : Argo Rp 27.200 -> OVO 1.665% (Fee Rp 461) -> GT: Rp 27.661
+          4. Sangat Jauh (20.0 KM): Argo Rp 50.700 -> OVO 1.665% (Fee Rp 859) -> GT: Rp 51.559
         """
         given("Tarif dasar argo dihitung oleh Pricing Engine EvMoto")
         tiers = [
             {"tier": "Dekat", "km": 1.5, "base_sub": 6000.0, "surcharge": 102.0, "grand_total": 6102.0},
             {"tier": "Sedang", "km": 3.5, "base_sub": 10200.0, "surcharge": 173.0, "grand_total": 10373.0},
-            {"tier": "Jauh", "km": 10.0, "base_sub": 28400.0, "surcharge": 481.0, "grand_total": 28881.0},
-            {"tier": "Sangat Jauh", "km": 20.0, "base_sub": 56400.0, "surcharge": 955.0, "grand_total": 57355.0},
+            {"tier": "Jauh", "km": 10.0, "base_sub": 27200.0, "surcharge": 461.0, "grand_total": 27661.0},
+            {"tier": "Sangat Jauh", "km": 20.0, "base_sub": 50700.0, "surcharge": 859.0, "grand_total": 51559.0},
         ]
         for t in tiers:
             res = fare_calc.calculate_grand_total(t["km"], payment_method="ovo")
@@ -429,16 +429,16 @@ class TestOvoOrderBehaviourMatrixSuite:
     Masing-masing divalidasi pada 4 Tier Jarak:
       - Dekat (1.5 KM)       : Argo Rp 6.000  | Subtotal Rp 6.600
       - Sedang (3.5 KM)      : Argo Rp 10.200 | Subtotal Rp 11.220
-      - Jauh (10.0 KM)       : Argo Rp 28.400 | Subtotal Rp 28.400
-      - Sangat Jauh (20.0 KM): Argo Rp 56.400 | Subtotal Rp 56.400
+      - Jauh (10.0 KM)       : Argo Rp 27.200 | Subtotal Rp 27.200
+      - Sangat Jauh (20.0 KM): Argo Rp 50.700 | Subtotal Rp 50.700
     Formula OVO: math.ceil(Adjusted Subtotal * (100 / (100 - 1.665)))
     """
 
     DISTANCES = [
         {"tier": "Jarak Dekat", "km": 1.5, "total_argo": 6000.0, "plat_fee": 0.0, "subtotal": 6000.0},
         {"tier": "Jarak Sedang", "km": 3.5, "total_argo": 10200.0, "plat_fee": 0.0, "subtotal": 10200.0},
-        {"tier": "Jarak Jauh", "km": 10.0, "total_argo": 28400.0, "plat_fee": 0.0, "subtotal": 28400.0},
-        {"tier": "Jarak Sangat Jauh", "km": 20.0, "total_argo": 56400.0, "plat_fee": 0.0, "subtotal": 56400.0},
+        {"tier": "Jarak Jauh", "km": 10.0, "total_argo": 27200.0, "plat_fee": 0.0, "subtotal": 27200.0},
+        {"tier": "Jarak Sangat Jauh", "km": 20.0, "total_argo": 50700.0, "plat_fee": 0.0, "subtotal": 50700.0},
     ]
 
     def _verify_ovo_combo(
@@ -502,8 +502,8 @@ class TestOvoOrderBehaviourMatrixSuite:
         """[OB-01] OVO Payment Only: Subtotal + Handling Fee 1.665%."""
         grand_totals = self._verify_ovo_combo(fare_calc, "OVO Only", use_coupon=False, waiting_minutes=0, apply_penalty=False)
         # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 1.665)) untuk jarak 1.5 / 3.5 / 10 / 20 km
-        assert grand_totals == [6102, 10373, 28881, 57355], (
-            f"[TC_OVO_OB_01] Grand total OVO (tanpa biaya tambahan) per tier jarak tidak sesuai acuan [6102, 10373, 28881, 57355]: {grand_totals}"
+        assert grand_totals == [6102, 10373, 27661, 51559], (
+            f"[TC_OVO_OB_01] Grand total OVO (tanpa biaya tambahan) per tier jarak tidak sesuai acuan [6102, 10373, 27661, 51559]: {grand_totals}"
         )
 
     # 2. OVO + KUPON
@@ -511,8 +511,8 @@ class TestOvoOrderBehaviourMatrixSuite:
         """[OB-02] OVO + Kupon: (Subtotal - Kupon Rp 5.000) + Handling Fee 1.665%."""
         grand_totals = self._verify_ovo_combo(fare_calc, "OVO + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=False)
         # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 1.665)) untuk jarak 1.5 / 3.5 / 10 / 20 km
-        assert grand_totals == [1017, 5289, 23797, 52271], (
-            f"[TC_OVO_OB_02] Grand total OVO (kupon -Rp5.000) per tier jarak tidak sesuai acuan [1017, 5289, 23797, 52271]: {grand_totals}"
+        assert grand_totals == [1017, 5289, 22576, 46474], (
+            f"[TC_OVO_OB_02] Grand total OVO (kupon -Rp5.000) per tier jarak tidak sesuai acuan [1017, 5289, 22576, 46474]: {grand_totals}"
         )
 
     # 3. OVO + WAITING FEE
@@ -520,8 +520,8 @@ class TestOvoOrderBehaviourMatrixSuite:
         """[OB-03] OVO + Waiting Fee: (Subtotal + WaitFee Rp 2.500) + Handling Fee 1.665%."""
         grand_totals = self._verify_ovo_combo(fare_calc, "OVO + WaitFee", use_coupon=False, waiting_minutes=20, apply_penalty=False)
         # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 1.665)) untuk jarak 1.5 / 3.5 / 10 / 20 km
-        assert grand_totals == [8644, 12916, 31424, 59898], (
-            f"[TC_OVO_OB_03] Grand total OVO (waiting fee 20 menit (+Rp2.500)) per tier jarak tidak sesuai acuan [8644, 12916, 31424, 59898]: {grand_totals}"
+        assert grand_totals == [8644, 12916, 30203, 54101], (
+            f"[TC_OVO_OB_03] Grand total OVO (waiting fee 20 menit (+Rp2.500)) per tier jarak tidak sesuai acuan [8644, 12916, 30203, 54101]: {grand_totals}"
         )
 
     # 4. OVO + PENALTY
@@ -529,8 +529,8 @@ class TestOvoOrderBehaviourMatrixSuite:
         """[OB-04] OVO + Penalty: (Subtotal + Denda Rp 5.000) + Handling Fee 1.665%."""
         grand_totals = self._verify_ovo_combo(fare_calc, "OVO + Penalty", use_coupon=False, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0)
         # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 1.665)) untuk jarak 1.5 / 3.5 / 10 / 20 km
-        assert grand_totals == [11187, 15458, 33966, 62440], (
-            f"[TC_OVO_OB_04] Grand total OVO (penalty +Rp5.000) per tier jarak tidak sesuai acuan [11187, 15458, 33966, 62440]: {grand_totals}"
+        assert grand_totals == [11187, 15458, 32746, 56644], (
+            f"[TC_OVO_OB_04] Grand total OVO (penalty +Rp5.000) per tier jarak tidak sesuai acuan [11187, 15458, 32746, 56644]: {grand_totals}"
         )
 
     # 5. OVO + KUPON + WAITING FEE
@@ -538,8 +538,8 @@ class TestOvoOrderBehaviourMatrixSuite:
         """[OB-05] OVO + Kupon + WaitFee: (Subtotal - 5.000 + 2.500) + Handling Fee 1.665%."""
         grand_totals = self._verify_ovo_combo(fare_calc, "OVO + Kupon + WaitFee", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=False)
         # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 1.665)) untuk jarak 1.5 / 3.5 / 10 / 20 km
-        assert grand_totals == [3560, 7831, 26339, 54813], (
-            f"[TC_OVO_OB_05] Grand total OVO (kupon + waiting fee) per tier jarak tidak sesuai acuan [3560, 7831, 26339, 54813]: {grand_totals}"
+        assert grand_totals == [3560, 7831, 25119, 49017], (
+            f"[TC_OVO_OB_05] Grand total OVO (kupon + waiting fee) per tier jarak tidak sesuai acuan [3560, 7831, 25119, 49017]: {grand_totals}"
         )
 
     # 6. OVO + KUPON + WAITING FEE + PENALTY (KOMBO LENGKAP)
@@ -547,8 +547,8 @@ class TestOvoOrderBehaviourMatrixSuite:
         """[OB-06] OVO + Kupon + WaitFee + Penalty: (Subtotal - 5.000 + 2.500 + 5.000) + Handling Fee 1.665%."""
         grand_totals = self._verify_ovo_combo(fare_calc, "OVO Full Combo", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0)
         # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 1.665)) untuk jarak 1.5 / 3.5 / 10 / 20 km
-        assert grand_totals == [8644, 12916, 31424, 59898], (
-            f"[TC_OVO_OB_06] Grand total OVO (kupon + waiting fee + penalty) per tier jarak tidak sesuai acuan [8644, 12916, 31424, 59898]: {grand_totals}"
+        assert grand_totals == [8644, 12916, 30203, 54101], (
+            f"[TC_OVO_OB_06] Grand total OVO (kupon + waiting fee + penalty) per tier jarak tidak sesuai acuan [8644, 12916, 30203, 54101]: {grand_totals}"
         )
 
     # 7. OVO + WAITING FEE + PENALTY
@@ -556,8 +556,8 @@ class TestOvoOrderBehaviourMatrixSuite:
         """[OB-07] OVO + WaitFee + Penalty: (Subtotal + 2.500 + 5.000) + Handling Fee 1.665%."""
         grand_totals = self._verify_ovo_combo(fare_calc, "OVO + WaitFee + Penalty", use_coupon=False, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0)
         # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 1.665)) untuk jarak 1.5 / 3.5 / 10 / 20 km
-        assert grand_totals == [13729, 18000, 36508, 64982], (
-            f"[TC_OVO_OB_07] Grand total OVO (waiting fee + penalty) per tier jarak tidak sesuai acuan [13729, 18000, 36508, 64982]: {grand_totals}"
+        assert grand_totals == [13729, 18000, 35288, 59186], (
+            f"[TC_OVO_OB_07] Grand total OVO (waiting fee + penalty) per tier jarak tidak sesuai acuan [13729, 18000, 35288, 59186]: {grand_totals}"
         )
 
     # 8. OVO + PENALTY + KUPON (OFFSET)
@@ -565,8 +565,8 @@ class TestOvoOrderBehaviourMatrixSuite:
         """[OB-08] OVO + Penalty + Kupon Offset: (Subtotal + 5.000 - 5.000) + Handling Fee 1.665%."""
         grand_totals = self._verify_ovo_combo(fare_calc, "OVO + Penalty + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0)
         # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 1.665)) untuk jarak 1.5 / 3.5 / 10 / 20 km
-        assert grand_totals == [6102, 10373, 28881, 57355], (
-            f"[TC_OVO_OB_08] Grand total OVO (penalty dioffset kupon) per tier jarak tidak sesuai acuan [6102, 10373, 28881, 57355]: {grand_totals}"
+        assert grand_totals == [6102, 10373, 27661, 51559], (
+            f"[TC_OVO_OB_08] Grand total OVO (penalty dioffset kupon) per tier jarak tidak sesuai acuan [6102, 10373, 27661, 51559]: {grand_totals}"
         )
 
     # 9. OVO ADVANCE BOOKING ONLY
@@ -575,8 +575,8 @@ class TestOvoOrderBehaviourMatrixSuite:
         grand_totals = self._verify_ovo_combo(fare_calc, "Advance OVO Only", use_coupon=False, waiting_minutes=0, apply_penalty=False, is_advance=True)
         # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 1.665)) untuk jarak 1.5 / 3.5 / 10 / 20 km
         # Kalkulator tidak membedakan advance booking: nilai acuan sama dengan skenario normal OB-01.
-        assert grand_totals == [6102, 10373, 28881, 57355], (
-            f"[TC_OVO_OB_09] Grand total OVO (tanpa biaya tambahan) per tier jarak tidak sesuai acuan [6102, 10373, 28881, 57355]: {grand_totals}"
+        assert grand_totals == [6102, 10373, 27661, 51559], (
+            f"[TC_OVO_OB_09] Grand total OVO (tanpa biaya tambahan) per tier jarak tidak sesuai acuan [6102, 10373, 27661, 51559]: {grand_totals}"
         )
 
     # 10. OVO ADVANCE + KUPON
@@ -585,8 +585,8 @@ class TestOvoOrderBehaviourMatrixSuite:
         grand_totals = self._verify_ovo_combo(fare_calc, "Advance OVO + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=False, is_advance=True)
         # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 1.665)) untuk jarak 1.5 / 3.5 / 10 / 20 km
         # Kalkulator tidak membedakan advance booking: nilai acuan sama dengan skenario normal OB-02.
-        assert grand_totals == [1017, 5289, 23797, 52271], (
-            f"[TC_OVO_OB_10] Grand total OVO (kupon -Rp5.000) per tier jarak tidak sesuai acuan [1017, 5289, 23797, 52271]: {grand_totals}"
+        assert grand_totals == [1017, 5289, 22576, 46474], (
+            f"[TC_OVO_OB_10] Grand total OVO (kupon -Rp5.000) per tier jarak tidak sesuai acuan [1017, 5289, 22576, 46474]: {grand_totals}"
         )
 
     # 11. OVO ADVANCE + WAITING FEE
@@ -595,8 +595,8 @@ class TestOvoOrderBehaviourMatrixSuite:
         grand_totals = self._verify_ovo_combo(fare_calc, "Advance OVO + WaitFee", use_coupon=False, waiting_minutes=20, apply_penalty=False, is_advance=True)
         # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 1.665)) untuk jarak 1.5 / 3.5 / 10 / 20 km
         # Kalkulator tidak membedakan advance booking: nilai acuan sama dengan skenario normal OB-03.
-        assert grand_totals == [8644, 12916, 31424, 59898], (
-            f"[TC_OVO_OB_11] Grand total OVO (waiting fee 20 menit (+Rp2.500)) per tier jarak tidak sesuai acuan [8644, 12916, 31424, 59898]: {grand_totals}"
+        assert grand_totals == [8644, 12916, 30203, 54101], (
+            f"[TC_OVO_OB_11] Grand total OVO (waiting fee 20 menit (+Rp2.500)) per tier jarak tidak sesuai acuan [8644, 12916, 30203, 54101]: {grand_totals}"
         )
 
     # 12. OVO ADVANCE + PENALTY
@@ -605,8 +605,8 @@ class TestOvoOrderBehaviourMatrixSuite:
         grand_totals = self._verify_ovo_combo(fare_calc, "Advance OVO + Penalty", use_coupon=False, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
         # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 1.665)) untuk jarak 1.5 / 3.5 / 10 / 20 km
         # Kalkulator tidak membedakan advance booking: nilai acuan sama dengan skenario normal OB-04.
-        assert grand_totals == [11187, 15458, 33966, 62440], (
-            f"[TC_OVO_OB_12] Grand total OVO (penalty +Rp5.000) per tier jarak tidak sesuai acuan [11187, 15458, 33966, 62440]: {grand_totals}"
+        assert grand_totals == [11187, 15458, 32746, 56644], (
+            f"[TC_OVO_OB_12] Grand total OVO (penalty +Rp5.000) per tier jarak tidak sesuai acuan [11187, 15458, 32746, 56644]: {grand_totals}"
         )
 
     # 13. OVO ADVANCE + KUPON + WAITING FEE
@@ -615,8 +615,8 @@ class TestOvoOrderBehaviourMatrixSuite:
         grand_totals = self._verify_ovo_combo(fare_calc, "Advance OVO + Kupon + WaitFee", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=False, is_advance=True)
         # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 1.665)) untuk jarak 1.5 / 3.5 / 10 / 20 km
         # Kalkulator tidak membedakan advance booking: nilai acuan sama dengan skenario normal OB-05.
-        assert grand_totals == [3560, 7831, 26339, 54813], (
-            f"[TC_OVO_OB_13] Grand total OVO (kupon + waiting fee) per tier jarak tidak sesuai acuan [3560, 7831, 26339, 54813]: {grand_totals}"
+        assert grand_totals == [3560, 7831, 25119, 49017], (
+            f"[TC_OVO_OB_13] Grand total OVO (kupon + waiting fee) per tier jarak tidak sesuai acuan [3560, 7831, 25119, 49017]: {grand_totals}"
         )
 
     # 14. OVO ADVANCE + KUPON + WAITING FEE + PENALTY
@@ -625,8 +625,8 @@ class TestOvoOrderBehaviourMatrixSuite:
         grand_totals = self._verify_ovo_combo(fare_calc, "Advance OVO Full Combo", use_coupon=True, coupon_amount=5000.0, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
         # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 1.665)) untuk jarak 1.5 / 3.5 / 10 / 20 km
         # Kalkulator tidak membedakan advance booking: nilai acuan sama dengan skenario normal OB-06.
-        assert grand_totals == [8644, 12916, 31424, 59898], (
-            f"[TC_OVO_OB_14] Grand total OVO (kupon + waiting fee + penalty) per tier jarak tidak sesuai acuan [8644, 12916, 31424, 59898]: {grand_totals}"
+        assert grand_totals == [8644, 12916, 30203, 54101], (
+            f"[TC_OVO_OB_14] Grand total OVO (kupon + waiting fee + penalty) per tier jarak tidak sesuai acuan [8644, 12916, 30203, 54101]: {grand_totals}"
         )
 
     # 15. OVO ADVANCE + WAITING FEE + PENALTY
@@ -635,8 +635,8 @@ class TestOvoOrderBehaviourMatrixSuite:
         grand_totals = self._verify_ovo_combo(fare_calc, "Advance OVO + WaitFee + Penalty", use_coupon=False, waiting_minutes=20, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
         # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 1.665)) untuk jarak 1.5 / 3.5 / 10 / 20 km
         # Kalkulator tidak membedakan advance booking: nilai acuan sama dengan skenario normal OB-07.
-        assert grand_totals == [13729, 18000, 36508, 64982], (
-            f"[TC_OVO_OB_15] Grand total OVO (waiting fee + penalty) per tier jarak tidak sesuai acuan [13729, 18000, 36508, 64982]: {grand_totals}"
+        assert grand_totals == [13729, 18000, 35288, 59186], (
+            f"[TC_OVO_OB_15] Grand total OVO (waiting fee + penalty) per tier jarak tidak sesuai acuan [13729, 18000, 35288, 59186]: {grand_totals}"
         )
 
     # 16. OVO ADVANCE + PENALTY + KUPON
@@ -645,6 +645,6 @@ class TestOvoOrderBehaviourMatrixSuite:
         grand_totals = self._verify_ovo_combo(fare_calc, "Advance OVO + Penalty + Kupon", use_coupon=True, coupon_amount=5000.0, waiting_minutes=0, apply_penalty=True, penalty_amount=5000.0, is_advance=True)
         # Nilai acuan dihitung manual (Decimal, pembulatan ke atas): ceil(subtotal x 100 / (100 - 1.665)) untuk jarak 1.5 / 3.5 / 10 / 20 km
         # Kalkulator tidak membedakan advance booking: nilai acuan sama dengan skenario normal OB-08.
-        assert grand_totals == [6102, 10373, 28881, 57355], (
-            f"[TC_OVO_OB_16] Grand total OVO (penalty dioffset kupon) per tier jarak tidak sesuai acuan [6102, 10373, 28881, 57355]: {grand_totals}"
+        assert grand_totals == [6102, 10373, 27661, 51559], (
+            f"[TC_OVO_OB_16] Grand total OVO (penalty dioffset kupon) per tier jarak tidak sesuai acuan [6102, 10373, 27661, 51559]: {grand_totals}"
         )

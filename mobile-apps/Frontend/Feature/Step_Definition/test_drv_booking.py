@@ -531,16 +531,16 @@ class TestDrvBooking:
     def test_TC_DRV_BOOK_FARE_03_kalkulasi_jarak_jauh_10_km_far_distance_fee(self, fare_calculator):
         """
         [FARE ENGINE - FARE-03]
-        Deskripsi : Verifikasi tarif Jarak Jauh (10 KM) TANPA biaya jarak jauh (dikonfirmasi user 16 Nov 2026).
-        Formula   : Base Rp 6.000 + Mileage (8 KM * Rp 2.800 = Rp 22.400) = Rp 28.400.
-        Ekspektasi: Platform Fee 10% = Rp 2.840, Grand Total User = Rp 31.240.
+        Deskripsi : Verifikasi tarif Jarak Jauh (10 KM) jam normal: farFee per KM menggantikan mileageFee di atas 6 KM.
+        Formula   : Base Rp 6.000 + (4 KM * Rp 2.800 = Rp 11.200) + (4 KM * Rp 2.500 = Rp 10.000) = Rp 27.200.
+        Ekspektasi: Platform Fee 10% = Rp 2.720, Grand Total User = Rp 29.920.
         """
         res = fare_calculator.calculate_fare(distance_km=10.0)
-        assert res["fare"] == 28400, f"Expected Jarak Jauh Rp 28.400, got {res['fare']}"
-        assert res["long_distance_charge"] == 0, f"Biaya jarak jauh tidak boleh dikenakan, got {res['long_distance_charge']}"
-        assert res["platform_fee"] == 2840, f"Expected Platform Fee Rp 2.840, got {res['platform_fee']}"
-        assert res["grand_total_user"] == 31240, f"Expected Grand Total Rp 31.240, got {res['grand_total_user']}"
-        logger.info(f"[FARE PASS] Jarak Jauh 10 KM Terverifikasi: Rp 6.000 + Rp 22.400 = Rp 28.400 (tanpa biaya jarak jauh).")
+        assert res["fare"] == 27200, f"Expected Jarak Jauh Rp 27.200, got {res['fare']}"
+        assert res["long_distance_charge"] == 10000, f"Expected far fee Rp 10.000, got {res['long_distance_charge']}"
+        assert res["platform_fee"] == 2720, f"Expected Platform Fee Rp 2.720, got {res['platform_fee']}"
+        assert res["grand_total_user"] == 29920, f"Expected Grand Total Rp 29.920, got {res['grand_total_user']}"
+        logger.info(f"[FARE PASS] Jarak Jauh 10 KM Terverifikasi: Rp 6.000 + Rp 11.200 + far Rp 10.000 = Rp 27.200.")
 
     @pytest.mark.pricing_engine
     @pytest.mark.waiting_fee
@@ -914,13 +914,13 @@ class TestDrvOrderBehaviourMatrix:
     Mencakup Rincian Tarif Perjalanan Resmi:
       - Tarif Dasar / Argo Awal (Start Price) : Rp 6.000 (Konstan untuk radius 0 - 2.0 KM pertama)
       - Tarif Jarak Reguler (Mileage Fee)     : Rp 2.800 / KM (untuk jarak > 2.0 KM)
-      - Biaya Jarak Jauh (Long Distance Fee)  : TIDAK dikenakan di tarif User (dikonfirmasi user 16 Nov 2026)
+      - Biaya Jarak Jauh (jam normal)         : Rp 2.500/KM (6-15 KM), Rp 2.200/KM (> 15 KM), MENGGANTIKAN Rp 2.800/KM
     
     4 Kategori Jarak Operasional Resmi:
       - Jarak Dekat       : 1.5 KM -> Argo Dasar Rp 6.000 + Jarak Rp 0 = Total Argo Rp 6.000
       - Jarak Sedang      : 3.5 KM -> Argo Dasar Rp 6.000 + Jarak (1.5 KM x Rp 2.800 = Rp 4.200) = Total Argo Rp 10.200
-      - Jarak Jauh        : 10.0 KM -> Argo Dasar Rp 6.000 + Jarak Rp 22.400 = Total Argo Rp 28.400
-      - Jarak Sangat Jauh : 20.0 KM -> Argo Dasar Rp 6.000 + Jarak Rp 50.400 = Total Argo Rp 56.400
+      - Jarak Jauh        : 10.0 KM -> Argo Dasar Rp 6.000 + Jarak Rp 11.200 + Far Rp 10.000 = Total Argo Rp 27.200
+      - Jarak Sangat Jauh : 20.0 KM -> Argo Dasar Rp 6.000 + Jarak Rp 11.200 + Far Rp 33.500 = Total Argo Rp 50.700
     
     Validasi Seluruh 4 Metode Pembayaran di Sisi Driver:
       1. Tunai (Cash)              : Driver menagih tunai fisik ke penumpang (Grand Total).
@@ -974,23 +974,23 @@ class TestDrvOrderBehaviourMatrix:
             "tier": "Jarak Jauh",
             "km": 10.0,
             "start_price": 6000.0,
-            "mileage_fee": 22400.0,
-            "long_distance_fee": 0.0,
-            "total_argo": 28400.0,
-            "base_argo": 28400.0,
-            "plat_fee": 2840.0,
-            "subtotal": 28400.0  # tagihan user = argo; platform fee 0% di sisi user (dipotong dari driver)
+            "mileage_fee": 11200.0,
+            "long_distance_fee": 10000.0,
+            "total_argo": 27200.0,
+            "base_argo": 27200.0,
+            "plat_fee": 2720.0,
+            "subtotal": 27200.0  # tagihan user = argo; platform fee 0% di sisi user (dipotong dari driver)
         },
         {
             "tier": "Jarak Sangat Jauh",
             "km": 20.0,
             "start_price": 6000.0,
-            "mileage_fee": 50400.0,
-            "long_distance_fee": 0.0,
-            "total_argo": 56400.0,
-            "base_argo": 56400.0,
-            "plat_fee": 5640.0,
-            "subtotal": 56400.0  # tagihan user = argo; platform fee 0% di sisi user (dipotong dari driver)
+            "mileage_fee": 11200.0,
+            "long_distance_fee": 33500.0,
+            "total_argo": 50700.0,
+            "base_argo": 50700.0,
+            "plat_fee": 5070.0,
+            "subtotal": 50700.0  # tagihan user = argo; platform fee 0% di sisi user (dipotong dari driver)
         },
     ]
 
@@ -1063,7 +1063,7 @@ class TestDrvOrderBehaviourMatrix:
         """
         [DRIVER ORDER BEHAVIOUR - DOB-01] Normal Booking Dispatch & Pendapatan Driver (4 Jarak x 4 Metode Pembayaran).
         Deskripsi: Driver menerima penugasan pesanan instan untuk rute Dekat, Sedang, Jauh, Sangat Jauh pada 4 metode pembayaran (Tunai, EvWallet, GoPay, OVO).
-        Ekspektasi: Nilai argo kotor tercatat valid (Rp 6.000 / Rp 10.200 / Rp 28.400 / Rp 56.400) dan penagihan tunai vs non-tunai akurat.
+        Ekspektasi: Nilai argo kotor tercatat valid (Rp 6.000 / Rp 10.200 / Rp 27.200 / Rp 50.700) dan penagihan tunai vs non-tunai akurat.
         """
         given("Driver menerima order Normal Booking melintasi 4 kategori jarak dan 4 metode bayar")
         jumlah = self._verify_driver_combo(fare_calculator, "Normal Booking", use_coupon=False, waiting_minutes=0, apply_penalty=False)

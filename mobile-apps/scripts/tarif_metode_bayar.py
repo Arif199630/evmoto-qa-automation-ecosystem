@@ -3,13 +3,15 @@ Tarif di layar Place Order aplikasi User per kategori jarak x metode bayar (stag
 Pickup: kantor pusat (EVMOTO_TEST_PICKUP, default 'Ecgo Evmoto Wijaya'). Metode: Cash, Saldo EVMoto, OVO
 (GoPay hanya bila tertaut). TIDAK menekan 'Pesan EVMoto': hanya membaca tarif lalu kembali.
 
-Harapan dihitung dari parameter Admin Price staging (User): tarif awal 6000 s.d. 1,99 km, lalu 2600/km, TANPA biaya
-jarak jauh (dikonfirmasi user 16 Nov 2026: 8,81 km -> Rp23.735). E-wallet: gross-up ceil(x * 100 / (100 - rate)),
-GoPay 2%, OVO 1,665%. Kolom 'rumus_aplikasi' sama dengan harapan (dipertahankan agar format hasil.tsv tetap).
+Harapan = rumus Price Admin (User) yang dibaca langsung dari Admin, sesuai jam saat tarif dibaca (WIB), keputusan
+user 16 Nov 2026: jam sibuk (peakTime) dan malam (nightTime) = tarif awal + (jarak - startKm) x peakMileage/nightMileage
+tanpa tier jarak jauh; jam normal = mileageFee s/d farFrom1, lalu farFee per KM tiap pita sebagai pengganti mileageFee.
+E-wallet: gross-up ceil(x * 100 / (100 - rate)), GoPay 2%, OVO 1,665%. Kolom 'mode_tarif' = sibuk / malam / normal.
 Hasil: reports/repro/tarif_metode_bayar/NN_<kategori>_<metode>.xml|.png, hasil.tsv, ringkasan.txt
 """
 import math
 import os
+from datetime import datetime, timedelta, timezone
 import re
 import sys
 import time
@@ -40,14 +42,38 @@ step = 0
 ringkasan = []
 
 
+_KALK = None
+
+
+def kalkulator():
+    """Kalkulator dengan angka Price Admin User environment aktif; bila Admin tidak terbaca, angka staging 16 Nov 2026."""
+    global _KALK
+    if _KALK is None:
+        from Frontend.Feature.Helper.admin_fare_calculator import AdminDashboardFareCalculator as K
+        try:
+            _KALK = K.from_admin("User")
+        except Exception as ex:  # noqa: BLE001 - Admin tidak terjangkau: pakai angka staging yang terakhir dibaca
+            ringkasan.append(f"Admin tidak terbaca ({type(ex).__name__}); memakai angka Price User staging 16 Nov 2026")
+            _KALK = K()
+            _KALK.START_PRICE, _KALK.START_KM, _KALK.MILEAGE_FEE = 6000.0, 1.99, 2600.0
+            _KALK.FAR_FROM_1, _KALK.FAR_TO_1, _KALK.FAR_FEE_1 = 6.0, 19.99, 3300.0
+            _KALK.FAR_FROM_2, _KALK.FAR_TO_2, _KALK.FAR_FEE_2 = 19.99, 100.0, 3000.0
+            _KALK.FAR_FROM_3, _KALK.FAR_FEE_3 = 100.0, 3500.0
+            _KALK.PEAK_TIME, _KALK.PEAK_START, _KALK.PEAK_MILEAGE = "07:00 - 16:00", 6000.0, 2600.0
+            _KALK.NIGHT_TIME, _KALK.NIGHT_START, _KALK.NIGHT_MILEAGE = "00:00 - 06:00", 10500.0, 3100.0
+    return _KALK
+
+
+def jam_wib():
+    return datetime.now(timezone(timedelta(hours=7))).time()
+
+
 def argo_admin(km):
-    if km <= 1.99:
-        return 6000.0
-    return 6000 + (km - 1.99) * 2600  # tanpa biaya jarak jauh (keputusan user 16 Nov 2026)
+    return kalkulator().calculate_base_argo(km, jam_wib())["total_argo"]
 
 
-def rumus_aplikasi(km):
-    return 6000.0 if km <= 1.99 else 6000 + (km - 1.99) * 2600
+def mode_tarif():
+    return kalkulator().mode_tarif(jam_wib())
 
 
 def gross_up(x, rate):
@@ -98,7 +124,7 @@ def diskon(d):
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
-    rows = ["kategori\ttujuan\tjarak_km\tmetode_terpilih\tsebelum_kupon\tdibayar\tdiskon\tharapan_admin\trumus_aplikasi\tstatus"]
+    rows = ["kategori\ttujuan\tjarak_km\tmetode_terpilih\tsebelum_kupon\tdibayar\tdiskon\tharapan_admin\tmode_tarif\tstatus"]
     d = DriverFactory.create_driver(no_reset=True)
     try:
         lp = LoginPage(d)
@@ -183,7 +209,7 @@ def main():
                 sebelum, bayar = angka(bp.get_fare_before_discount()), angka(bp.get_estimated_fare())
                 disk = diskon(d)
                 harap = gross_up(argo_admin(km), rate)
-                app = gross_up(rumus_aplikasi(km), rate)
+                mode = mode_tarif()
                 # jarak di layar dibulatkan 2 desimal: toleransi +-0,005 km
                 lo_h = gross_up(argo_admin(km - 0.005), rate) - 1
                 hi_h = gross_up(argo_admin(km + 0.005), rate) + 1
@@ -193,7 +219,7 @@ def main():
                     status = "SESUAI"
                 else:
                     status = f"BERBEDA dari rumus (selisih {sebelum - harap:,.0f}; belum diverifikasi, bukan otomatis bug)"
-                rows.append(f"{kategori}\t{tujuan}\t{km}\t{terpilih}\t{sebelum}\t{bayar}\t{disk}\t{harap:.0f}\t{app:.0f}\t{status}")
+                rows.append(f"{kategori}\t{tujuan}\t{km}\t{terpilih}\t{sebelum}\t{bayar}\t{disk}\t{harap:.0f}\t{mode}\t{status}")
                 log(rows[-1])
         # kembalikan pilihan ke OVO (metode utama akun ini sebelum test)
         try:

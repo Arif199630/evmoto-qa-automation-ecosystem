@@ -6,10 +6,13 @@ Modul kalkulator harga resmi EvMoto yang mengimplementasikan 6 kondisi bisnis:
 1. Harga Normal:
    - Jarak Dekat (<= 2.0 KM)  : Tarif Awal Rp 6.000 (startPrice)
    - Jarak Sedang (2.0 - 6 KM): Rp 6.000 + (Jarak - 2.0) * Rp 2.800/KM (mileageFee)
-   - Jarak Jauh (> 6.0 KM)    : Mengikuti aturan bertingkat Dashboard Production:
-                                * Tier 1 (6.0 - 15.0 KM) : +Rp 2.500/KM (farFee1)
-                                * Tier 2 (15.0 - 100 KM) : +Rp 2.200/KM (farFee2)
-                                * Tier 3 (> 100.0 KM)    : +Rp 2.200/KM (farFee3)
+   - Jarak Jauh (> 6.0 KM)    : jam normal, tarif per KM bertingkat (far fee MENGGANTIKAN mileageFee di pitanya):
+                                * s/d 6.0 KM             : Rp 2.800/KM (mileageFee)
+                                * Tier 1 (6.0 - 15.0 KM) : Rp 2.500/KM (farFee1)
+                                * Tier 2 (15.0 - 100 KM) : Rp 2.200/KM (farFee2)
+                                * Tier 3 (> 100.0 KM)    : Rp 2.200/KM (farFee3)
+   - Jam sibuk (peakTime) / malam (nightTime) Admin: peakStart/nightStart + (jarak - startKm) x
+     peakMileage/nightMileage, tanpa tier jarak jauh (keputusan user 16 Nov 2026).
 2. Platform Fee (10%):
    - Dihitung 10% dari Tarif Dasar Argo (seamless di sisi User Apps)
 3. Waiting Fee:
@@ -71,10 +74,19 @@ class AdminDashboardFareCalculator:
     OVO_CHARGE_RATE = 0.01665 # 1.665% Handling Fee untuk OVO
     EWALLET_CHARGE_RATE = 0.02# Default fallback Charge fee e-wallet
 
-    # Tarif User TIDAK memakai biaya jarak jauh (farFee): tarif = startPrice + (jarak - startKm) x mileageFee
-    # (dikonfirmasi user 16 Nov 2026, contoh 8,81 km -> Rp23.735). Parameter far fee tetap dibaca dari Admin
-    # tetapi hanya dipakai bila PAKAI_FAR_FEE = True.
-    PAKAI_FAR_FEE = False
+    # Rumus tarif mengikuti Price Admin per jam order (keputusan user 16 Nov 2026, cocok dengan angka aplikasi staging):
+    #  - jam sibuk (peakTime)  : peakStart + (jarak - startKm) x peakMileage, tanpa tier jarak jauh
+    #                            (staging 07:00-16:00: 8,81 km -> Rp23.735)
+    #  - jam malam (nightTime) : nightStart + (jarak - startKm) x nightMileage, tanpa tier jarak jauh (belum dicek di app)
+    #  - jam normal            : startPrice + mileageFee s/d farFrom1, lalu farFee per KM di tiap pita sebagai PENGGANTI
+    #                            mileageFee (staging 17.56: 8,89 km -> Rp25.966; 36,63 km -> Rp112.525)
+    # Tanpa jam order (waktu=None) dipakai rumus jam normal. Jam = WIB (UTC+7).
+    PEAK_TIME = None          # mis. "07:00 - 16:00" dari Admin
+    PEAK_START = None
+    PEAK_MILEAGE = None
+    NIGHT_TIME = None         # mis. "00:00 - 06:00" dari Admin
+    NIGHT_START = None
+    NIGHT_MILEAGE = None
     # Konfigurasi Long Distance Fee resmi Dashboard Admin Production (ID 1626 / 1619)
     FAR_FROM_1 = 6.0          # Batas awal Jarak Jauh Tier 1 (6.0 KM)
     FAR_TO_1 = 15.0           # Batas akhir Jarak Jauh Tier 1 (15.0 KM)
@@ -126,53 +138,70 @@ class AdminDashboardFareCalculator:
         calc.FAR_FROM_1, calc.FAR_TO_1, calc.FAR_FEE_1 = cfg["farFrom1"], cfg["farTo1"], cfg["farFee1"]
         calc.FAR_FROM_2, calc.FAR_TO_2, calc.FAR_FEE_2 = cfg["farFrom2"], cfg["farTo2"], cfg["farFee2"]
         calc.FAR_FROM_3, calc.FAR_FEE_3 = cfg["farFrom3"], cfg["farFee3"]
+        calc.PEAK_TIME, calc.PEAK_START, calc.PEAK_MILEAGE = cfg.get("peakTime"), cfg.get("peakStart"), cfg.get("peakMileage")
+        calc.NIGHT_TIME, calc.NIGHT_START, calc.NIGHT_MILEAGE = cfg.get("nightTime"), cfg.get("nightStart"), cfg.get("nightMileage")
         calc.source = f"Admin Price {billing_object} (ID {cfg['price_id']})"
         return calc
 
-    def calculate_base_argo(self, distance_km: float) -> Dict[str, Any]:
+    @staticmethod
+    def _dalam_rentang(rentang, waktu) -> bool:
+        """True bila jam `waktu` (datetime.time) ada di rentang Admin 'HH:MM - HH:MM' (awal termasuk, akhir tidak)."""
+        if not rentang or waktu is None:
+            return False
+        m = re.match(r"\s*(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})", str(rentang))
+        if not m:
+            return False
+        awal, akhir = int(m.group(1)) * 60 + int(m.group(2)), int(m.group(3)) * 60 + int(m.group(4))
+        t = waktu.hour * 60 + waktu.minute
+        return awal <= t < akhir if awal <= akhir else (t >= awal or t < akhir)
+
+    def mode_tarif(self, waktu=None) -> str:
+        """'malam', 'sibuk' atau 'normal' untuk jam order `waktu` (WIB). Tanpa waktu: 'normal'."""
+        if self.NIGHT_START is not None and self._dalam_rentang(self.NIGHT_TIME, waktu):
+            return "malam"
+        if self.PEAK_START is not None and self._dalam_rentang(self.PEAK_TIME, waktu):
+            return "sibuk"
+        return "normal"
+
+    def calculate_base_argo(self, distance_km: float, waktu=None) -> Dict[str, Any]:
         """
-        Kondisi 1: Menghitung Tarif Argo Normal berdasarkan jarak persis Dashboard Admin Production:
-        - Jarak Dekat (<= 2.0 KM)  : Rp 6.000 (Tarif Awal Minimum)
-        - Jarak Sedang (2.0 - 6 KM): Rp 6.000 + (Jarak - 2.0) * Rp 2.800
-        - Jarak Jauh (> 6.0 KM)    : Rp 6.000 + (Jarak - 2.0) * Rp 2.800, tanpa biaya jarak jauh (PAKAI_FAR_FEE = False)
+        Kondisi 1: Tarif argo sesuai Price Admin untuk jam order `waktu` (datetime.time WIB; None = jam normal).
+        - Jarak Dekat (<= startKm)        : tarif awal
+        - Jam sibuk / malam               : tarif awal + (jarak - startKm) x peakMileage / nightMileage
+        - Jam normal, s/d farFrom1        : tarif awal + (jarak - startKm) x mileageFee
+        - Jam normal, > farFrom1          : + farFee per KM di tiap pita (menggantikan mileageFee, bukan tambahan)
         """
         distance_float = float(distance_km)
+        mode = self.mode_tarif(waktu)
+        start_price = {"sibuk": self.PEAK_START, "malam": self.NIGHT_START}.get(mode, self.START_PRICE)
+        per_km = {"sibuk": self.PEAK_MILEAGE, "malam": self.NIGHT_MILEAGE}.get(mode, self.MILEAGE_FEE)
+        additional_km = max(0.0, distance_float - self.START_KM)
+        long_distance_charge = 0.0
         if distance_float <= self.START_KM:
-            additional_km = 0.0
             mileage_charge = 0.0
-            long_distance_charge = 0.0
-            category = "Jarak Dekat (<= 2 KM)"
-        elif distance_float <= self.FAR_FROM_1:  # 2.0 s/d 6.0 KM
-            additional_km = distance_float - self.START_KM
-            mileage_charge = additional_km * self.MILEAGE_FEE
-            long_distance_charge = 0.0
-            category = "Jarak Sedang (2.0 - 6.0 KM)"
-        else:  # > 6.0 KM (Long Distance Surcharge Persis Dashboard Admin Production)
-            additional_km = distance_float - self.START_KM
-            mileage_charge = additional_km * self.MILEAGE_FEE
-            category = "Jarak Jauh (> 6.0 KM - Sesuai Dashboard Production)"
+            category = "Jarak Dekat (<= startKm)"
+        elif mode != "normal":
+            mileage_charge = additional_km * per_km
+            category = f"Tarif jam {mode} (tanpa tier jarak jauh)"
+        elif distance_float <= self.FAR_FROM_1:
+            mileage_charge = additional_km * per_km
+            category = "Jarak Sedang (startKm - farFrom1)"
+        else:
+            mileage_charge = (self.FAR_FROM_1 - self.START_KM) * per_km
+            pita = ((self.FAR_FROM_1, self.FAR_TO_1, self.FAR_FEE_1),
+                    (self.FAR_FROM_2, self.FAR_TO_2, self.FAR_FEE_2),
+                    (self.FAR_FROM_3, float("inf"), self.FAR_FEE_3))
+            for lo, hi, fee in pita:
+                long_distance_charge += max(0.0, min(distance_float, hi) - lo) * fee
+            category = "Jarak Jauh (> farFrom1, tarif per KM bertingkat)"
 
-            if not self.PAKAI_FAR_FEE:
-                long_distance_charge = 0.0
-            elif distance_float <= self.FAR_TO_1:  # 6.0 s/d 15.0 KM
-                far_km_tier1 = distance_float - self.FAR_FROM_1
-                long_distance_charge = far_km_tier1 * self.FAR_FEE_1
-            elif distance_float <= self.FAR_TO_2:  # 15.0 s/d 100.0 KM
-                tier1_km = self.FAR_TO_1 - self.FAR_FROM_1  # 9.0 KM
-                far_km_tier2 = distance_float - self.FAR_FROM_2
-                long_distance_charge = (tier1_km * self.FAR_FEE_1) + (far_km_tier2 * self.FAR_FEE_2)
-            else:  # > 100.0 KM
-                tier1_km = self.FAR_TO_1 - self.FAR_FROM_1  # 9.0 KM
-                tier2_km = self.FAR_TO_2 - self.FAR_FROM_2  # 85.0 KM
-                far_km_tier3 = distance_float - self.FAR_FROM_3
-                long_distance_charge = (tier1_km * self.FAR_FEE_1) + (tier2_km * self.FAR_FEE_2) + (far_km_tier3 * self.FAR_FEE_3)
-
-        total_argo = self.START_PRICE + mileage_charge + long_distance_charge
+        total_argo = start_price + mileage_charge + long_distance_charge
 
         return {
             "distance_km": round(distance_float, 2),
             "category": category,
-            "start_price": self.START_PRICE,
+            "mode_tarif": mode,
+            "start_price": start_price,
             "start_km": self.START_KM,
             "additional_km": round(additional_km, 2),
             "mileage_charge": mileage_charge,
@@ -507,7 +536,7 @@ class AdminDashboardFareCalculator:
     # Pembungkus singkat yang dipakai test_drv_booking.py (TC_DRV_BOOK_FARE_*)
     # Semua angka diambil dari konstanta QC Form Waiting Fee & Cancellation.
     # ------------------------------------------------------------------
-    def verify_ui_fare(self, ui_fare_text: str, distance_km: float, distance_rounding: float = 0.0):
+    def verify_ui_fare(self, ui_fare_text: str, distance_km: float, distance_rounding: float = 0.0, waktu=None):
         """Bandingkan teks tarif di layar (mis. 'Rp 10.200') dengan argo hasil rumus. Hasil: (cocok?, pesan).
 
         distance_rounding: bila jarak dibaca dari layar yang sudah dibulatkan (mis. 'Jarak 3.88 km' = 3,875-3,885 km),
@@ -518,12 +547,12 @@ class AdminDashboardFareCalculator:
         if not digits:
             return False, f"Tarif tidak terbaca dari layar: {ui_fare_text!r}"
         actual = float(digits)
-        expected = self.calculate_base_argo(distance_km)["total_argo"]
+        expected = self.calculate_base_argo(distance_km, waktu)["total_argo"]
         if actual == expected:
             return True, f"Cocok: {format_rupiah_exact(actual)}"
         if distance_rounding > 0:
-            low = self.calculate_base_argo(max(0.0, distance_km - distance_rounding))["total_argo"]
-            high = self.calculate_base_argo(distance_km + distance_rounding)["total_argo"]
+            low = self.calculate_base_argo(max(0.0, distance_km - distance_rounding), waktu)["total_argo"]
+            high = self.calculate_base_argo(distance_km + distance_rounding, waktu)["total_argo"]
             if low - 1 <= actual <= high + 1:
                 return True, (f"Cocok: {format_rupiah_exact(actual)} berada di rentang argo "
                               f"{format_rupiah_exact(low)}-{format_rupiah_exact(high)} untuk jarak tampil {distance_km} KM")
