@@ -170,9 +170,15 @@ jobs:
           script: |
             adb root || true
             sleep 5 && adb wait-for-device
+            # Pastikan emulator benar-benar tenang sebelum zygote di-restart: pada run 17 Nov 2026 shard 3 mati tepat setelah restart zygote
+            # (galat grafis swiftshader 'context was preempted', lalu adb 'error: closed') sehingga seluruh test shard itu tidak berjalan.
+            adb shell 'while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done' || true
+            sleep 15
             adb shell "setprop persist.sys.locale id-ID; setprop ctl.restart zygote" || echo "Ganti bahasa lewat adb gagal; Appium (language=id) tetap mengatur bahasa"
             sleep 25 && adb wait-for-device
-            adb shell 'while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done; getprop persist.sys.locale'
+            # Tunggu boot paling lama 3 menit (dulu tanpa batas) dan beri label jelas kalau emulator mati, agar mudah dibedakan dari kegagalan test
+            for i in $(seq 1 90); do [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] && break; sleep 2; done
+            adb shell getprop persist.sys.locale || { echo "EMULATOR_MATI_SETELAH_RESTART_ZYGOTE"; exit 1; }
             adb install -r -g apk/evmoto-user.apk
             adb install -r -g apk/evmoto-driver.apk
             mkdir -p bukti
