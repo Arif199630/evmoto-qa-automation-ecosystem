@@ -26,6 +26,20 @@ function Pasang-Winget($id, $nama) {
     Muat-Path
 }
 
+# Salin otomatis APK dari folder Download kalau belum ada di apk\ (nama di Download: UserApps.apk dan DriverApps.apk)
+function Siapkan-Apk($Repo) {
+    New-Item -ItemType Directory -Force (Join-Path $Repo "apk") | Out-Null
+    $unduhan = Join-Path $HOME "Downloads"
+    foreach ($m in @(@("UserApps.apk", "evmoto-user.apk"), @("DriverApps.apk", "evmoto-driver.apk"))) {
+        $tujuan = Join-Path $Repo ("apk\" + $m[1])
+        $sumber = Join-Path $unduhan $m[0]
+        if ((-not (Test-Path $tujuan)) -and (Test-Path $sumber)) {
+            Copy-Item $sumber $tujuan
+            Write-Host "   APK disalin dari Download: $($m[0]) -> apk\$($m[1])" -ForegroundColor Green
+        }
+    }
+}
+
 Langkah "1/6 Alat dasar (Python 3.12, Node.js LTS, JDK 17)"
 if (-not (Get-Command winget -ErrorAction SilentlyContinue)) { throw "winget tidak ditemukan. Pasang 'App Installer' dari Microsoft Store, lalu jalankan ulang." }
 if (-not (Bisa "python" "--version")) { Pasang-Winget "Python.Python.3.12" "Python 3.12" }
@@ -109,6 +123,7 @@ if ($drivers -notmatch "uiautomator2") { appium driver install uiautomator2 }
 Ok "Appium dan driver uiautomator2 siap"
 
 Langkah "6/6 Cek berkas yang harus disiapkan manual"
+Siapkan-Apk $Repo
 $kurang = @()
 if (-not (Test-Path (Join-Path $Repo "mobile-apps\.env"))) { $kurang += "mobile-apps\.env (isi dari pemilik, jangan di-commit)" }
 if (-not (Test-Path (Join-Path $Repo "apk\evmoto-user.apk"))) { $kurang += "apk\evmoto-user.apk" }

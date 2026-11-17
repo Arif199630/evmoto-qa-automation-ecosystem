@@ -35,6 +35,21 @@ function Tunggu-Boot($menit) {
     throw "Emulator belum selesai boot dalam $menit menit."
 }
 
+# Salin otomatis APK dari folder Download kalau belum ada di apk\ (nama di Download: UserApps.apk dan DriverApps.apk)
+function Siapkan-Apk($Repo) {
+    New-Item -ItemType Directory -Force (Join-Path $Repo "apk") | Out-Null
+    $unduhan = Join-Path $HOME "Downloads"
+    foreach ($m in @(@("UserApps.apk", "evmoto-user.apk"), @("DriverApps.apk", "evmoto-driver.apk"))) {
+        $tujuan = Join-Path $Repo ("apk\" + $m[1])
+        $sumber = Join-Path $unduhan $m[0]
+        if ((-not (Test-Path $tujuan)) -and (Test-Path $sumber)) {
+            Copy-Item $sumber $tujuan
+            Write-Host "   APK disalin dari Download: $($m[0]) -> apk\$($m[1])" -ForegroundColor Green
+        }
+    }
+}
+
+Siapkan-Apk $Repo
 if (-not (Test-Path (Join-Path $Repo "mobile-apps\.env"))) { throw "mobile-apps\.env belum ada. Salin dulu dari pemilik." }
 foreach ($f in @("apk\evmoto-user.apk", "apk\evmoto-driver.apk")) {
     if (-not (Test-Path (Join-Path $Repo $f))) { throw "$f belum ada." }
