@@ -64,7 +64,10 @@ if (-not (Test-Path $sdkmanager)) {
     $zip = Join-Path $env:TEMP "cmdline-tools.zip"
     $tmp = Join-Path $env:TEMP "cmdline-tools-ex"
     Write-Host "   mengunduh command-line tools ..."
-    Invoke-WebRequest "https://dl.google.com/android/repository/commandlinetools-win-11076708_latest.zip" -OutFile $zip -ErrorAction Stop
+    # curl.exe (bawaan Windows 10/11) menampilkan persen kemajuan; Invoke-WebRequest di PowerShell 5.1 tidak
+    Remove-Item $zip -Force -ErrorAction SilentlyContinue
+    curl.exe -L --fail --retry 3 -o $zip "https://dl.google.com/android/repository/commandlinetools-win-11076708_latest.zip"
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $zip)) { throw "Unduhan command-line tools gagal. Cek koneksi internet, lalu jalankan ulang." }
     Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
     Expand-Archive $zip $tmp -ErrorAction Stop
     New-Item -ItemType Directory -Force (Join-Path $Sdk "cmdline-tools") | Out-Null
