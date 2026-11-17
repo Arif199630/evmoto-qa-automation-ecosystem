@@ -39,3 +39,6 @@ web-dashboard/reports/
 apk/
 gabungan/
 artifacts/
+
+# Hasil unduhan CI di PC lokal
+hasil_ci/
