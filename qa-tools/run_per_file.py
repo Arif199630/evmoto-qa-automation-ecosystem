@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 
 project, tests_dir, out_dir, buckets = Path(sys.argv[1]).resolve(), sys.argv[2], Path(sys.argv[3]).resolve(), int(sys.argv[4])
@@ -171,6 +172,53 @@ def appium_alive():
         return False
 
 
+def device_alive():
+    """True bila adb melihat perangkat berstatus 'device'. Appium bisa tetap hidup walau emulator sudah mati."""
+    try:
+        out = subprocess.run(["adb", "devices"], capture_output=True, text=True, timeout=20).stdout
+    except (OSError, subprocess.SubprocessError):
+        return True  # tidak bisa diperiksa: jangan menyimpulkan mati
+    return any(line.split("\t")[-1].strip() == "device" for line in out.splitlines()[1:] if "\t" in line)
+
+
+_pulihkan_lock = threading.Lock()
+
+
+def recover_emulator():
+    """Nyalakan lagi emulator CI yang mati di tengah run (17 Nov 2026: shard 1, 3, 5 kehilangan perangkat setelah +-6 menit).
+    Hanya aktif bila RECOVER_EMULATOR=1 (diset di workflow). Gagal apa pun tidak boleh menjatuhkan run: hasilnya False."""
+    if os.getenv("RECOVER_EMULATOR") != "1":
+        return False
+    with _pulihkan_lock:
+        if device_alive():
+            return True
+        try:
+            sdk = os.getenv("ANDROID_SDK_ROOT") or os.getenv("ANDROID_HOME") or "/usr/local/lib/android/sdk"
+            avd = os.getenv("EMULATOR_AVD", "test")  # nama AVD yang dibuat android-emulator-runner
+            log = open(out_dir / "emulator_pulih.log", "a", encoding="utf-8")
+            subprocess.Popen([f"{sdk}/emulator/emulator", "-avd", avd, "-no-window", "-no-audio", "-no-boot-anim",
+                              "-gpu", "swiftshader_indirect", "-no-snapshot", "-dns-server", "8.8.8.8,1.1.1.1"],
+                             stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+            subprocess.run(["adb", "wait-for-device"], timeout=240)
+            deadline = time.time() + 300
+            while time.time() < deadline:
+                boot = subprocess.run(["adb", "shell", "getprop", "sys.boot_completed"],
+                                      capture_output=True, text=True, timeout=20).stdout.strip()
+                if boot == "1":
+                    break
+                time.sleep(3)
+            else:
+                return False
+            apk_dir = project.parent / "apk"
+            for apk in ("evmoto-user.apk", "evmoto-driver.apk"):  # data biasanya masih ada; pasang ulang bila hilang
+                if (apk_dir / apk).exists():
+                    subprocess.run(["adb", "install", "-r", "-g", str(apk_dir / apk)], capture_output=True, timeout=240)
+            subprocess.run(["adb", "emu", "geo", "fix", "106.8037", "-6.2449"], capture_output=True, timeout=20)
+            return True
+        except Exception:  # noqa: BLE001 - pemulihan hanya upaya terbaik
+            return False
+
+
 def find_previous(stem):
     """XML unit yang sama dari run sebelumnya (RESUME_DIR), di folder suite yang sama, tanpa error lingkungan."""
     if not RESUME_DIR:
@@ -198,10 +246,18 @@ def run_bucket(index, group):
                    "-p", "no:cacheprovider", "-rfE", f"--junitxml={xml}", *extra]
             fh.write(f"### {label}\n")
             fh.flush()
-            proc = subprocess.run(cmd, cwd=project, stdout=fh, stderr=subprocess.STDOUT, env=os.environ.copy())
-            fh.write(f"### exit {proc.returncode} {label}\n")
-            fh.flush()
-            if has_infra_error(xml) and not appium_alive():
+            for percobaan in (1, 2):
+                proc = subprocess.run(cmd, cwd=project, stdout=fh, stderr=subprocess.STDOUT, env=os.environ.copy())
+                fh.write(f"### exit {proc.returncode} {label}\n")
+                fh.flush()
+                # Perangkat hilang di tengah unit: nyalakan emulator lagi lalu ulangi unit ini sekali
+                if percobaan == 1 and has_infra_error(xml) and not device_alive() and recover_emulator():
+                    fh.write(f"### emulator mati lalu dipulihkan, unit {label} diulang\n")
+                    fh.flush()
+                    xml.unlink(missing_ok=True)
+                    continue
+                break
+            if has_infra_error(xml) and (not appium_alive() or not device_alive()):
                 # Emulator/Appium mati: unit ini dan sisanya tidak dicatat sebagai gagal palsu
                 infra_down.set()
                 xml.rename(xml.with_name(xml.name + ".infra_error"))  # bukan .xml: tidak ikut dihitung di laporan

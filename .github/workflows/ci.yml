@@ -124,6 +124,8 @@ jobs:
       # Subsidi jam sibuk & Dispatch batch diuji di STAGING (izin user 11 Nov 2026; fitur belum dipakai resmi).
       # Test menyimpan snapshot konfigurasi lalu memulihkannya; staging_guard menolak host production.
       ALLOW_ADMIN_CONFIG_WRITE: "1"
+      # Bila emulator mati di tengah run, run_per_file.py menyalakannya lagi sekali lalu mengulang unit yang terdampak
+      RECOVER_EMULATOR: "1"
     steps:
       - uses: actions/checkout@v4
       - name: Aktifkan KVM (emulator cepat tanpa jendela)
