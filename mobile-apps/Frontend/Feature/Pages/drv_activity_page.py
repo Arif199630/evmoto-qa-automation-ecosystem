@@ -452,9 +452,17 @@ class DrvActivityPage(BasePage):
         logger.info("Membuka layar Order Saya (riwayat order driver)")
         if self.is_displayed(self.TAB_ORDER_SAYA_SEMUA, timeout=2):
             return
-        if self.is_displayed(self.HEADER_AKTIVITAS, timeout=2):
-            self.click(self.BTN_KEMBALI, label="Tombol Kembali dari Aktivitas Saya")
-            time.sleep(1)
+        # Ketukan 'Kembali' kadang tidak terdaftar sehingga layar tetap di Aktivitas Saya (regression 16 Nov 2026:
+        # PT_26/PT_28 gagal, PT_27 di antaranya lolos). Ulangi sampai Aktivitas Saya tertutup; percobaan terakhir
+        # memakai tombol Back Android.
+        for percobaan in range(3):
+            if not self.is_displayed(self.HEADER_AKTIVITAS, timeout=2):
+                break
+            if percobaan < 2:
+                self.click(self.BTN_KEMBALI, label="Tombol Kembali dari Aktivitas Saya")
+            else:
+                self.driver.back()
+            time.sleep(1.5)
         # Pop-up 'Pemberitahuan Jam Operasional' bisa menutupi Beranda (bukti CI: HOME_PT_16_FAILED.xml)
         DrvHomePage(self.driver).dismiss_operational_popup()
         self.click(self.TAB_PESANAN, label="Kartu Order Saya di Beranda")

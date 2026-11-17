@@ -164,6 +164,14 @@ class DrvLoginPage(BasePage):
         (nomor kosong/tidak valid) lalu memeriksa bahwa aplikasi tidak lanjut ke OTP.
         """
         logger.info("Klik: Tombol Join Sekarang")
+        # Saat keyboard terbuka, bar 'Daftar sebagai Driver baru' naik dan menutupi tombol ini, sehingga ketukan
+        # membuka Registrasi Driver Baru (repro_login_driver.py, 17 Nov 2026). Tutup keyboard dulu.
+        try:
+            if self.driver.is_keyboard_shown():
+                self.driver.hide_keyboard()
+                time.sleep(0.5)
+        except Exception:  # noqa: BLE001 - keyboard sudah tertutup / perintah tidak didukung
+            pass
         deadline = time.time() + 5  # tunggu tombol aktif bila nomor valid; tetap mengetuk bila tetap disabled
         while time.time() < deadline and self.find(self.BTN_JOIN_SEKARANG).get_attribute("enabled") != "true":
             time.sleep(0.3)
