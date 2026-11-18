@@ -71,10 +71,21 @@ def main():
             login.click_submit_login()
             login.input_otp_dev(config.ACTIVE_OTP)
         time.sleep(5)
-        tap(d, "//*[@content-desc='Lanjutkan']", "tutup_popup", 2)
-        if tap(d, "//android.widget.ImageView[starts-with(@content-desc, 'Akun')]", "akun", 3):
-            if tap(d, "//*[@content-desc='Pengaturan Pembayaran' or @text='Pengaturan Pembayaran']", "pengaturan_pembayaran", 4):
-                xml = save(d, "pengaturan_pembayaran_penuh")
+        for el in d.find_elements("xpath", "//*[@content-desc='Lanjutkan']")[:1]:  # popup sambutan, bukan tombol penautan
+            el.click()
+            time.sleep(2)
+            save(d, "tutup_popup")
+        PENGATURAN = "//*[@content-desc='Pengaturan Pembayaran' or @text='Pengaturan Pembayaran']"
+        akun_terbuka = False
+        for percobaan in range(1, 5):  # ketukan pertama tepat setelah login sering diabaikan (bukti run 18 Nov 2026)
+            tap(d, "//android.widget.ImageView[starts-with(@content-desc, 'Akun')]", f"akun_{percobaan}", 3)
+            if d.find_elements("xpath", PENGATURAN):
+                akun_terbuka = True
+                break
+            time.sleep(2)
+        if akun_terbuka:
+            if tap(d, PENGATURAN, "pengaturan_pembayaran", 4):
+                save(d, "pengaturan_pembayaran_penuh")
                 if tap(d, "//*[contains(@content-desc,'Tambahkan Metode Lainnya') or contains(@text,'Tambahkan Metode Lainnya')]",
                        "tambah_metode", 4):
                     # Buka entri OVO (bila ada) tanpa melanjutkan penautan
