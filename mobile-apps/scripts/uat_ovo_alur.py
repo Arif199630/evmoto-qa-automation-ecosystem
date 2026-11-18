@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 
 os.environ["TEST_USER_POOL_INDEX"] = os.getenv("UAT_POOL_INDEX", "15")
+AKUN_VAR = os.getenv("UAT_AKUN_VAR", "")  # nama variabel .env berisi nomor login UAT (mis. UAT_OVO_NOMOR1); kosong = akun pool
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "Frontend" / "Feature")]
 
@@ -39,8 +40,13 @@ def save(d, nama):
     izinkan_lokasi(d)
     xml = dump_ringan(d)
     (OUT / f"{step:02d}_{nama}.xml").write_text(xml, encoding="utf-8")
-    d.save_screenshot(str(OUT / f"{step:02d}_{nama}.png"))
-    index.append(f"{step:02d}_{nama}: " + " | ".join(semua_label(xml)[:45]))
+    if not AKUN_VAR:  # dengan nomor UAT tidak ada gambar: repo publik, nomor bisa terbaca
+        d.save_screenshot(str(OUT / f"{step:02d}_{nama}.png"))
+    try:
+        jejak = f" [{d.current_package}/{(d.current_activity or '').split('.')[-1]}]"
+    except Exception:
+        jejak = ""
+    index.append(f"{step:02d}_{nama}{jejak}: " + " | ".join(semua_label(xml)[:45]))
     log(index[-1][:160])
     return xml
 
@@ -108,7 +114,7 @@ def main():
         izinkan_lokasi(d)
         login = LoginPage(d)
         if login.is_login_screen_displayed(timeout=20):
-            login.input_phone_number(config.ACTIVE_PHONE)
+            login.input_phone_number((os.getenv(AKUN_VAR, "") if AKUN_VAR else "") or config.ACTIVE_PHONE)
             login.click_submit_login()
             login.input_otp_dev(config.ACTIVE_OTP)
         time.sleep(5)
