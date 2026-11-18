@@ -156,6 +156,10 @@ jobs:
         if: ${{ inputs.apk_set == 'uat' }}
         run: printf '%s\n' "$UAT_OVO_PHONES" >> mobile-apps/.env
         env: { UAT_OVO_PHONES: "${{ secrets.UAT_OVO_PHONES }}" }
+      - name: Tambah kandidat akun Driver ke .env (khusus cek_akun_driver)
+        if: ${{ startsWith(inputs.file_filter, 'cek_akun_driver') }}
+        run: printf '%s\n' "$DRIVER_KANDIDAT" >> mobile-apps/.env
+        env: { DRIVER_KANDIDAT: "${{ secrets.DRIVER_KANDIDAT }}" }
       - name: Ambil APK (terenkripsi di Release) lalu buka enkripsinya
         env:
           GH_TOKEN: ${{ github.token }}
@@ -216,12 +220,12 @@ jobs:
           cp -r mobile-apps/reports/screen_map bukti/ 2>/dev/null || true
           cp -r mobile-apps/reports/repro bukti/ 2>/dev/null || true
       - name: Sensor nomor UAT di bukti (artifact repo publik bisa diunduh siapa pun)
-        if: ${{ always() && inputs.apk_set == 'uat' }}
-        env: { UAT_OVO_PHONES: "${{ secrets.UAT_OVO_PHONES }}" }
+        if: ${{ always() && (inputs.apk_set == 'uat' || startsWith(inputs.file_filter, 'cek_akun_driver')) }}
+        env: { UAT_OVO_PHONES: "${{ secrets.UAT_OVO_PHONES }}", DRIVER_KANDIDAT: "${{ secrets.DRIVER_KANDIDAT }}" }
         run: |
           python - <<'PY'
           import os, re, pathlib
-          nums = re.findall(r"=(\d{8,15})", os.environ.get("UAT_OVO_PHONES", ""))
+          nums = re.findall(r"=(\d{8,15})", os.environ.get("UAT_OVO_PHONES", "") + "\n" + os.environ.get("DRIVER_KANDIDAT", ""))
           pola = sorted({p for n in nums for p in (n, "62" + n, "0" + n)}, key=len, reverse=True)
           mask = lambda n: n[:3] + "*" * max(len(n) - 5, 1) + n[-2:]
           ubah = hapus = 0
