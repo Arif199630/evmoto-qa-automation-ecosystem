@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 
 os.environ["TEST_USER_POOL_INDEX"] = os.getenv("UAT_POOL_INDEX", "15")
+HANYA_LIHAT = os.getenv("UAT_HANYA_LIHAT", "") == "1"  # akun sudah tertaut OVO: hanya baca layar, jangan ketuk baris OVO/GoPay
 AKUN_VAR = os.getenv("UAT_AKUN_VAR", "")  # nama variabel .env berisi nomor login UAT (mis. UAT_OVO_NOMOR1); kosong = akun pool
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "Frontend" / "Feature")]
@@ -107,6 +108,16 @@ def ketuk_baris(d, xpath, nama):
     return False
 
 
+def gulir_dan_catat_pengaturan(d):
+    """Mode hanya-lihat: catat layar Pengaturan Pembayaran di tiap posisi gulir (tanpa mengetuk apa pun)."""
+    size = d.get_window_size()
+    x = size["width"] // 2
+    for i in range(3):
+        d.swipe(x, int(size["height"] * 0.75), x, int(size["height"] * 0.35), 500)
+        time.sleep(1.0)
+        save(d, f"pengaturan_pembayaran_gulir_{i + 1}")
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     d = DriverFactory.create_driver()
@@ -143,8 +154,10 @@ def main():
             tutup_popup(d)
             if tap(d, PENGATURAN, "pengaturan_pembayaran", 4):
                 save(d, "pengaturan_pembayaran_penuh")
-                if tap(d, "//*[contains(@content-desc,'Tambahkan Metode Lainnya') or contains(@text,'Tambahkan Metode Lainnya')]",
-                       "tambah_metode", 4):
+                if HANYA_LIHAT:
+                    gulir_dan_catat_pengaturan(d)
+                elif tap(d, "//*[contains(@content-desc,'Tambahkan Metode Lainnya') or contains(@text,'Tambahkan Metode Lainnya')]",
+                         "tambah_metode", 4):
                     # Peta 18 Nov 2026: 'Metode Lainnya' berisi baris View clickable 'GoPay / <nomor akun>' dan 'OVO / <nomor akun>'
                     # (nomor OVO = nomor login akun). Ketuk baris OVO berulang sampai layar berganti, tanpa melanjutkan penautan.
                     for nama_baris in ("OVO", "GoPay"):
