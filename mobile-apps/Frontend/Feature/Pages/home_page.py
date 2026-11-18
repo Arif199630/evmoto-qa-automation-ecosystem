@@ -535,6 +535,8 @@ class HomePage(BasePage):
         kolom input (EditText); ketukan kedua membuka form tujuan. Jadi kolom diketuk ulang sekali bila form
         belum terbuka.
         """
+        self.tutup_popup_lanjutkan()
+        self.batalkan_order_sisa_jika_ada()  # order sisa test sebelumnya menghilangkan kolom pencarian
         self.click(self.SEARCH_DESTINATION, label="Kolom Tujuan 'Hello, mau kemana hari ini?'")
         if self.find_all(self.INPUT_SEARCH_FIELD, timeout=3):
             return

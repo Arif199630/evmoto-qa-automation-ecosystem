@@ -98,6 +98,44 @@ class BasePage:
             logger.error(f"Gagal melakukan klik pada {label or locator}: {e}")
             raise
 
+    # Pembatalan order sisa (peta layar CI 18 Nov 2026, peta_batal_order): panel 'Sedang mencari driver' terpotong di layar 320x640;
+    # setelah digeser ke atas muncul Button 'Batalkan'. Diketuk -> dialog 'Apakah Anda yakin ingin membatalkan pesanan?' dengan
+    # Button 'Tutup' dan 'Batalkan' (konfirmasi, elemen 'Batalkan' terakhir di pohon).
+    _XP_MENCARI_DRIVER = "//*[contains(@content-desc,'Sedang mencari driver terdekat') or contains(@text,'Sedang mencari driver terdekat')]"
+    _XP_BATALKAN = "//android.widget.Button[@content-desc='Batalkan' or @text='Batalkan']"
+    _XP_DIALOG_YAKIN = "//*[starts-with(@content-desc, 'Apakah Anda yakin ingin membatalkan pesanan')]"
+
+    def batalkan_order_sisa_jika_ada(self) -> bool:
+        """Batalkan order yang tertinggal di status 'Sedang mencari driver' (sisa test sebelumnya) agar akun kembali bersih.
+
+        Satu akun QA dipakai berurutan oleh banyak test; satu order sisa membuat semua test berikutnya gagal karena Beranda tidak
+        punya kolom pencarian (24 kegagalan di run 18 Nov 2026). True bila ada order sisa yang berhasil dibatalkan.
+        """
+        if not self.is_displayed(("xpath", self._XP_MENCARI_DRIVER), timeout=2):
+            return False
+        logger.info("Order sisa 'Sedang mencari driver' terdeteksi, membatalkan...")
+        for percobaan in range(1, 4):
+            size = self.driver.get_window_size()
+            x = size["width"] // 2
+            try:
+                self.driver.swipe(x, int(size["height"] * 0.93), x, int(size["height"] * 0.55), 600)
+            except Exception:  # noqa: BLE001
+                pass
+            time.sleep(1.5)
+            tombol = self.driver.find_elements("xpath", self._XP_BATALKAN)
+            if not tombol:
+                continue
+            tombol[0].click()
+            time.sleep(1.5)
+            if self.driver.find_elements("xpath", self._XP_DIALOG_YAKIN):
+                self.driver.find_elements("xpath", self._XP_BATALKAN)[-1].click()
+                time.sleep(3)
+            if not self.driver.find_elements("xpath", self._XP_MENCARI_DRIVER):
+                logger.info(f"Order sisa dibatalkan (percobaan {percobaan})")
+                return True
+        logger.warning("Order sisa tidak berhasil dibatalkan setelah 3 percobaan")
+        return False
+
     def tutup_popup_lanjutkan(self) -> bool:
         """Tutup popup 'Pemberitahuan Jam Operasional' (Button 'Lanjutkan') bila sedang tampil. True bila ditutup.
 

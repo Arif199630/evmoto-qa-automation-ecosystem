@@ -129,6 +129,10 @@ def authenticated_home(driver, login_page, home_page):
             home_page.dismiss_welcome_popup_if_present()
         except Exception as e:
             logger.info(f"State login setup: {e}")
+    try:
+        home_page.batalkan_order_sisa_jika_ada()  # order sisa test sebelumnya membuat test berikutnya gagal
+    except Exception as e:  # noqa: BLE001
+        logger.info(f"Pembersihan order sisa dilewati: {e}")
     return home_page
 
 
