@@ -119,10 +119,13 @@ jobs:
       CHUNK_SIZE: "8"
       HEADLESS_FAST: "1"
       QA_TEARDOWN_PAUSE: "1"
-      # 1 akun = 1 perangkat: test Driver di job 0, Aktivitas User (akun utama) di job 1,
-      # job 2-15 memakai akun QA Auto masing-masing (awalan nomor dari Secret ENV_MOBILE_APPS).
+      # 1 akun = 1 perangkat. Job 0-6: test Driver dibagi ke 7 akun Driver (job 0 akun utama, job 1-6 akun DRIVER_KANDIDAT_2..7 dari Secret),
+      # job 7: Aktivitas User (akun utama), job 8-15: akun QA Auto masing-masing (awalan nomor dari Secret ENV_MOBILE_APPS).
+      # Sebelumnya 250 test Driver berjalan berurutan di job 0 (255 menit; 15 job lain 3-37 menit); kini kira-kira 40 test per job.
       ACCOUNT_SHARDING: "1"
-      TEST_USER_POOL_INDEX: ${{ matrix.shard }}
+      DRIVER_SHARDS: "7"
+      TEST_DRIVER_POOL_INDEX: ${{ matrix.shard }}
+      TEST_USER_POOL_INDEX: ${{ matrix.shard == 7 && '1' || matrix.shard }}
       INSTALL_APK: "0"
       RESUME_DIR: sebelumnya
       FILE_INCLUDE: ${{ inputs.file_filter }}
@@ -156,8 +159,7 @@ jobs:
         if: ${{ inputs.apk_set == 'uat' }}
         run: printf '%s\n' "$UAT_OVO_PHONES" >> mobile-apps/.env
         env: { UAT_OVO_PHONES: "${{ secrets.UAT_OVO_PHONES }}" }
-      - name: Tambah kandidat akun Driver ke .env (khusus cek_akun_driver)
-        if: ${{ startsWith(inputs.file_filter, 'cek_akun_driver') }}
+      - name: Tambah akun Driver tambahan (DRIVER_KANDIDAT_n) ke .env
         run: printf '%s\n' "$DRIVER_KANDIDAT" >> mobile-apps/.env
         env: { DRIVER_KANDIDAT: "${{ secrets.DRIVER_KANDIDAT }}" }
       - name: Ambil APK (terenkripsi di Release) lalu buka enkripsinya
@@ -219,9 +221,14 @@ jobs:
           cp appium.log bukti/ 2>/dev/null || true
           cp -r mobile-apps/reports/screen_map bukti/ 2>/dev/null || true
           cp -r mobile-apps/reports/repro bukti/ 2>/dev/null || true
-      - name: Sensor nomor UAT di bukti (artifact repo publik bisa diunduh siapa pun)
-        if: ${{ always() && (inputs.apk_set == 'uat' || startsWith(inputs.file_filter, 'cek_akun_driver')) }}
-        env: { UAT_OVO_PHONES: "${{ secrets.UAT_OVO_PHONES }}", DRIVER_KANDIDAT: "${{ secrets.DRIVER_KANDIDAT }}" }
+      - name: Sensor nomor UAT dan akun Driver di bukti (artifact repo publik bisa diunduh siapa pun)
+        if: ${{ always() }}
+        env:
+          UAT_OVO_PHONES: ${{ secrets.UAT_OVO_PHONES }}
+          DRIVER_KANDIDAT: ${{ secrets.DRIVER_KANDIDAT }}
+          # Gambar dihapus hanya pada run UAT/penyaringan akun (tidak memakai screenshot); run regression biasa tetap menyimpan screenshot
+          # kegagalan dan hanya memasking nomor di berkas teks (XML/log).
+          HAPUS_GAMBAR: ${{ (inputs.apk_set == 'uat' || startsWith(inputs.file_filter, 'cek_akun_driver')) && '1' || '0' }}
         run: |
           python - <<'PY'
           import os, re, pathlib
@@ -229,11 +236,12 @@ jobs:
           pola = sorted({p for n in nums for p in (n, "62" + n, "0" + n)}, key=len, reverse=True)
           mask = lambda n: n[:3] + "*" * max(len(n) - 5, 1) + n[-2:]
           ubah = hapus = 0
-          for f in pathlib.Path("bukti").rglob("*"):
+          for f in [x for d in ("bukti", "qa-tools/runs") for x in pathlib.Path(d).rglob("*")]:
               if not f.is_file():
                   continue
               if f.suffix.lower() in (".png", ".jpg", ".mp4"):
-                  f.unlink(); hapus += 1  # gambar bisa memuat nomor dan tidak bisa disensor; UAT tidak memakai screenshot
+                  if os.environ.get("HAPUS_GAMBAR") == "1":
+                      f.unlink(); hapus += 1  # gambar bisa memuat nomor dan tidak bisa disensor; UAT tidak memakai screenshot
                   continue
               data = f.read_bytes()
               baru = data

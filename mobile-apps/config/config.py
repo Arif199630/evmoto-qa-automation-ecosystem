@@ -29,6 +29,16 @@ if _pool_prefix and _pool_index >= 2:
     for _key in ("TEST_USER_PHONE", "DEV_PHONE", "ACTIVE_PHONE", "EVMOTO_DEV_PHONE"):
         os.environ[_key] = _pool_phone
 
+# Akun Driver per shard (CI paralel): satu akun Driver hanya boleh login di satu perangkat, jadi test aplikasi Driver dibagi ke beberapa shard
+# dengan akun masing-masing. TEST_DRIVER_POOL_INDEX 0 (atau kosong) = akun Driver utama (EVMOTO_DRIVER_PHONE); n >= 1 memakai DRIVER_KANDIDAT_{n+1}
+# yang diisi workflow dari secret (nomor tidak pernah ada di kode; repo publik).
+_drv_index = int(os.getenv("TEST_DRIVER_POOL_INDEX", "-1") or -1)
+if _drv_index >= 1:
+    _drv_phone = os.getenv(f"DRIVER_KANDIDAT_{_drv_index + 1}", "")
+    if _drv_phone:
+        for _key in ("EVMOTO_DRIVER_PHONE", "TEST_DRIVER_PHONE"):
+            os.environ[_key] = _drv_phone
+
 # Ensure directories exist
 SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
 VIDEOS_DIR.mkdir(parents=True, exist_ok=True)

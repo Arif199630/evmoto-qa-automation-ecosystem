@@ -110,7 +110,9 @@ def balance(items, slots):
     return [load[1] for load in loads]
 
 
-if shard_total > 1 and os.getenv("ACCOUNT_SHARDING") == "1" and shard_total >= 3:
+driver_shards = max(1, int(os.getenv("DRIVER_SHARDS", "1")))  # jumlah job untuk test Driver (satu akun Driver per job)
+
+if shard_total > 1 and os.getenv("ACCOUNT_SHARDING") == "1" and shard_total >= driver_shards + 2:
     # Satu akun hanya boleh login di satu perangkat: test aplikasi Driver (1 akun) di job 0,
     # test User yang butuh riwayat akun utama di job 1, sisanya ke job 2.. dengan akun QA Auto masing-masing.
     main_user = re.compile(os.getenv("USER_MAIN_FILES", r"^test_activity\.py$"))
@@ -122,8 +124,10 @@ if shard_total > 1 and os.getenv("ACCOUNT_SHARDING") == "1" and shard_total >= 3
             return "user_main"
         return "pool"  # test User lain (akun QA Auto per job) dan test tanpa perangkat
 
-    plan = [[u for u in units if group(u) == "driver"], [u for u in units if group(u) == "user_main"]]
-    plan += balance([u for u in units if group(u) == "pool"], shard_total - 2)
+    # Job 0..D-1: test Driver (dibagi seimbang), job D: test User akun utama, job D+1..: pool akun QA Auto
+    plan = balance([u for u in units if group(u) == "driver"], driver_shards)
+    plan += [[u for u in units if group(u) == "user_main"]]
+    plan += balance([u for u in units if group(u) == "pool"], shard_total - driver_shards - 1)
     if os.getenv("DRY_RUN") == "all":
         for i, job in enumerate(plan):
             print(f"job {i:2}: {sum(u[3] for u in job):3} test | perangkat {sorted({u[4] for u in job})} | {len(job)} unit")
