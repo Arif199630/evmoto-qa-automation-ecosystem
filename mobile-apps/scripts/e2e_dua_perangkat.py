@@ -10,6 +10,7 @@ Pembersihan: pesanan yang belum selesai dibatalkan dari User, driver Offline.
 Hasil: reports/repro/e2e_dua_perangkat/NN_<app>_<langkah>.xml|.png dan ringkasan.txt
 """
 import os
+import re
 import sys
 import time
 import traceback
@@ -39,6 +40,44 @@ SLIDER = ("//android.widget.ImageView[@clickable='true' and string-length(@conte
 
 BAYAR = ("//*[@content-desc='Sudah Terima Pembayaran' or @text='Sudah Terima Pembayaran' or "
          "@content-desc='Menunggu Pembayaran (Cash)' or starts-with(@content-desc,'Menunggu Pembayaran')]")
+
+
+# Metode bayar E2E: cash (default, perilaku lama) | wallet (Saldo EVMoto) | ovo | gopay. E2E_STRICT=1 membuat skrip keluar
+# dengan kode 1 bila ada tahap yang tidak terbukti (dipakai varian metode non-tunai agar CI menandai kegagalan, bukan hanya mencatat).
+METODE = os.getenv("E2E_METODE", "cash").strip().lower()
+NAMA_METODE = {"cash": "Cash", "wallet": "Saldo EVMoto", "ovo": "OVO", "gopay": "GoPay"}.get(METODE, METODE)
+STRICT = os.getenv("E2E_STRICT", "0") == "1"
+HASIL = {"metode_terpilih": None, "order_terkirim": False, "driver_terima": False, "tahap_digeser": False,
+         "user_selesai": False, "saldo_sebelum": None, "saldo_sesudah": None}
+
+
+def baca_saldo(du):
+    """Saldo EVMoto dari kartu 'Saldo Anda' di Beranda User (angka rupiah), None bila tidak terbaca."""
+    try:
+        xml = du.page_source
+    except Exception:
+        return None
+    if "Saldo Anda" not in xml:
+        return None
+    m = re.search(r'content-desc="Rp\s?([\d.]+)"', xml)
+    return int(m.group(1).replace(".", "")) if m else None
+
+
+def kembali_ke_beranda(du, e, percobaan=6):
+    """Tutup layar penilaian/ringkasan sampai Beranda User tampil. True bila kartu 'Saldo Anda' terlihat."""
+    for _ in range(percobaan):
+        if baca_saldo(du) is not None:
+            return True
+        for label in ("Kembali ke Beranda", "Selesai", "Lewati", "Nanti", "Tutup", "OK"):
+            if e.ketuk(du, f"//*[@content-desc='{label}' or @text='{label}']", 2):
+                break
+        else:
+            try:
+                du.back()
+            except Exception:
+                pass
+        time.sleep(3)
+    return baca_saldo(du) is not None
 
 
 def slider_driver(dd, detik=60):
@@ -164,10 +203,10 @@ def main():
     try:
         dd = buat_sesi(is_driver_app=True, udid="emulator-5556", system_port=8201)
         du = buat_sesi(udid="emulator-5554", system_port=8200)
-        r.append("Driver: emulator-5556 | User: emulator-5554 (akun QA pool) | metode bayar: Cash")
+        r.append(f"Driver: emulator-5556 | User: emulator-5554 (akun QA pool) | metode bayar: {NAMA_METODE}")
         lp = LoginPage(du)
         if lp.is_login_screen_displayed(timeout=20):
-            lp.input_phone_number(config.ACTIVE_PHONE)
+            lp.input_phone_number(os.getenv(os.getenv("E2E_PHONE_VAR", "") or "_", "") or config.ACTIVE_PHONE)
             lp.click_submit_login()
             lp.input_otp_dev(config.ACTIVE_OTP)
             time.sleep(5)
@@ -205,10 +244,25 @@ def main():
             return
         e.tutup_popup(du)
         e.save(du, "user", "beranda")
-        BookingPage(du).open_place_order(e.TUJUAN)
+        if METODE == "wallet":
+            HASIL["saldo_sebelum"] = baca_saldo(du)
+            r.append(f"   saldo sebelum order: {HASIL['saldo_sebelum']}")
+        bp = BookingPage(du)
+        bp.open_place_order(e.TUJUAN)
         e.save(du, "user", "place_order")
+        if METODE != "cash":
+            try:
+                bp.select_payment_method(METODE)
+            except Exception as ex:
+                r.append(f"   GAGAL memilih metode {NAMA_METODE}: {type(ex).__name__}: {str(ex)[:220]}")
+                e.save(du, "user", "pilih_metode_gagal")
+                raise
+            e.save(du, "user", "metode_bayar_dipilih")
+        HASIL["metode_terpilih"] = bp.get_selected_payment_method()
+        r.append(f"   metode bayar terpilih di layar: '{HASIL['metode_terpilih']}' (diharapkan '{NAMA_METODE}')")
         if pesan_order(du):
             order_dibuat = True
+            HASIL["order_terkirim"] = True
             for i in range(3):
                 e.save(du, "user", f"setelah_pesan_{i + 1}")
                 time.sleep(8)
@@ -219,6 +273,7 @@ def main():
         if e.tunggu_label(dd, ["Swipe", "Geser", "Terima", "Orderan Baru", "Pesanan Baru"], 150, 5, "driver", "order_masuk"):
             e.save(dd, "driver", "order_masuk")
             r.append(f"   geser terima: {e.geser(dd, ['Swipe', 'Geser', 'Terima'])}")
+            HASIL["driver_terima"] = True
             try:
                 e.save(dd, "driver", "setelah_terima")
             except Exception as ex:
@@ -235,11 +290,17 @@ def main():
                 if slider_driver(dd, 20) is None:
                     buka_order_driver(dd, e)
             e.save(du, "user", "driver_ditemukan")
-            jalankan_tahap(dd, du, e, r, "order")
+            HASIL["tahap_digeser"] = bool(jalankan_tahap(dd, du, e, r, "order"))
             e.save(dd, "driver", "akhir")
             xml = e.save(du, "user", "akhir")
             if any(k in xml for k in ("Penilaian", "penilaian", "Selesai", "Perjalanan selesai")):
                 order_dibuat = False
+                HASIL["user_selesai"] = True
+            if METODE == "wallet":
+                if kembali_ke_beranda(du, e):
+                    HASIL["saldo_sesudah"] = baca_saldo(du)
+                r.append(f"   saldo sesudah order: {HASIL['saldo_sesudah']}")
+                e.save(du, "user", "saldo_sesudah")
     except Exception as ex:
         traceback.print_exc()
         r.append(f"langkah gagal: {type(ex).__name__}: {str(ex)[:200]}")
@@ -262,9 +323,31 @@ def main():
                     d.quit()
             except Exception:
                 pass
+        gagal = []
+        if not (HASIL["metode_terpilih"] or "").lower().startswith(NAMA_METODE.lower()):
+            gagal.append(f"metode bayar terpilih '{HASIL['metode_terpilih']}' bukan '{NAMA_METODE}'")
+        if not HASIL["order_terkirim"]:
+            gagal.append("order tidak terkirim")
+        if not HASIL["driver_terima"]:
+            gagal.append("driver tidak menerima order")
+        if not HASIL["tahap_digeser"]:
+            gagal.append("tahap perjalanan driver tidak dijalankan")
+        if not HASIL["user_selesai"]:
+            gagal.append("layar akhir User tidak menunjukkan order selesai")
+        if METODE == "wallet":
+            sb, sa = HASIL["saldo_sebelum"], HASIL["saldo_sesudah"]
+            if sb is None or sa is None:
+                gagal.append(f"saldo tidak terbaca (sebelum={sb}, sesudah={sa})")
+            elif sa >= sb:
+                gagal.append(f"saldo tidak berkurang (sebelum={sb}, sesudah={sa})")
+            else:
+                r.append(f"   saldo berkurang Rp{sb - sa} (sebelum {sb}, sesudah {sa})")
+        r.append("VONIS: " + ("LULUS, semua tahap terbukti" if not gagal else "GAGAL: " + "; ".join(gagal)))
         text = "\n".join(r)
         (e.OUT / "ringkasan.txt").write_text(text, encoding="utf-8")
         print(text)
+        if STRICT and gagal:
+            raise SystemExit(1)
 
 
 if __name__ == "__main__":
