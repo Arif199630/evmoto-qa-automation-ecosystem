@@ -98,6 +98,24 @@ class BasePage:
             logger.error(f"Gagal melakukan klik pada {label or locator}: {e}")
             raise
 
+    def tutup_popup_lanjutkan(self) -> bool:
+        """Tutup popup 'Pemberitahuan Jam Operasional' (Button 'Lanjutkan') bila sedang tampil. True bila ditutup.
+
+        Popup ini muncul beberapa detik setelah login dan menutupi layar; ketukan pertama pada tab bawah hanya mengenai
+        latar popup sehingga layar tidak berpindah (bukti run 18 Nov 2026: test Aktivitas dan peta alur OVO). Hanya
+        dipanggil dari fungsi navigasi tab utama, tempat 'Lanjutkan' tidak mungkin tombol alur lain.
+        """
+        try:
+            els = self.driver.find_elements("xpath", "//android.widget.Button[@content-desc='Lanjutkan' or @text='Lanjutkan']")
+            if not els:
+                return False
+            logger.info("Popup 'Lanjutkan' (Pemberitahuan Jam Operasional) tampil, menutup popup...")
+            els[0].click()
+            time.sleep(1.0)
+            return True
+        except Exception:
+            return False
+
     def scroll_until_displayed(self, locator: Tuple[str, str], max_swipes: int = 5) -> bool:
         """Geser layar ke atas sampai elemen tampil (ListView Flutter hanya menampilkan item yang terlihat).
 

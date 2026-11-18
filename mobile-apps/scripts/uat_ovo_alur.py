@@ -45,6 +45,15 @@ def save(d, nama):
     return xml
 
 
+def tutup_popup(d):
+    """Popup 'Pemberitahuan Jam Operasional' (Button 'Lanjutkan') menelan ketukan; tutup bila ada. Hanya di fase navigasi awal."""
+    for el in d.find_elements("xpath", "//android.widget.Button[@content-desc='Lanjutkan' or @text='Lanjutkan']")[:1]:
+        el.click()
+        time.sleep(1.5)
+        return True
+    return False
+
+
 def tap(d, xpath, nama, tunggu=3, idx=0):
     els = d.find_elements("xpath", xpath)
     if len(els) <= idx:
@@ -110,12 +119,14 @@ def main():
         PENGATURAN = "//*[@content-desc='Pengaturan Pembayaran' or @text='Pengaturan Pembayaran']"
         akun_terbuka = False
         for percobaan in range(1, 5):  # ketukan pertama tepat setelah login sering diabaikan (bukti run 18 Nov 2026)
+            tutup_popup(d)
             tap(d, "//android.widget.ImageView[starts-with(@content-desc, 'Akun')]", f"akun_{percobaan}", 3)
             if d.find_elements("xpath", PENGATURAN):
                 akun_terbuka = True
                 break
             time.sleep(2)
         if akun_terbuka:
+            tutup_popup(d)
             if tap(d, PENGATURAN, "pengaturan_pembayaran", 4):
                 save(d, "pengaturan_pembayaran_penuh")
                 if tap(d, "//*[contains(@content-desc,'Tambahkan Metode Lainnya') or contains(@text,'Tambahkan Metode Lainnya')]",

@@ -642,6 +642,7 @@ class ActivityPage(BasePage):
         # Ketukan pertama tepat setelah login/Beranda memuat sering diabaikan di CI (bukti run 18 Nov 2026: layar tetap di Beranda
         # sehingga 27 test Aktivitas gagal). Ketuk ulang sampai layar Aktivitas benar-benar tampil.
         for percobaan in range(1, 5):
+            self.tutup_popup_lanjutkan()  # popup Jam Operasional menelan ketukan pertama
             self.click(self.NAV_ACTIVITY, label="Tab Navigasi 'Activity'")
             if self.is_activity_screen_displayed(timeout=4):
                 return

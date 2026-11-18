@@ -509,6 +509,7 @@ class ProfilPage(BasePage):
 
     def navigate_to_profil_screen(self):
         """Menavigasi ke layar Profil / Me melalui tab navigasi bawah."""
+        self.tutup_popup_lanjutkan()  # popup Jam Operasional menelan ketukan pertama
         try:
             self.click(self.NAV_ME, label="Tab Bar 'Me / Akun'")
         except Exception:

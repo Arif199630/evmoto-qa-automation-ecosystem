@@ -643,6 +643,7 @@ class HomePage(BasePage):
     # 7. Bottom Navigation Bar
     def navigate_to_home(self):
         """Menekan tab navigasi 'Home' / 'Beranda'."""
+        self.tutup_popup_lanjutkan()
         self.click(self.NAV_HOME, label="Tab Navigasi 'Home'")
 
     def navigate_to_activity(self):
