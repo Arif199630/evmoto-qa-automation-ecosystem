@@ -88,15 +88,19 @@ def main():
                 save(d, "pengaturan_pembayaran_penuh")
                 if tap(d, "//*[contains(@content-desc,'Tambahkan Metode Lainnya') or contains(@text,'Tambahkan Metode Lainnya')]",
                        "tambah_metode", 4):
-                    # Buka entri OVO (bila ada) tanpa melanjutkan penautan
-                    if tap(d, "//*[contains(@content-desc,'OVO') or contains(@text,'OVO')]", "pilih_ovo", 4):
-                        save(d, "layar_tautan_ovo")
-                        d.back()
-                        time.sleep(2)
-                    # Entri GoPay (sekadar dilihat, untuk peta cakupan)
-                    if tap(d, "//*[contains(@content-desc,'GoPay') or contains(@text,'GoPay')]", "pilih_gopay", 4):
-                        d.back()
-                        time.sleep(2)
+                    # Peta 18 Nov 2026: 'Metode Lainnya' berisi baris View clickable 'GoPay / <nomor akun>' dan 'OVO / <nomor akun>'
+                    # (nomor OVO = nomor login akun). Ketuk baris OVO berulang sampai layar berganti, tanpa melanjutkan penautan.
+                    for nama_baris in ("OVO", "GoPay"):
+                        baris = f"//android.view.View[@clickable='true' and starts-with(@content-desc,'{nama_baris}')]"
+                        for percobaan in range(1, 5):
+                            if not tap(d, baris, f"pilih_{nama_baris.lower()}_{percobaan}", 4):
+                                break
+                            if not d.find_elements("xpath", "//*[@content-desc='Metode Lainnya']"):
+                                save(d, f"layar_tautan_{nama_baris.lower()}")
+                                break
+                        if not d.find_elements("xpath", "//*[@content-desc='Metode Lainnya']"):
+                            d.back()
+                            time.sleep(2)
                     d.back()
                     time.sleep(2)
                 # Entri OVO yang sudah tertaut (akun utama): buka detailnya bila ada
