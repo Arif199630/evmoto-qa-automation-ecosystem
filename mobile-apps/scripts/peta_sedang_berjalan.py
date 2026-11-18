@@ -72,7 +72,7 @@ def main():
             login.input_otp_dev(config.ACTIVE_OTP)
         time.sleep(6)
         tutup_popup(d)
-        xml = save(d, "beranda")
+        save(d, "beranda")
         kartu = d.find_elements("xpath", "//*[contains(@content-desc,'Sedang berjalan')]")
         index.append(f"   kartu 'Sedang berjalan' ditemukan: {len(kartu)}")
         if not kartu:
