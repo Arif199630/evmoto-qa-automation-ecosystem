@@ -223,6 +223,22 @@ class DrvHomePage(BasePage):
             if buttons:
                 buttons[0].click()
 
+    def _tutup_popup_cepat(self):
+        """Tutup pop-up 'Pemberitahuan Jam Operasional' bila SEDANG tampil, tanpa menunggu (dipanggil sebelum tiap ketukan navigasi).
+
+        Pop-up ini muncul beberapa detik setelah login dan menutupi layar; ketukan pada tab/tombol hanya mengenai latar
+        pop-up (bukti run 17 Nov 2026: 16 kegagalan test Driver menampilkan pop-up ini).
+        """
+        try:
+            if self.driver.find_elements(*self.POPUP_JAM_OPERASIONAL):
+                tombol = self.driver.find_elements(*self.BTN_LANJUTKAN_POPUP)
+                if tombol:
+                    logger.info("Pop-up Jam Operasional tampil, menekan 'Lanjutkan'")
+                    tombol[0].click()
+                    time.sleep(1.0)
+        except Exception:  # noqa: BLE001 - pop-up bisa hilang sendiri di antara pencarian dan ketukan
+            pass
+
     def open_wallet(self):
         """Buka layar eWallet lewat kartu 'Saldo Kamu' di Beranda."""
         self.dismiss_operational_popup()
@@ -230,6 +246,7 @@ class DrvHomePage(BasePage):
 
     def toggle_online_offline_status(self):
         """Mengetuk tombol sakelar status kerja Online / Offline."""
+        self._tutup_popup_cepat()
         logger.info("Mengetuk toggle status Online/Offline")
         self.click(self.SWITCH_ONLINE_OFFLINE, label="Toggle Status Online / Offline")
         time.sleep(1)
@@ -283,6 +300,7 @@ class DrvHomePage(BasePage):
 
     def switch_to_scheduled_orders_tab(self):
         """Berpindah ke tab Pesanan Terjadwal."""
+        self._tutup_popup_cepat()
         self.click(self.TAB_PESANAN_TERJADWAL, label="Tab Pesanan Terjadwal")
 
     def _ketuk_dan_tunggu(self, tombol, penanda, label: str, percobaan: int = 2):
@@ -292,6 +310,7 @@ class DrvHomePage(BasePage):
         tombol Menu diketuk tetapi layar tetap Beranda). Bila layar tujuan tetap tidak tampil, langkah
         berikutnya di test yang gagal, jadi tidak ada kegagalan yang disembunyikan.
         """
+        self._tutup_popup_cepat()
         for _ in range(percobaan):
             self.dismiss_operational_popup()
             self.click(tombol, label=label)
@@ -300,18 +319,21 @@ class DrvHomePage(BasePage):
 
     def navigate_to_menu(self):
         """Navigasi ke halaman Menu melalui Bottom Navigation Bar."""
+        self._tutup_popup_cepat()
         logger.info("Navigasi ke menu melalui Bottom Bar")
         self._ketuk_dan_tunggu(self.BOTTOM_NAV_MENU, self.PENANDA_MENU, "Tab Bottom Nav Menu")
         time.sleep(1)
 
     def navigate_to_activity(self):
         """Navigasi ke halaman Aktivitas Saya lewat kartu 'Aktivitas Saya' di Beranda."""
+        self._tutup_popup_cepat()
         logger.info("Navigasi ke Aktivitas Saya melalui kartu di Beranda")
         self._ketuk_dan_tunggu(self.BOTTOM_NAV_AKTIVITAS, self.PENANDA_AKTIVITAS, "Kartu Aktivitas Saya")
         time.sleep(1)
 
     def toggle_hide_balance(self):
         """Mengetuk ikon mata untuk sembunyikan/tampilkan nominal saldo."""
+        self._tutup_popup_cepat()
         logger.info("Mengetuk ikon mata untuk toggle hide/show saldo")
         self.click(self.BTN_TOGGLE_HIDE_SALDO, label="Tombol Toggle Sembunyikan Saldo")
 
