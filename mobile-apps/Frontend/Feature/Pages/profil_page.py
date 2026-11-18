@@ -600,7 +600,7 @@ class ProfilPage(BasePage):
 
     def navigate_to_payment_settings(self):
         """Membuka menu Pengaturan Pembayaran."""
-        self.click(self.MENU_PAYMENT_SETTINGS, label="Menu 'Payment Settings'")
+        self.click_with_scroll(self.MENU_PAYMENT_SETTINGS, label="Menu 'Payment Settings'")
 
     def is_cash_payment_option_displayed(self, timeout: int = 5) -> bool:
         return self.is_displayed(self.ITEM_PAYMENT_CASH, timeout=timeout)
@@ -626,7 +626,7 @@ class ProfilPage(BasePage):
     # 3. Kontak Darurat
     def navigate_to_emergency_contacts(self):
         """Membuka halaman Kontak Darurat."""
-        self.click(self.MENU_EMERGENCY_CONTACT, label="Menu 'Kontak Darurat'")
+        self.click_with_scroll(self.MENU_EMERGENCY_CONTACT, label="Menu 'Kontak Darurat'")
 
     def is_emergency_contacts_empty_state_displayed(self, timeout: int = 5) -> bool:
         return self.is_displayed(self.TEXT_EMERGENCY_EMPTY, timeout=timeout)
@@ -698,7 +698,7 @@ class ProfilPage(BasePage):
 
     def navigate_to_saved_addresses(self):
         """Membuka menu Alamat Tersimpan / Favorit."""
-        self.click(self.MENU_SAVED_ADDRESSES, label="Menu 'Saved Addresses'")
+        self.click_with_scroll(self.MENU_SAVED_ADDRESSES, label="Menu 'Saved Addresses'")
 
     def is_saved_address_empty_state_displayed(self, timeout: int = 5) -> bool:
         return self.is_displayed(self.TEXT_EMPTY_SAVED_ADDRESS, timeout=timeout)
@@ -730,7 +730,7 @@ class ProfilPage(BasePage):
     # 5. Pengaturan Bahasa & Snackbar
     def navigate_to_language(self):
         """Membuka menu Pengaturan Bahasa."""
-        self.click(self.MENU_LANGUAGE, label="Menu 'Language / Bahasa'")
+        self.click_with_scroll(self.MENU_LANGUAGE, label="Menu 'Language / Bahasa'")
 
     def select_language(self, language: str = "id"):
         """Mengubah bahasa antarmuka aplikasi ('id' untuk Indonesia, 'en' untuk English)."""
@@ -757,7 +757,7 @@ class ProfilPage(BasePage):
     # 6. Pusat Bantuan & Panduan Video FAQ
     def navigate_to_help_center(self):
         """Membuka menu Cara Penggunaan Aplikasi / FAQ."""
-        self.click(self.MENU_HELP_CENTER, label="Menu 'Cara Penggunaan Aplikasi'")
+        self.click_with_scroll(self.MENU_HELP_CENTER, label="Menu 'Cara Penggunaan Aplikasi'")
 
     def is_help_center_displayed(self, timeout: int = 5) -> bool:
         return (
@@ -813,17 +813,17 @@ class ProfilPage(BasePage):
     def navigate_to_terms(self):
         """Membuka halaman Syarat & Ketentuan (menu di bawah lipatan layar: peta layar CI 12 Nov 2026 10_akun_gulir_1)."""
         self._scroll_until_visible(self.MENU_TERMS)
-        self.click(self.MENU_TERMS, label="Menu 'Terms and Conditions'")
+        self.click_with_scroll(self.MENU_TERMS, label="Menu 'Terms and Conditions'")
 
     def navigate_to_privacy(self):
         """Membuka halaman Kebijakan Privasi (menu di bawah lipatan layar: peta layar CI 12 Nov 2026 10_akun_gulir_1)."""
         self._scroll_until_visible(self.MENU_PRIVACY)
-        self.click(self.MENU_PRIVACY, label="Menu 'Privacy Policy'")
+        self.click_with_scroll(self.MENU_PRIVACY, label="Menu 'Privacy Policy'")
 
     # 9. Hapus Akun
     def open_delete_account_modal(self):
         """Menekan menu 'Delete account' untuk memicu modal peringatan permanen."""
-        self.click(self.MENU_DELETE_ACCOUNT, label="Menu 'Delete account'")
+        self.click_with_scroll(self.MENU_DELETE_ACCOUNT, label="Menu 'Delete account'")
 
     def is_delete_account_modal_displayed(self, timeout: int = 5) -> bool:
         """Memeriksa apakah modal peringatan hapus akun permanen muncul."""
@@ -839,7 +839,7 @@ class ProfilPage(BasePage):
     # 10. Bagian Paling Bawah: Logout
     def open_logout_dialog(self):
         """Menekan tombol 'Log Out' untuk memicu dialog konfirmasi keluar."""
-        self.click(self.BTN_LOGOUT, label="Tombol 'Log Out'")
+        self.click_with_scroll(self.BTN_LOGOUT, label="Tombol 'Log Out'")
 
     def is_logout_dialog_displayed(self, timeout: int = 5) -> bool:
         """Memeriksa apakah dialog konfirmasi logout muncul."""

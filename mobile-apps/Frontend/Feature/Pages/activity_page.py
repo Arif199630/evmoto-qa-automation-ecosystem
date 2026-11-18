@@ -639,7 +639,14 @@ class ActivityPage(BasePage):
     def navigate_to_activity_screen(self):
         """Mengetuk tab 'Activity / Aktivitas' pada bilah navigasi bawah."""
         logger.info("Menavigasi ke Halaman Aktivitas...")
-        self.click(self.NAV_ACTIVITY, label="Tab Navigasi 'Activity'")
+        # Ketukan pertama tepat setelah login/Beranda memuat sering diabaikan di CI (bukti run 18 Nov 2026: layar tetap di Beranda
+        # sehingga 27 test Aktivitas gagal). Ketuk ulang sampai layar Aktivitas benar-benar tampil.
+        for percobaan in range(1, 5):
+            self.click(self.NAV_ACTIVITY, label="Tab Navigasi 'Activity'")
+            if self.is_activity_screen_displayed(timeout=4):
+                return
+            logger.warning(f"Layar Aktivitas belum tampil setelah ketukan ke-{percobaan}; mengulang...")
+            time.sleep(2.0)
 
     def is_activity_screen_displayed(self, timeout: int = 10) -> bool:
         """Memverifikasi apakah pengguna berada di layar Halaman Aktivitas.

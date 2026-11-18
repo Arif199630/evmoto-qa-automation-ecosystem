@@ -98,6 +98,32 @@ class BasePage:
             logger.error(f"Gagal melakukan klik pada {label or locator}: {e}")
             raise
 
+    def scroll_until_displayed(self, locator: Tuple[str, str], max_swipes: int = 5) -> bool:
+        """Geser layar ke atas sampai elemen tampil (ListView Flutter hanya menampilkan item yang terlihat).
+
+        Emulator CI berukuran 320x640, sehingga banyak menu/tombol berada di bawah lipatan layar dan
+        TimeoutException bila langsung diklik tanpa menggeser layar (bukti run 18 Nov 2026: menu Kontak Darurat dkk).
+        """
+        if self.is_displayed(locator, timeout=2):
+            return True
+        size = self.driver.get_window_size()
+        x = size["width"] // 2
+        for _ in range(max_swipes):
+            try:
+                self.swipe(x, int(size["height"] * 0.75), x, int(size["height"] * 0.35), 500)
+            except Exception as e:
+                logger.warning(f"Gagal menggeser layar: {e}")
+                break
+            time.sleep(0.6)
+            if self.is_displayed(locator, timeout=1):
+                return True
+        return False
+
+    def click_with_scroll(self, locator: Tuple[str, str], label: str = "", max_swipes: int = 5):
+        """Klik elemen; bila belum terlihat, geser layar dulu sampai tampil."""
+        self.scroll_until_displayed(locator, max_swipes=max_swipes)
+        return self.click(locator, label=label)
+
     def type_text(self, locator: Tuple[str, str], text: str, label: str = "", use_human_pacing: bool = True):
         """Mengetik teks pada field input."""
         element = self.find(locator)
