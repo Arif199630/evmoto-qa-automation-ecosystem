@@ -168,7 +168,14 @@ def main():
                     d.back()
                     time.sleep(2)
                 # Entri OVO yang sudah tertaut (akun utama): buka detailnya bila ada
-                tap(d, "//*[starts-with(@content-desc,'OVO')]", "detail_ovo_tertaut", 4)
+                if tap(d, "//*[starts-with(@content-desc,'OVO')]", "detail_ovo_tertaut", 4) and os.getenv("UAT_BUKA_DETAIL") == "1":
+                    # Mode lihat: buka 'Lihat riwayat pembayaran' dan 'Pengaturan' (hanya dibaca, tidak ada toggle/tombol aksi yang diketuk)
+                    for nama, xp in (("riwayat_pembayaran", "//*[starts-with(@content-desc,'Lihat riwayat pembayaran')]"),
+                                     ("pengaturan_ovo", "//*[@content-desc='Pengaturan' or @text='Pengaturan']")):
+                        if tap(d, xp, nama, 4):
+                            gulir_dan_catat_pengaturan(d)
+                            d.back()
+                            time.sleep(2)
     except Exception as e:
         index.append(f"langkah gagal: {type(e).__name__}: {str(e)[:200]}")
         try:
