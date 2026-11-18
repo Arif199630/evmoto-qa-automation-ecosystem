@@ -25,6 +25,7 @@ ap.add_argument("--port", type=int, default=8800)
 ap.add_argument("--run", default="", help="Nomor run yang dipantau; kosong = run terbaru yang judulnya cocok dengan --judul")
 ap.add_argument("--judul", default=r"evmoto-regression all", help="Regex judul run yang diikuti (default: regression penuh)")
 ap.add_argument("--referensi", default="44049612532", help="Run acuan untuk durasi per job (default: run penuh terjadwal 17 Nov 2026)")
+ap.add_argument("--ref-mobile", type=float, default=0, help="Durasi acuan (menit) untuk SEMUA job 'mobile (n)'; dipakai setelah pembagian shard berubah (mis. 45 untuk 7 shard Driver)")
 args = ap.parse_args()
 STATE = {"updated": "-", "run": None, "jobs": [], "error": "", "menunggu": "", "ringkas": {}, "eta": ""}
 REF = {}  # nama job -> durasi menit di run acuan
@@ -58,6 +59,12 @@ def muat_acuan():
         STATE["error"] = f"acuan tidak terbaca: {e}"
 
 
+def terapkan_ref_mobile():
+    if args.ref_mobile > 0:
+        for n in range(16):
+            REF[f"mobile ({n})"] = args.ref_mobile
+
+
 def pilih_run():
     campos = "databaseId,displayTitle,status,conclusion,createdAt,url"
     if args.run:
@@ -69,6 +76,7 @@ def pilih_run():
 
 def poll():
     muat_acuan()
+    terapkan_ref_mobile()
     while True:
         try:
             run = pilih_run()
