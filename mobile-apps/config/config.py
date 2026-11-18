@@ -32,9 +32,13 @@ if _pool_prefix and _pool_index >= 2:
 # Akun Driver per shard (CI paralel): satu akun Driver hanya boleh login di satu perangkat, jadi test aplikasi Driver dibagi ke beberapa shard
 # dengan akun masing-masing. TEST_DRIVER_POOL_INDEX 0 (atau kosong) = akun Driver utama (EVMOTO_DRIVER_PHONE); n >= 1 memakai DRIVER_KANDIDAT_{n+1}
 # yang diisi workflow dari secret (nomor tidak pernah ada di kode; repo publik).
+# DRIVER_POOL_URUTAN: nomor urut DRIVER_KANDIDAT_n yang dipakai shard 1,2,3,... (default 2,3,4,...); nomor yang dicadangkan untuk keperluan lain
+# (mis. akun UAT OVO yang juga berfungsi sebagai User) dilewati.
 _drv_index = int(os.getenv("TEST_DRIVER_POOL_INDEX", "-1") or -1)
+_drv_urutan = [x.strip() for x in os.getenv("DRIVER_POOL_URUTAN", "").split(",") if x.strip()]
 if _drv_index >= 1:
-    _drv_phone = os.getenv(f"DRIVER_KANDIDAT_{_drv_index + 1}", "")
+    _drv_nomor_urut = _drv_urutan[_drv_index - 1] if _drv_index - 1 < len(_drv_urutan) else str(_drv_index + 1)
+    _drv_phone = os.getenv(f"DRIVER_KANDIDAT_{_drv_nomor_urut}", "")
     if _drv_phone:
         for _key in ("EVMOTO_DRIVER_PHONE", "TEST_DRIVER_PHONE"):
             os.environ[_key] = _drv_phone

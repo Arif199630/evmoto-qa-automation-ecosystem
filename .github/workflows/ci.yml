@@ -119,13 +119,15 @@ jobs:
       CHUNK_SIZE: "8"
       HEADLESS_FAST: "1"
       QA_TEARDOWN_PAUSE: "1"
-      # 1 akun = 1 perangkat. Job 0-6: test Driver dibagi ke 7 akun Driver (job 0 akun utama, job 1-6 akun DRIVER_KANDIDAT_2..7 dari Secret),
-      # job 7: Aktivitas User (akun utama), job 8-15: akun QA Auto masing-masing (awalan nomor dari Secret ENV_MOBILE_APPS).
+      # 1 akun = 1 perangkat. Job 0-5: test Driver dibagi ke 6 akun Driver (job 0 akun utama, job 1-5 akun DRIVER_KANDIDAT_2,3,5,6,7 dari Secret),
+      # job 6: Aktivitas User (akun utama), job 7-15: akun QA Auto masing-masing (awalan nomor dari Secret ENV_MOBILE_APPS).
       # Sebelumnya 250 test Driver berjalan berurutan di job 0 (255 menit; 15 job lain 3-37 menit); kini kira-kira 40 test per job.
       ACCOUNT_SHARDING: "1"
-      DRIVER_SHARDS: "7"
+      DRIVER_SHARDS: "6"
+      # Nomor urut DRIVER_KANDIDAT untuk job 1-5 (urutan 4 dicadangkan: akun UAT OVO yang juga berfungsi sebagai User)
+      DRIVER_POOL_URUTAN: "2,3,5,6,7"
       TEST_DRIVER_POOL_INDEX: ${{ matrix.shard }}
-      TEST_USER_POOL_INDEX: ${{ matrix.shard == 7 && '1' || matrix.shard }}
+      TEST_USER_POOL_INDEX: ${{ matrix.shard == 6 && '1' || matrix.shard }}
       INSTALL_APK: "0"
       RESUME_DIR: sebelumnya
       FILE_INCLUDE: ${{ inputs.file_filter }}
