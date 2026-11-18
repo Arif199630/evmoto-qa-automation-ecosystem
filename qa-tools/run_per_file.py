@@ -38,8 +38,8 @@ def collect(path):
                            str(path.relative_to(project))], cwd=project, capture_output=True, text=True, env=os.environ.copy())
     nodes = [line.strip() for line in proc.stdout.splitlines() if "::" in line and not line.startswith(("<", "="))]
     k = os.getenv("PYTEST_K")
-    if k:  # hanya unit yang berisi test terpilih (pencocokan sederhana pada nama node)
-        nodes = [n for n in nodes if all(part.strip() in n for part in k.split(" and "))]
+    if k:  # hanya unit yang berisi test terpilih (pencocokan substring pada nama node; 'a or b' = salah satu, 'a and b' = semuanya)
+        nodes = [n for n in nodes if any(all(part.strip() in n for part in alt.split(" and ")) for alt in k.split(" or "))]
     return nodes
 
 
@@ -77,6 +77,8 @@ account_sharding = os.getenv("ACCOUNT_SHARDING") == "1"
 units = []
 for f in files:
     nodes = collect(f) if (chunk_size > 0 or account_sharding) else []
+    if os.getenv("PYTEST_K") and (chunk_size > 0 or account_sharding) and not nodes:
+        continue  # k_filter aktif dan file ini tidak punya test terpilih: jangan jadikan unit 'seluruh file'
     if account_sharding and nodes:
         # Pisahkan test per perangkat dulu (satu akun = satu perangkat), lalu potong per CHUNK_SIZE
         devices = device_of_tests(f)
