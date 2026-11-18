@@ -173,6 +173,16 @@ def main():
                     for nama, xp in (("riwayat_pembayaran", "//*[starts-with(@content-desc,'Lihat riwayat pembayaran')]"),
                                      ("pengaturan_ovo", "//*[@content-desc='Pengaturan' or @text='Pengaturan']")):
                         if tap(d, xp, nama, 4):
+                            if nama == "pengaturan_ovo":
+                                # Ketukan elemen tidak mengganti layar (run 44264047876): coba ketukan koordinat dan catat 1 dan 4 detik sesudahnya
+                                els = d.find_elements("xpath", xp)
+                                if els:
+                                    rc = els[0].rect
+                                    d.execute_script("mobile: clickGesture", {"x": rc["x"] + rc["width"] // 2, "y": rc["y"] + rc["height"] // 2})
+                                    time.sleep(1)
+                                    save(d, "pengaturan_ovo_gesture_1dtk")
+                                    time.sleep(3)
+                                    save(d, "pengaturan_ovo_gesture_4dtk")
                             gulir_dan_catat_pengaturan(d)
                             d.back()
                             time.sleep(2)
