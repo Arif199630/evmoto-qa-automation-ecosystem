@@ -18,6 +18,9 @@ on:
       k_filter:
         description: "Opsional: ekspresi pytest -k untuk menjalankan test tertentu saja, mis. TC_FARE_UI"
         default: ""
+      apk_set:
+        description: "APK yang diuji: dev (default, dipakai regression harian) atau uat (Release apk-uat, khusus eksekusi TC UAT)"
+        default: "dev"
       simulasi_emulator_mati:
         description: "Uji pemulihan emulator: matikan emulator sengaja setelah restart zygote (true/false). Biarkan false untuk run normal."
         default: "false"
@@ -149,15 +152,20 @@ jobs:
       - name: Tulis .env dari Secrets
         run: printf '%s\n' "$ENV_MOBILE" > mobile-apps/.env
         env: { ENV_MOBILE: "${{ secrets.ENV_MOBILE_APPS }}" }
-      - name: Ambil APK dev (terenkripsi di Release) lalu buka enkripsinya
+      - name: Ambil APK (terenkripsi di Release) lalu buka enkripsinya
         env:
           GH_TOKEN: ${{ github.token }}
-          APK_PASSPHRASE: ${{ secrets.APK_PASSPHRASE }}
+          APK_SET: ${{ inputs.apk_set || 'dev' }}
+          APK_PASSPHRASE_DEV: ${{ secrets.APK_PASSPHRASE }}
+          APK_PASSPHRASE_UAT: ${{ secrets.APK_UAT_PASSPHRASE }}
         run: |
+          # apk_set=dev (default, regression harian) -> Release apk-dev; apk_set=uat -> Release apk-uat (khusus eksekusi TC UAT)
+          if [ "$APK_SET" = "uat" ]; then TAG=apk-uat; FILE=evmoto-apk-uat.tar.gz.enc; export APK_PASSPHRASE="$APK_PASSPHRASE_UAT"
+          else TAG=apk-dev; FILE=evmoto-apk-dev.tar.gz.enc; export APK_PASSPHRASE="$APK_PASSPHRASE_DEV"; fi
+          echo "Set APK: $APK_SET (Release $TAG)"
           mkdir -p apk
-          gh release download apk-dev -R "${{ github.repository }}" -p 'evmoto-apk-dev.tar.gz.enc' -D apk             || { echo "::error::APK terenkripsi belum ada di Release apk-dev (lihat apps/README.md)"; exit 1; }
-          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass env:APK_PASSPHRASE \
-            -in apk/evmoto-apk-dev.tar.gz.enc | tar -xz -C apk
+          gh release download "$TAG" -R "${{ github.repository }}" -p "$FILE" -D apk             || { echo "::error::APK terenkripsi belum ada di Release $TAG (lihat apps/README.md)"; exit 1; }
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass env:APK_PASSPHRASE             -in "apk/$FILE" | tar -xz -C apk
           ls apk
       - name: Ambil hasil percobaan sebelumnya (lanjutkan run yang di-pause)
         if: ${{ github.run_attempt > 1 || inputs.lanjutkan_dari != '' }}
