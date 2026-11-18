@@ -8,6 +8,8 @@ dan Penilaian Rating Driver.
 Sesuai spesifikasi Sheet 'User' (TC40 s/d TC87).
 ================================================================================
 """
+import time
+
 from appium.webdriver.common.appiumby import AppiumBy
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
@@ -262,13 +264,27 @@ class TrackingPage(BasePage):
         """Memeriksa apakah layar berada dalam state pencarian driver."""
         return self.is_displayed(self.STATUS_SEARCHING_DRIVER, timeout=timeout)
 
+    # Peta layar CI 18 Nov 2026 (peta_batal_order): panel 'Sedang mencari driver' terpotong di layar 320x640; Button 'Batalkan' baru terlihat
+    # setelah panel digeser ke atas. Dialog 'Apakah Anda yakin ingin membatalkan pesanan?' punya Button 'Tutup' dan 'Batalkan' (konfirmasi).
+    _XP_BATALKAN_PERSIS = "//android.widget.Button[@content-desc='Batalkan' or @text='Batalkan']"
+    _XP_TUTUP_PERSIS = "//android.widget.Button[@content-desc='Tutup' or @text='Tutup']"
+
     def cancel_searching_driver(self, confirm: bool = True):
-        """Membatalkan proses pencarian driver."""
-        self.click(self.BTN_CANCEL_SEARCHING, label="Tombol Batalkan Pencarian")
+        """Membatalkan proses pencarian driver: geser panel ke atas, ketuk 'Batalkan', lalu 'Batalkan' (konfirmasi) atau 'Tutup'."""
+        size = self.driver.get_window_size()
+        x = size["width"] // 2
+        for _ in range(3):
+            if self.driver.find_elements("xpath", self._XP_BATALKAN_PERSIS):
+                break
+            self.driver.swipe(x, int(size["height"] * 0.93), x, int(size["height"] * 0.55), 600)
+            time.sleep(1.5)
+        self.click(("xpath", self._XP_BATALKAN_PERSIS), label="Tombol Batalkan Pencarian")
+        time.sleep(1.0)
         if confirm:
-            self.click(self.BTN_CONFIRM_CANCEL_SUBMIT, label="Konfirmasi Batalkan Pencarian")
+            # Dialog memuat Button 'Batalkan' kedua (konfirmasi) sebagai elemen terakhir
+            self.driver.find_elements("xpath", self._XP_BATALKAN_PERSIS)[-1].click()
         else:
-            self.click(self.BTN_CONFIRM_CANCEL_CLOSE, label="Tutup Dialog Pembatalan (Tetap Mencari)")
+            self.click(("xpath", self._XP_TUTUP_PERSIS), label="Tutup Dialog Pembatalan (Tetap Mencari)")
 
     def is_driver_assigned(self, timeout: int = 15) -> bool:
         """Memeriksa apakah driver telah ditemukan dan ditugaskan."""
