@@ -60,6 +60,38 @@ def tap(d, xpath, nama, tunggu=3, idx=0):
     return True
 
 
+def judul_metode_lainnya(d):
+    return bool(d.find_elements("xpath", "//*[@content-desc='Metode Lainnya']"))
+
+
+def ketuk_baris(d, xpath, nama):
+    """Ketuk baris dengan tiga cara bergantian (element.click, lalu clickGesture di tengah baris, lalu sekali lagi dengan tunggu 8 dtk).
+    Layar dicatat 1 detik setelah tiap ketukan agar pesan sementara (snackbar/dialog) ikut terbaca. True bila layar berganti."""
+    els = d.find_elements("xpath", xpath)
+    if not els:
+        index.append(f"   tidak ditemukan: {nama}")
+        return False
+    label = (els[0].get_attribute("content-desc") or "").strip()
+    if DILARANG.search(label):
+        index.append(f"   DILEWATI (tombol penyelesaian): {nama} '{label[:40]}'")
+        return False
+    rc = els[0].rect
+    x, y = rc["x"] + rc["width"] // 2, rc["y"] + rc["height"] // 2
+    for cara in ("click", "gesture", "gesture_tunggu_lama"):
+        if cara == "click":
+            els[0].click()
+        else:
+            d.execute_script("mobile: clickGesture", {"x": x, "y": y})
+        time.sleep(1)
+        save(d, f"{nama}_{cara}_1dtk")
+        time.sleep(8 if cara == "gesture_tunggu_lama" else 3)
+        if not judul_metode_lainnya(d):
+            save(d, f"{nama}_layar_baru")
+            return True
+    index.append(f"   layar tidak berganti setelah tiga cara ketuk: {nama}")
+    return False
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     d = DriverFactory.create_driver()
@@ -92,13 +124,7 @@ def main():
                     # (nomor OVO = nomor login akun). Ketuk baris OVO berulang sampai layar berganti, tanpa melanjutkan penautan.
                     for nama_baris in ("OVO", "GoPay"):
                         baris = f"//android.view.View[@clickable='true' and starts-with(@content-desc,'{nama_baris}')]"
-                        for percobaan in range(1, 5):
-                            if not tap(d, baris, f"pilih_{nama_baris.lower()}_{percobaan}", 4):
-                                break
-                            if not d.find_elements("xpath", "//*[@content-desc='Metode Lainnya']"):
-                                save(d, f"layar_tautan_{nama_baris.lower()}")
-                                break
-                        if not d.find_elements("xpath", "//*[@content-desc='Metode Lainnya']"):
+                        if ketuk_baris(d, baris, f"baris_{nama_baris.lower()}") and not judul_metode_lainnya(d):
                             d.back()
                             time.sleep(2)
                     d.back()
