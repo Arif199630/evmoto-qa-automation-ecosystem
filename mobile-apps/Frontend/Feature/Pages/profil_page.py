@@ -436,6 +436,12 @@ class ProfilPage(BasePage):
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Delete account') or contains(@content-desc, 'Hapus akun')]"
     )
+    # Peta layar CI 18 Nov 2026 (peta_akun): 'Keluar' dan 'Hapus akun' tidak ada di daftar utama Akun, tetapi di dalam menu
+    # 'Kelola Akun' (daftar utama: ... Syarat dan Ketentuan, Kebijakan Privasi, Periksa pembaruan, Chucker Debug, Kelola Akun, Versi Aplikasi).
+    MENU_KELOLA_AKUN = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Kelola Akun') or contains(@text, 'Kelola Akun')]"
+    )
     MODAL_DELETE_WARNING = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'permanen dan tidak dapat dipulihkan') or "
@@ -822,9 +828,18 @@ class ProfilPage(BasePage):
         self.click_with_scroll(self.MENU_PRIVACY, label="Menu 'Privacy Policy'")
 
     # 9. Hapus Akun
+    def buka_kelola_akun(self):
+        """Membuka 'Kelola Akun' (tempat 'Keluar' dan 'Hapus akun'). Tidak diketuk lagi bila kontrolnya sudah tampil."""
+        if self.driver.find_elements(*self.MENU_DELETE_ACCOUNT) and self.driver.find_elements(*self.BTN_LOGOUT):
+            return
+        self.tutup_popup_lanjutkan()
+        self.click_with_scroll(self.MENU_KELOLA_AKUN, label="Menu 'Kelola Akun'")
+        time.sleep(1.0)
+
     def open_delete_account_modal(self):
-        """Menekan menu 'Delete account' untuk memicu modal peringatan permanen."""
-        self.click_with_scroll(self.MENU_DELETE_ACCOUNT, label="Menu 'Delete account'")
+        """Membuka 'Kelola Akun' lalu menekan 'Hapus akun' untuk memicu modal peringatan permanen."""
+        self.buka_kelola_akun()
+        self.click(self.MENU_DELETE_ACCOUNT, label="Menu 'Hapus akun'")
 
     def is_delete_account_modal_displayed(self, timeout: int = 5) -> bool:
         """Memeriksa apakah modal peringatan hapus akun permanen muncul."""
@@ -839,8 +854,9 @@ class ProfilPage(BasePage):
 
     # 10. Bagian Paling Bawah: Logout
     def open_logout_dialog(self):
-        """Menekan tombol 'Log Out' untuk memicu dialog konfirmasi keluar."""
-        self.click_with_scroll(self.BTN_LOGOUT, label="Tombol 'Log Out'")
+        """Membuka 'Kelola Akun' lalu menekan 'Keluar' untuk memicu dialog konfirmasi keluar."""
+        self.buka_kelola_akun()
+        self.click(self.BTN_LOGOUT, label="Tombol 'Keluar'")
 
     def is_logout_dialog_displayed(self, timeout: int = 5) -> bool:
         """Memeriksa apakah dialog konfirmasi logout muncul."""
