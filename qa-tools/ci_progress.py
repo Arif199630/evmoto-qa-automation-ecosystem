@@ -116,7 +116,7 @@ def poll():
                        "total": len(jobs),
                        "persen_total": int(100 * bobot_selesai / bobot_total) if bobot_total else None}
             if run["status"] == "completed":
-                eta = "selesai"
+                eta = "DIBATALKAN: bukan hasil lengkap" if run.get("conclusion") == "cancelled" else "selesai"
             elif lewat and sisa <= 0:
                 eta = "melewati durasi acuan; perkiraan sulit"
             else:
