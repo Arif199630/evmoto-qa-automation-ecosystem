@@ -244,7 +244,7 @@ def main():
             return
         e.tutup_popup(du)
         e.save(du, "user", "beranda")
-        if METODE == "wallet":
+        if METODE in ("wallet", "ovo"):
             HASIL["saldo_sebelum"] = baca_saldo(du)
             r.append(f"   saldo sebelum order: {HASIL['saldo_sebelum']}")
         bp = BookingPage(du)
@@ -290,13 +290,26 @@ def main():
                 if slider_driver(dd, 20) is None:
                     buka_order_driver(dd, e)
             e.save(du, "user", "driver_ditemukan")
-            HASIL["tahap_digeser"] = bool(jalankan_tahap(dd, du, e, r, "order"))
+            try:
+                labels_tahap = jalankan_tahap(dd, du, e, r, "order")
+            except Exception as ex:
+                # run 44257980755: UiAutomator2 Driver mati ('socket hang up') tepat setelah terima order; sesi dibuat ulang lalu tahap dilanjutkan
+                r.append(f"   sesi Driver bermasalah saat tahap ({type(ex).__name__}), dibuat ulang lalu tahap dilanjutkan")
+                try:
+                    dd.quit()
+                except Exception:
+                    pass
+                dd = buat_sesi(no_reset=True, is_driver_app=True, udid="emulator-5556", system_port=8201)
+                time.sleep(6)
+                buka_order_driver(dd, e)
+                labels_tahap = jalankan_tahap(dd, du, e, r, "order")
+            HASIL["tahap_digeser"] = bool(labels_tahap)
             e.save(dd, "driver", "akhir")
             xml = e.save(du, "user", "akhir")
             if any(k in xml for k in ("Penilaian", "penilaian", "Selesai", "Perjalanan selesai")):
                 order_dibuat = False
                 HASIL["user_selesai"] = True
-            if METODE == "wallet":
+            if METODE in ("wallet", "ovo"):
                 if kembali_ke_beranda(du, e):
                     HASIL["saldo_sesudah"] = baca_saldo(du)
                 r.append(f"   saldo sesudah order: {HASIL['saldo_sesudah']}")
@@ -334,7 +347,7 @@ def main():
             gagal.append("tahap perjalanan driver tidak dijalankan")
         if not HASIL["user_selesai"]:
             gagal.append("layar akhir User tidak menunjukkan order selesai")
-        if METODE == "wallet":
+        if METODE in ("wallet", "ovo"):
             sb, sa = HASIL["saldo_sebelum"], HASIL["saldo_sesudah"]
             if sb is None or sa is None:
                 gagal.append(f"saldo tidak terbaca (sebelum={sb}, sesudah={sa})")
