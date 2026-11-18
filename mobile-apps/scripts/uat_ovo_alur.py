@@ -115,8 +115,16 @@ def main():
         login = LoginPage(d)
         if login.is_login_screen_displayed(timeout=20):
             login.input_phone_number((os.getenv(AKUN_VAR, "") if AKUN_VAR else "") or config.ACTIVE_PHONE)
+            save(d, "login_nomor_diisi")
             login.click_submit_login()
-            login.input_otp_dev(config.ACTIVE_OTP)
+            for detik in (1, 3, 6):  # pesan penolakan/validasi bisa hilang dalam ±3 detik, jadi dicatat bertahap
+                time.sleep(detik if detik == 1 else 2 if detik == 3 else 3)
+                save(d, f"login_setelah_masuk_{detik}dtk")
+            if d.find_elements(*login.TITLE_OTP):
+                login.input_otp_dev(config.ACTIVE_OTP)
+            else:
+                index.append("   layar OTP tidak muncul setelah 'Masuk': eksekusi dihentikan (tidak ada pendaftaran akun otomatis)")
+                return
         time.sleep(5)
         for el in d.find_elements("xpath", "//*[@content-desc='Lanjutkan']")[:1]:  # popup sambutan, bukan tombol penautan
             el.click()
