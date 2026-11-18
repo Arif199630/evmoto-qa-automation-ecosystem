@@ -47,6 +47,7 @@ BAYAR = ("//*[@content-desc='Sudah Terima Pembayaran' or @text='Sudah Terima Pem
 METODE = os.getenv("E2E_METODE", "cash").strip().lower()
 NAMA_METODE = {"cash": "Cash", "wallet": "Saldo EVMoto", "ovo": "OVO", "gopay": "GoPay"}.get(METODE, METODE)
 STRICT = os.getenv("E2E_STRICT", "0") == "1"
+CEK_DARURAT = os.getenv("E2E_CEK_DARURAT", "0") == "1"  # ketuk ikon sirene merah di layar perjalanan User dan catat apa yang terbuka
 HASIL = {"metode_terpilih": None, "order_terkirim": False, "driver_terima": False, "tahap_digeser": False,
          "user_selesai": False, "saldo_sebelum": None, "saldo_sesudah": None}
 
@@ -78,6 +79,34 @@ def kembali_ke_beranda(du, e, percobaan=6):
                 pass
         time.sleep(3)
     return baca_saldo(du) is not None
+
+
+def uji_darurat(du, e, r, awalan):
+    """Layar perjalanan User ('Dalam perjalanan'): ketuk ikon sirene merah (kanan peta, tanpa label aksesibilitas) dan catat apa yang terbuka.
+
+    Konfirmasi pemilik produk 18 Nov 2026: 'Kontak Darurat' ada di layar Order saat perjalanan (ikon sirene merah). Posisi ikon dari screenshot
+    run 44233461314 (layar 320x640): kanan, sekitar 38% dari atas. Hanya mengamati; setelah itu kembali dengan tombol Back.
+    """
+    try:
+        size = du.get_window_size()
+        x, y = int(size["width"] * 0.90), int(size["height"] * 0.38)
+        sebelum = du.current_package
+        du.execute_script("mobile: clickGesture", {"x": x, "y": y})
+        time.sleep(1)
+        e.save(du, "user", f"{awalan}_darurat_1dtk")
+        time.sleep(3)
+        e.save(du, "user", f"{awalan}_darurat_4dtk")
+        r.append(f"   {awalan}: ikon sirene diketuk di ({x},{y}); paket sebelum={sebelum}, sesudah={du.current_package}")
+        du.back()
+        time.sleep(2)
+        try:
+            du.activate_app(e.USER_PKG)  # bila yang terbuka aplikasi lain (mis. telepon)
+        except Exception:  # noqa: BLE001
+            pass
+        time.sleep(2)
+        e.save(du, "user", f"{awalan}_setelah_darurat_kembali")
+    except Exception as ex:  # noqa: BLE001
+        r.append(f"   {awalan}: pengamatan sirene gagal ({type(ex).__name__}: {str(ex)[:120]})")
 
 
 def slider_driver(dd, detik=60):
@@ -166,6 +195,8 @@ def jalankan_tahap(dd, du, e, r, awalan):
         r.append(f"   {awalan} tahap {tahap + 1}: geser '{lbl}'")
         e.save(dd, "driver", f"{awalan}_tahap_{tahap + 1}")
         e.save(du, "user", f"{awalan}_tahap_{tahap + 1}")
+        if tahap == 0 and CEK_DARURAT and awalan == "order":
+            uji_darurat(du, e, r, awalan)
         if ulang >= 2:
             r.append(f"   {awalan}: slider yang sama 3x berturut-turut, berhenti")
             break

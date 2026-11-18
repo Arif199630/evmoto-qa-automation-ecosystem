@@ -39,6 +39,14 @@ from utils.logger import get_logger
 logger = get_logger("TestProfil")
 
 
+# Konfirmasi pemilik produk (18 Nov 2026): 'Kontak Darurat' TIDAK ada di halaman Akun; fiturnya hanya ada di layar Order saat perjalanan
+# (ikon sirene merah di peta). Peta layar Akun (runs 44249110227 dan 44249130774) memang tidak memuat menu itu, baik di daftar utama maupun di
+# 'Kelola Akun'. Test di bawah mencari menu di Akun sehingga selalu TimeoutException; dihentikan sampai ditulis ulang untuk layar perjalanan
+# (cakupan layar perjalanan: E2E dua perangkat, e2e_darurat.py).
+ALASAN_KONTAK_DARURAT = ("Kontak Darurat hanya ada di layar Order saat perjalanan (ikon sirene merah), bukan di halaman Akun; "
+                         "test ini mencari menu di Akun. Dicakup E2E layar perjalanan.")
+
+
 class TestProfil:
     """Suite Pengujian Otomasi Halaman Profil Pengguna EvMoto (Happy Flow & 4 Pilar)."""
 
@@ -293,6 +301,7 @@ class TestProfil:
         print("  -> Pengaturan Pembayaran & Saldo Dompet terverifikasi fungsional.")
 
     @pytest.mark.pilar1_positive
+    @pytest.mark.skip(reason=ALASAN_KONTAK_DARURAT)
     def test_TC_PROF_PT_03_fitur_tambah_kontak_darurat_valid(self, driver):
         """[PT-03] Menambahkan kontak darurat baru dengan data nama dan nomor telepon sah."""
         print("\n>>> [PILAR 1: PT-03] FITUR TAMBAH KONTAK DARURAT VALID <<<")
@@ -534,6 +543,7 @@ class TestProfil:
     # --------------------------------------------------------------------------
 
     @pytest.mark.pilar2_negative
+    @pytest.mark.skip(reason=ALASAN_KONTAK_DARURAT)
     def test_TC_PROF_PF_01_pembatalan_dialog_hapus_kontak_darurat(self, driver):
         """[PF-01] Menekan tombol 'Hapus Kontak' lalu memilih Batal, memastikan data tidak terhapus."""
         print("\n>>> [PILAR 2: PF-01] PEMBATALAN DIALOG HAPUS KONTAK DARURAT <<<")
@@ -674,6 +684,7 @@ class TestProfil:
     # --------------------------------------------------------------------------
 
     @pytest.mark.pilar3_boundary
+    @pytest.mark.skip(reason=ALASAN_KONTAK_DARURAT)
     def test_TC_PROF_NT_01_kontak_darurat_nama_kosong(self, driver):
         """[NT-01] Validasi penolakan submit formulir kontak darurat saat nama dibiarkan kosong."""
         print("\n>>> [PILAR 3: NT-01] KONTAK DARURAT: NAMA KOSONG DITOLAK <<<")
@@ -699,6 +710,7 @@ class TestProfil:
         self.profil_page.press_back_key()
 
     @pytest.mark.pilar3_boundary
+    @pytest.mark.skip(reason=ALASAN_KONTAK_DARURAT)
     def test_TC_PROF_NT_02_kontak_darurat_nomor_telepon_invalid_alfabet(self, driver):
         """[NT-02] Validasi penolakan nomor telepon kontak darurat yang mengandung huruf."""
         print("\n>>> [PILAR 3: NT-02] KONTAK DARURAT: FORMAT NOMOR TELEPON ALFABETIS DITOLAK <<<")
@@ -723,6 +735,7 @@ class TestProfil:
         self.profil_page.press_back_key()
 
     @pytest.mark.pilar3_boundary
+    @pytest.mark.skip(reason=ALASAN_KONTAK_DARURAT)
     def test_TC_PROF_NT_03_boundary_value_nama_kontak_darurat_di_bawah_minimum(self, driver):
         """[NT-03] Menguji nilai batas panjang nama kontak darurat (1 karakter di bawah batas minimum)."""
         print("\n>>> [PILAR 3: NT-03] BVA: BATAS PANJANG NAMA KONTAK DI BAWAH MINIMUM (1 KARAKTER) <<<")
@@ -749,8 +762,8 @@ class TestProfil:
 
     @pytest.mark.pilar3_boundary
     def test_TC_PROF_NT_04_state_kosong_alamat_tersimpan_dan_kontak_darurat(self, driver):
-        """[NT-04] Memverifikasi deteksi empty state pada halaman Alamat Favorit dan Kontak Darurat."""
-        print("\n>>> [PILAR 3: NT-04] BVA: EMPTY STATE ALAMAT FAVORIT & KONTAK DARURAT <<<")
+        """[NT-04] Memverifikasi deteksi empty state pada halaman Alamat Favorit (bagian Kontak Darurat dihapus: fitur itu ada di layar perjalanan)."""
+        print("\n>>> [PILAR 3: NT-04] BVA: EMPTY STATE ALAMAT FAVORIT <<<")
         when("Membuka menu Alamat Tersimpan")
         self.profil_page.navigate_to_saved_addresses()
         time.sleep(2)
@@ -764,21 +777,9 @@ class TestProfil:
             )
         self.profil_page.press_back_key()
 
-        when("Membuka menu Kontak Darurat")
-        self.profil_page.navigate_to_emergency_contacts()
-        time.sleep(2)
-        is_contact_empty = self.profil_page.is_emergency_contacts_empty_state_displayed(timeout=4)
-        print(f"  -> Empty state kontak darurat: {is_contact_empty}")
-        if is_contact_empty:
-            assert self.profil_page.is_emergency_contact_empty_description_displayed(timeout=3), (
-                "[GAGAL NT-04] Empty state Kontak Darurat tidak lengkap: deskripsi "
-                "'Tambahkan kontak untuk akses cepat saat keadaan darurat.' tidak tampil!"
-            )
-        self.profil_page.press_back_key()
-
-        if not is_addr_empty and not is_contact_empty:
-            pytest.skip("[NT-04] Akun uji sudah memiliki alamat favorit dan kontak darurat, "
-                        "sehingga empty state tidak bisa diuji pada akun ini.")
+        # Bagian Kontak Darurat dihapus dari test ini: fitur itu hanya ada di layar perjalanan (lihat ALASAN_KONTAK_DARURAT).
+        if not is_addr_empty:
+            pytest.skip("[NT-04] Akun uji sudah memiliki alamat favorit, sehingga empty state tidak bisa diuji pada akun ini.")
 
     @pytest.mark.pilar3_boundary
     def test_TC_PROF_NT_05_submit_tiket_cs_deskripsi_kendala_kosong(self, driver):
@@ -801,6 +802,7 @@ class TestProfil:
         assert self.profil_page.is_profile_screen_displayed(timeout=5)
 
     @pytest.mark.pilar3_boundary
+    @pytest.mark.skip(reason=ALASAN_KONTAK_DARURAT)
     def test_TC_PROF_NT_06_batas_maksimal_kuota_kontak_darurat_bva(self, driver):
         """[NT-06] Boundary Value Analysis: Memverifikasi sistem membatasi penambahan kontak darurat sesuai kuota maksimal."""
         print("\n>>> [PILAR 3: NT-06] BVA: VERIFIKASI KUOTA MAKSIMAL KONTAK DARURAT <<<")
@@ -825,6 +827,7 @@ class TestProfil:
     # --------------------------------------------------------------------------
 
     @pytest.mark.pilar4_security
+    @pytest.mark.skip(reason=ALASAN_KONTAK_DARURAT)
     def test_TC_PROF_NF_01_sanitasi_sql_injection_pada_form_kontak_darurat(self, driver):
         """[NF-01] Menguji sanitasi payload SQL Injection (' OR '1'='1' --) pada form nama kontak."""
         print("\n>>> [PILAR 4: NF-01] KEAMANAN: UJI SANITASI SQL INJECTION <<<")
@@ -852,6 +855,7 @@ class TestProfil:
         print("  -> Proteksi sanitasi SQL Injection terverifikasi aman!")
 
     @pytest.mark.pilar4_security
+    @pytest.mark.skip(reason=ALASAN_KONTAK_DARURAT)
     def test_TC_PROF_NF_02_sanitasi_xss_script_pada_form_kontak_darurat(self, driver):
         """[NF-02] Menguji sanitasi payload Cross-Site Scripting (XSS) pada form profil pengguna."""
         print("\n>>> [PILAR 4: NF-02] KEAMANAN: UJI SANITASI CROSS-SITE SCRIPTING (XSS) <<<")
