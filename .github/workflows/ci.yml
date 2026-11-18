@@ -152,6 +152,10 @@ jobs:
       - name: Tulis .env dari Secrets
         run: printf '%s\n' "$ENV_MOBILE" > mobile-apps/.env
         env: { ENV_MOBILE: "${{ secrets.ENV_MOBILE_APPS }}" }
+      - name: Tambah nomor UAT OVO ke .env (khusus apk_set=uat)
+        if: ${{ inputs.apk_set == 'uat' }}
+        run: printf '%s\n' "$UAT_OVO_PHONES" >> mobile-apps/.env
+        env: { UAT_OVO_PHONES: "${{ secrets.UAT_OVO_PHONES }}" }
       - name: Ambil APK (terenkripsi di Release) lalu buka enkripsinya
         env:
           GH_TOKEN: ${{ github.token }}
@@ -211,6 +215,30 @@ jobs:
           cp appium.log bukti/ 2>/dev/null || true
           cp -r mobile-apps/reports/screen_map bukti/ 2>/dev/null || true
           cp -r mobile-apps/reports/repro bukti/ 2>/dev/null || true
+      - name: Sensor nomor UAT di bukti (artifact repo publik bisa diunduh siapa pun)
+        if: ${{ always() && inputs.apk_set == 'uat' }}
+        env: { UAT_OVO_PHONES: "${{ secrets.UAT_OVO_PHONES }}" }
+        run: |
+          python - <<'PY'
+          import os, re, pathlib
+          nums = re.findall(r"=(\d{8,15})", os.environ.get("UAT_OVO_PHONES", ""))
+          pola = sorted({p for n in nums for p in (n, "62" + n, "0" + n)}, key=len, reverse=True)
+          mask = lambda n: n[:3] + "*" * max(len(n) - 5, 1) + n[-2:]
+          ubah = hapus = 0
+          for f in pathlib.Path("bukti").rglob("*"):
+              if not f.is_file():
+                  continue
+              if f.suffix.lower() in (".png", ".jpg", ".mp4"):
+                  f.unlink(); hapus += 1  # gambar bisa memuat nomor dan tidak bisa disensor; UAT tidak memakai screenshot
+                  continue
+              data = f.read_bytes()
+              baru = data
+              for p in pola:
+                  baru = baru.replace(p.encode(), mask(p).encode())
+              if baru != data:
+                  f.write_bytes(baru); ubah += 1
+          print(f"sensor nomor UAT: {ubah} file diubah, {hapus} gambar dihapus, {len(pola)} pola")
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
