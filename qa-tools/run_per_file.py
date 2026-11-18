@@ -246,12 +246,12 @@ def run_bucket(index, group):
                    "-p", "no:cacheprovider", "-rfE", f"--junitxml={xml}", *extra]
             fh.write(f"### {label}\n")
             fh.flush()
-            for percobaan in (1, 2):
+            for percobaan in (1, 2, 3):  # run 44232627400: emulator shard 3 mati dua kali berturut-turut; satu pemulihan tidak cukup
                 proc = subprocess.run(cmd, cwd=project, stdout=fh, stderr=subprocess.STDOUT, env=os.environ.copy())
                 fh.write(f"### exit {proc.returncode} {label}\n")
                 fh.flush()
                 # Perangkat hilang di tengah unit: nyalakan emulator lagi lalu ulangi unit ini sekali
-                if percobaan == 1 and has_infra_error(xml) and not device_alive() and recover_emulator():
+                if percobaan < 3 and has_infra_error(xml) and not device_alive() and recover_emulator():
                     fh.write(f"### emulator mati lalu dipulihkan, unit {label} diulang\n")
                     fh.flush()
                     xml.unlink(missing_ok=True)
