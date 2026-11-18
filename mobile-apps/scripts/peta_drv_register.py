@@ -5,7 +5,6 @@ Latar belakang (18 Nov 2026): 21 test test_drv_register gagal di enter_plate_num
 sampai formulir muncul. Tidak mengunggah berkas dan TIDAK menekan 'Kirim': tidak ada pendaftaran yang diselesaikan.
 Nomor yang diketik acak (awalan 899) dan tidak terhubung ke orang; OTP memakai kode bypass dev.
 Hasil: reports/repro/peta_drv_register/NN_<layar>.xml|.png dan index.txt."""
-import os
 import random
 import re
 import sys
