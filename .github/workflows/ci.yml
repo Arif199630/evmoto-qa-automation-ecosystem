@@ -167,7 +167,7 @@ jobs:
           arch: x86_64
           ram-size: 4096M
           disk-size: 6000M
-          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -dns-server 8.8.8.8,1.1.1.1
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -dns-server 8.8.8.8,1.1.1.1 -prop persist.sys.locale=id-ID
           disable-animations: true
           script: |
             adb root || true
@@ -181,10 +181,14 @@ jobs:
             adb shell getprop sys.boot_completed | grep -q 1 || { echo "EMULATOR_MATI_SEBELUM_INSTALL_APK"; exit 1; }
             adb install -r -g apk/evmoto-user.apk
             adb install -r -g apk/evmoto-driver.apk
+            # Bahasa Indonesia per aplikasi (Android 13+), tanpa restart zygote. Appium language/locale saja TIDAK cukup di API 35
+            # (run 17 Nov 2026 setelah restart zygote dihapus: layar aplikasi berbahasa Inggris, banyak locator Indonesia gagal TimeoutException).
+            for pkg in com.evmoto.user.app com.evmoto.driver.app; do adb shell cmd locale set-app-locales $pkg --locales id-ID || echo "set-app-locales $pkg gagal"; done
             mkdir -p bukti
             echo "== Cek jaringan dari dalam emulator ke backend staging ==" | tee bukti/cek_jaringan.txt
             adb shell "ping -c 3 -W 3 evmotodev.justkidding.app" >> bukti/cek_jaringan.txt 2>&1 || echo "ping gagal" >> bukti/cek_jaringan.txt
             adb shell "getprop net.dns1; getprop persist.sys.locale; getprop ro.build.version.sdk" >> bukti/cek_jaringan.txt 2>&1 || true
+            for pkg in com.evmoto.user.app com.evmoto.driver.app; do adb shell cmd locale get-app-locales $pkg >> bukti/cek_jaringan.txt 2>&1 || true; done
             adb shell "dumpsys package com.google.android.gms | grep -m1 versionCode" >> bukti/cek_jaringan.txt 2>&1 || true
             cat bukti/cek_jaringan.txt
             adb logcat -c || true
