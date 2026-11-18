@@ -214,7 +214,9 @@ jobs:
 
   laporan:
     needs: [admin, api, mobile]
-    if: always()
+    # Run skrip tunggal (skrip/skrip2/peta/...) tidak menghasilkan JUnit/run_info, sehingga merge_runs/report gagal (KeyError 'environment')
+    # dan menandai seluruh run 'failure' walau job mobile sukses (run 44233461314). Laporan PDF hanya untuk run regression.
+    if: ${{ always() && !contains(fromJSON('["peta","repro","diag","petadriver","skrip","skrip2"]'), inputs.suites || 'regression') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
