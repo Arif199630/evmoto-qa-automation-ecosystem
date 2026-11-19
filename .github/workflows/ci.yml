@@ -21,6 +21,9 @@ on:
       apk_set:
         description: "APK yang diuji: dev (default, dipakai regression harian) atau uat (Release apk-uat, khusus eksekusi TC UAT)"
         default: "dev"
+      simpan_gambar:
+        description: "Isi 1 agar screenshot tetap disimpan pada run apk_set=uat (default: gambar run uat dihapus karena run UAT OVO memuat nomor akun)"
+        default: ""
       simulasi_emulator_mati:
         description: "Uji pemulihan emulator: matikan emulator sengaja setelah restart zygote (true/false). Biarkan false untuk run normal."
         default: "false"
@@ -230,7 +233,7 @@ jobs:
           DRIVER_KANDIDAT: ${{ secrets.DRIVER_KANDIDAT }}
           # Gambar dihapus hanya pada run UAT/penyaringan akun (tidak memakai screenshot); run regression biasa tetap menyimpan screenshot
           # kegagalan dan hanya memasking nomor di berkas teks (XML/log).
-          HAPUS_GAMBAR: ${{ (inputs.apk_set == 'uat' || startsWith(inputs.file_filter, 'cek_akun_driver')) && '1' || '0' }}
+          HAPUS_GAMBAR: ${{ ((inputs.apk_set == 'uat' && inputs.simpan_gambar != '1') || startsWith(inputs.file_filter, 'cek_akun_driver')) && '1' || '0' }}
         run: |
           python - <<'PY'
           import os, re, pathlib
