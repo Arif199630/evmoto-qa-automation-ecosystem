@@ -121,12 +121,13 @@ class BasePage:
                 or self.is_displayed(("xpath", self._XP_BANNER_BERJALAN), timeout=2)):
             return False
         logger.info("Order sisa ('Sedang berjalan' / 'Sedang mencari driver') terdeteksi, membatalkan...")
-        for percobaan in range(1, 4):
+        # Titik awal geser harus tepat di atas panel: panel 'Sedang mencari driver' di layar pelacakan berada di sekitar y=541 (85% tinggi layar),
+        # banner 'Sedang berjalanan' di Beranda y=488-552. Titik 80% (run 44484545989) mengenai peta pada layar pelacakan sehingga panel tidak bergeser.
+        for percobaan in range(1, 5):
             size = self.driver.get_window_size()
             x = size["width"] // 2
             try:
-                # Geser dari banner (sekitar 80% tinggi layar, di atas bilah navigasi) ke atas; percobaan lain dari tepi bawah.
-                awal = 0.80 if percobaan != 2 else 0.93
+                awal = (0.86, 0.80, 0.93, 0.84)[percobaan - 1]
                 self.driver.swipe(x, int(size["height"] * awal), x, int(size["height"] * 0.25), 600)
             except Exception:  # noqa: BLE001
                 pass
@@ -143,7 +144,7 @@ class BasePage:
                     or self.driver.find_elements("xpath", self._XP_BANNER_BERJALAN)):
                 logger.info(f"Order sisa dibatalkan (percobaan {percobaan})")
                 return True
-        logger.warning("Order sisa tidak berhasil dibatalkan setelah 3 percobaan")
+        logger.warning("Order sisa tidak berhasil dibatalkan setelah 4 percobaan")
         return False
 
     def tutup_popup_lanjutkan(self) -> bool:
