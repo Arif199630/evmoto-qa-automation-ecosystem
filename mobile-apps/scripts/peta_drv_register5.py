@@ -30,7 +30,7 @@ def catat(teks):
 def unggah_foto(d, label_el, nama):
     """Ketuk kotak foto di bawah label, pilih 'Galeri', pilih foto pertama; True bila kembali ke aplikasi Driver."""
     r = label_el.rect
-    d.tap([(int(d.get_window_size()["width"] * 0.5), int(r["y"] + r["height"] + 70))], 150)
+    d.tap([(int(d.get_window_size()["width"] * 0.5), int(r["y"] + r["height"] + 35))], 150)
     time.sleep(2.5)
     galeri = d.find_elements("xpath", "//*[@content-desc='Galeri' or @text='Galeri']")
     if not galeri:
