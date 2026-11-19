@@ -82,19 +82,17 @@ def main():
             for kata in ("OK", "Pilih", "Simpan", "Selesai", "Konfirmasi", "Batal"):
                 for el in d.find_elements("xpath", f"//*[@text='{kata}' or @content-desc='{kata}']")[:1]:
                     catat(f"tombol di pemilih tanggal: '{kata}'")
-            # coba ketik langsung bila kolom menerima teks
-            try:
-                tgl.send_keys("2024-01-15")
+            hari = d.find_elements("xpath", "//*[starts-with(@content-desc,'1, ') and contains(@content-desc,'November 2026')]")
+            catat(f"sel hari 1 November ditemukan: {len(hari)}")
+            if hari:
+                hari[0].click()
                 time.sleep(1)
-                q.save(d, "setelah_ketik_tanggal")
-                catat(f"nilai kolom setelah ketik: '{tgl.get_attribute('text')}'")
-            except Exception as ex:  # noqa: BLE001
-                catat(f"ketik tanggal gagal: {type(ex).__name__}")
-            for kata in ("OK", "Pilih", "Simpan", "Selesai", "Konfirmasi"):
+            for kata in ("OKE", "OK"):
                 el = d.find_elements("xpath", f"//*[@text='{kata}' or @content-desc='{kata}']")
                 if el:
                     el[0].click()
                     time.sleep(2)
+                    catat(f"tombol '{kata}' diketuk")
                     break
             xml = q.save(d, "setelah_pilih_tanggal")
             catat(f"setelah pilih tanggal: {q.semua_label(xml)[:20]}")
