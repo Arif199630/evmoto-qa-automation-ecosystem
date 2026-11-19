@@ -193,8 +193,7 @@ class DrvRegisterPage(BasePage):
             self._klik_langsung(self.BTN_LANJUTKAN, f"Lanjutkan (OTP), percobaan {percobaan}")
             if self.is_displayed(self.PENANDA_FORMULIR, timeout=12):
                 return
-            teks = [(e.get_attribute("content-desc") or e.get_attribute("text") or "").replace("
-", "/")[:60]
+            teks = [(e.get_attribute("content-desc") or e.get_attribute("text") or "")[:60]
                     for e in self.driver.find_elements("xpath", "//*[@content-desc or @text]")]
             logger.warning(f"Setelah OTP percobaan {percobaan} formulir belum tampil; isi layar: {[t for t in teks if t.strip()][:12]}")
         raise AssertionError("Formulir 'Data Informasi Personal' tidak tampil setelah OTP (3 percobaan Lanjutkan)")
