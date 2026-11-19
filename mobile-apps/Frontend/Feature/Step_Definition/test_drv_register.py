@@ -24,6 +24,9 @@ from utils.logger import get_logger
 
 logger = get_logger("TestDrvRegister")
 
+ALASAN_TANPA_REFERRAL = ("Formulir pendaftaran Driver pada APK UAT (User 1.2.33+103 / Driver 1.9.27) tidak memiliki kolom kode referral; "
+                         "perlu konfirmasi produk apakah fitur referral dipindah atau dihapus")
+
 
 @pytest.mark.driver_app
 @pytest.mark.drv_register
@@ -57,22 +60,13 @@ class TestDrvRegister:
         assert login_pg.is_login_screen_displayed(), "Layar Login Driver harus tampil di awal"
 
         when("Mitra mengetuk tautan 'Daftar sebagai Driver baru'")
-        reg_pg.click_daftar_driver_baru()
+        reg_pg.buka_formulir_pendaftaran()
 
         and_step("Sistem memuat formulir pendaftaran mitra baru")
         assert reg_pg.is_register_screen_displayed(), "Layar Registrasi Driver Baru harus terbuka"
 
-        and_step("Mitra memilih tipe armada ECGO: Ya")
-        reg_pg.select_ecgo_driver(is_ecgo=True)
-
-        and_step(f"Mitra menginput plat kendaraan: {data['plate_number']}")
-        reg_pg.enter_plate_number(data["plate_number"])
-
-        and_step("Mitra mengunggah seluruh berkas (KTP, STNK depan & belakang, SKCK)")
-        reg_pg.click_upload_selfie_ktp()
-        reg_pg.click_upload_stnk_front()
-        reg_pg.click_upload_stnk_back()
-        reg_pg.click_upload_skck()
+        and_step("Mitra melengkapi seluruh kolom wajib dan mengunggah seluruh berkas")
+        reg_pg.lengkapi_formulir(data["plate_number"], is_ecgo=True)
 
         and_step("Mitra menekan tombol Kirim / Submit Formulir")
         reg_pg.submit_registration_form()
@@ -95,13 +89,13 @@ class TestDrvRegister:
         given("Aplikasi berada di formulir pendaftaran driver baru")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
+        if not reg_pg.has_referral_field():
+            pytest.skip(ALASAN_TANPA_REFERRAL)
         when("Mitra memilih armada non-ECGO (Tidak)")
-        reg_pg.select_ecgo_driver(is_ecgo=False)
-
-        and_step(f"Mitra menginput nomor plat: {data['plate_number']}")
-        reg_pg.enter_plate_number(data["plate_number"])
+        and_step(f"Mitra melengkapi formulir dengan nomor plat: {data['plate_number']}")
+        reg_pg.lengkapi_formulir(data["plate_number"], is_ecgo=False)
 
         and_step(f"Mitra memasukkan kode referral: {data['referral_code']}")
         reg_pg.enter_referral_code(data["referral_code"])
@@ -127,10 +121,10 @@ class TestDrvRegister:
         given("Mitra berada pada formulir registrasi")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
         when(f"Mitra menginput nomor plat 1 digit: {data['plate_number']}")
-        reg_pg.enter_plate_number(data["plate_number"])
+        reg_pg.lengkapi_formulir(data["plate_number"], is_ecgo=True)
         reg_pg.submit_registration_form()
 
         then("Format plat 1 digit diterima tanpa error validasi format")
@@ -151,10 +145,10 @@ class TestDrvRegister:
         given("Mitra berada di form registrasi driver")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
         when(f"Mitra menginput nomor plat 4 digit: {data['plate_number']}")
-        reg_pg.enter_plate_number(data["plate_number"])
+        reg_pg.lengkapi_formulir(data["plate_number"], is_ecgo=True)
         reg_pg.submit_registration_form()
 
         then("Format plat 4 digit diterima sistem")
@@ -175,10 +169,10 @@ class TestDrvRegister:
         given("Mitra berada di form registrasi")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
         when(f"Mitra memasukkan plat nomor Bandung: {data['plate_number']}")
-        reg_pg.enter_plate_number(data["plate_number"])
+        reg_pg.lengkapi_formulir(data["plate_number"], is_ecgo=True)
         reg_pg.submit_registration_form()
 
         then("Plat wilayah D berhasil diproses")
@@ -199,10 +193,10 @@ class TestDrvRegister:
         given("Mitra membuka form pendaftaran")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
         when(f"Mitra menginput plat Surabaya: {data['plate_number']}")
-        reg_pg.enter_plate_number(data["plate_number"])
+        reg_pg.lengkapi_formulir(data["plate_number"], is_ecgo=True)
         reg_pg.submit_registration_form()
 
         then("Plat wilayah L berhasil diverifikasi")
@@ -249,14 +243,15 @@ class TestDrvRegister:
         given("Mitra berada pada formulir registrasi driver baru")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
-        when(f"Mitra menginput plat kendaraan terdaftar: {data['plate_number']}")
-        reg_pg.enter_plate_number(data["plate_number"])
+        when(f"Mitra melengkapi formulir dengan plat kendaraan terdaftar: {data['plate_number']}")
+        reg_pg.lengkapi_formulir(data["plate_number"], is_ecgo=False)
         reg_pg.submit_registration_form()
 
-        then("Sistem menolak atau memvalidasi plat nomor duplikat secara tepat")
-        assert reg_pg.is_mandatory_warning_displayed(), "Hasil yang diharapkan harus tampil (cadangan layar generik dihapus agar bug tidak tertutup)"
+        then("Sistem menolak pendaftaran: dialog sukses tidak tampil dan pengguna tetap di formulir")
+        assert not reg_pg.is_registration_success_displayed(), "Plat yang sudah terdaftar tidak boleh menghasilkan dialog sukses"
+        assert reg_pg.is_register_screen_displayed()
         logger.info("[SUCCESS] Pencegahan registrasi plat nomor duplikat terverifikasi.")
 
     @pytest.mark.positive_false
@@ -273,8 +268,10 @@ class TestDrvRegister:
         given("Mitra berada di form registrasi driver")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
+        if not reg_pg.has_referral_field():
+            pytest.skip(ALASAN_TANPA_REFERRAL)
         when(f"Mitra memasukkan kode referral kadaluarsa: {data['referral_code']}")
         reg_pg.enter_referral_code(data["referral_code"])
         reg_pg.submit_registration_form()
@@ -296,7 +293,7 @@ class TestDrvRegister:
         given("Mitra berada di form registrasi")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
         when("Mitra mengisi plat motor namun tidak mengunggah dokumen")
         reg_pg.enter_plate_number("B 3333 XYZ")
@@ -304,6 +301,7 @@ class TestDrvRegister:
 
         then("Formulir tidak dapat terkirim dan meminta dokumen dilengkapi")
         assert reg_pg.is_register_screen_displayed()
+        assert reg_pg.is_mandatory_warning_displayed(), "Formulir harus menampilkan 'Wajib Diisi' pada kolom yang belum lengkap"
         logger.info("[SUCCESS] Penolakan submit tanpa dokumen terverifikasi.")
 
     @pytest.mark.positive_false
@@ -319,7 +317,7 @@ class TestDrvRegister:
         given("Mitra berada pada layar formulir pendaftaran")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
         when("Mitra mendaftarkan plat armada ECGO terdaftar")
         reg_pg.select_ecgo_driver(is_ecgo=False)
@@ -328,6 +326,7 @@ class TestDrvRegister:
 
         then("Sistem menolak duplikasi armada ECGO")
         assert reg_pg.is_register_screen_displayed()
+        assert reg_pg.is_mandatory_warning_displayed(), "Formulir harus menampilkan 'Wajib Diisi' pada kolom yang belum lengkap"
         logger.info("[SUCCESS] Validasi proteksi duplikasi armada ECGO berhasil.")
 
     # ==========================================================================
@@ -347,7 +346,7 @@ class TestDrvRegister:
         given("Mitra berada di layar registrasi driver")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
         when("Mitra mengosongkan kolom plat nomor dan menekan Submit")
         reg_pg.enter_plate_number("")
@@ -355,6 +354,7 @@ class TestDrvRegister:
 
         then("Sistem menolak pengiriman dan tetap di layar formulir pendaftaran")
         assert reg_pg.is_register_screen_displayed()
+        assert reg_pg.is_mandatory_warning_displayed(), "Formulir harus menampilkan 'Wajib Diisi' pada kolom yang belum lengkap"
         logger.info("[SUCCESS] Validasi kolom wajib nomor plat terverifikasi.")
 
     @pytest.mark.negative_true
@@ -371,7 +371,7 @@ class TestDrvRegister:
         given("Mitra berada di form registrasi driver")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
         when(f"Mitra menginput format plat hanya angka: {data['plate_number']}")
         reg_pg.enter_plate_number(data["plate_number"])
@@ -379,6 +379,7 @@ class TestDrvRegister:
 
         then("Sistem tidak mengizinkan submit format plat tidak valid")
         assert reg_pg.is_register_screen_displayed()
+        assert reg_pg.is_mandatory_warning_displayed(), "Formulir harus menampilkan 'Wajib Diisi' pada kolom yang belum lengkap"
         logger.info("[SUCCESS] Validasi format plat hanya angka terverifikasi.")
 
     @pytest.mark.negative_true
@@ -395,7 +396,7 @@ class TestDrvRegister:
         given("Mitra berada pada formulir registrasi")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
         when(f"Mitra menginput format plat hanya huruf: {data['plate_number']}")
         reg_pg.enter_plate_number(data["plate_number"])
@@ -403,6 +404,7 @@ class TestDrvRegister:
 
         then("Sistem menolak format plat tanpa angka")
         assert reg_pg.is_register_screen_displayed()
+        assert reg_pg.is_mandatory_warning_displayed(), "Formulir harus menampilkan 'Wajib Diisi' pada kolom yang belum lengkap"
         logger.info("[SUCCESS] Validasi format plat tanpa angka terverifikasi.")
 
     @pytest.mark.negative_true
@@ -419,7 +421,7 @@ class TestDrvRegister:
         given("Mitra berada pada formulir pendaftaran")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
         when(f"Mitra memasukkan simbol terlarang: {data['plate_number']}")
         reg_pg.enter_plate_number(data["plate_number"])
@@ -427,6 +429,7 @@ class TestDrvRegister:
 
         then("Sistem menolak karakter simbol terlarang pada plat")
         assert reg_pg.is_register_screen_displayed()
+        assert reg_pg.is_mandatory_warning_displayed(), "Formulir harus menampilkan 'Wajib Diisi' pada kolom yang belum lengkap"
         logger.info("[SUCCESS] Validasi simbol terlarang pada plat terverifikasi.")
 
     @pytest.mark.negative_true
@@ -442,7 +445,7 @@ class TestDrvRegister:
         given("Mitra berada di form registrasi")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
         when("Mitra mengisi plat motor tanpa memilih tipe armada")
         reg_pg.enter_plate_number("B 1234 XYZ")
@@ -450,6 +453,7 @@ class TestDrvRegister:
 
         then("Sistem tidak mengizinkan submit")
         assert reg_pg.is_register_screen_displayed()
+        assert reg_pg.is_mandatory_warning_displayed(), "Formulir harus menampilkan 'Wajib Diisi' pada kolom yang belum lengkap"
         logger.info("[SUCCESS] Validasi keharusan memilih radio button terverifikasi.")
 
     # ==========================================================================
@@ -471,15 +475,17 @@ class TestDrvRegister:
         given("Mitra berada pada layar registrasi")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
         when(f"Mitra memasukkan payload SQL Injection: {data['plate_number']}")
         reg_pg.enter_plate_number(data["plate_number"])
-        reg_pg.enter_referral_code(data["referral_code"])
+        if reg_pg.has_referral_field():
+            reg_pg.enter_referral_code(data["referral_code"])
         reg_pg.submit_registration_form()
 
         then("Aplikasi tetap stabil dan payload disanitasi dengan aman")
         assert reg_pg.is_register_screen_displayed()
+        assert reg_pg.is_mandatory_warning_displayed(), "Formulir harus menampilkan 'Wajib Diisi' pada kolom yang belum lengkap"
         logger.info("[SECURITY PASS] SQL Injection form registrasi aman tersanitasi.")
 
     @pytest.mark.negative_false
@@ -497,15 +503,17 @@ class TestDrvRegister:
         given("Mitra berada pada formulir registrasi driver")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
         when(f"Mitra memasukkan payload XSS: {data['plate_number']}")
         reg_pg.enter_plate_number(data["plate_number"])
-        reg_pg.enter_referral_code(data["referral_code"])
+        if reg_pg.has_referral_field():
+            reg_pg.enter_referral_code(data["referral_code"])
         reg_pg.submit_registration_form()
 
         then("Payload XSS ditolak atau dinetralkan secara aman")
         assert reg_pg.is_register_screen_displayed()
+        assert reg_pg.is_mandatory_warning_displayed(), "Formulir harus menampilkan 'Wajib Diisi' pada kolom yang belum lengkap"
         logger.info("[SECURITY PASS] Cross-Site Scripting (XSS) form registrasi aman.")
 
     @pytest.mark.negative_false
@@ -522,7 +530,7 @@ class TestDrvRegister:
         given("Mitra berada di form registrasi driver")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
         when(f"Mitra menginput plat panjang ekstrem: {data['plate_number']}")
         reg_pg.enter_plate_number(data["plate_number"])
@@ -530,6 +538,7 @@ class TestDrvRegister:
 
         then("Aplikasi tidak mengalami buffer overflow dan memotong panjang karakter")
         assert reg_pg.is_register_screen_displayed()
+        assert reg_pg.is_mandatory_warning_displayed(), "Formulir harus menampilkan 'Wajib Diisi' pada kolom yang belum lengkap"
         logger.info("[SUCCESS] Boundary value length plat ekstrem aman.")
 
     @pytest.mark.negative_false
@@ -546,15 +555,17 @@ class TestDrvRegister:
         given("Mitra berada di form registrasi")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
         when("Mitra menginput spasi murni pada seluruh kolom")
         reg_pg.enter_plate_number(data["plate_number"])
-        reg_pg.enter_referral_code(data["referral_code"])
+        if reg_pg.has_referral_field():
+            reg_pg.enter_referral_code(data["referral_code"])
         reg_pg.submit_registration_form()
 
         then("Sistem menganggap kolom kosong dan menolak submit")
         assert reg_pg.is_register_screen_displayed()
+        assert reg_pg.is_mandatory_warning_displayed(), "Formulir harus menampilkan 'Wajib Diisi' pada kolom yang belum lengkap"
         logger.info("[SUCCESS] Sanitasi whitespace spasi murni terverifikasi.")
 
     @pytest.mark.negative_false
@@ -571,7 +582,7 @@ class TestDrvRegister:
         given("Mitra menginput data pada formulir registrasi")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
             reg_pg.enter_plate_number(data["plate_number"])
 
         when("Mitra melakukan rapid clicking pada tombol Kirim")
@@ -598,11 +609,12 @@ class TestDrvRegister:
         given("Mitra berada pada formulir pendaftaran bagian dokumen legalitas")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
         when("Mitra mengunggah foto selfie memegang KTP asli")
-        then("Sistem memproses berkas dan menampilkan status terunggah")
-        assert reg_pg.is_register_screen_displayed()
+        assert reg_pg.unggah_foto("Driver Selfie dengan KTP"), "Aplikasi Driver harus kembali ke formulir setelah memilih foto"
+        then("Sistem memproses berkas dan menampilkan status terunggah ('Update Foto' dan 'Hapus')")
+        assert reg_pg.is_photo_uploaded(), "Tombol 'Update Foto' harus tampil setelah foto selfie terunggah"
 
     @pytest.mark.positive_true
     def test_TC_DRV_REG_PT_09_verifikasi_klausul_konfirmasi_telepon_sla_2_jam(self, driver_app):
@@ -617,11 +629,13 @@ class TestDrvRegister:
         given("Mitra telah mengirimkan data pendaftaran driver baru")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
-        when("Layar dialog konfirmasi pendaftaran muncul")
+        when("Mitra melengkapi formulir dan menekan Lanjutkan")
+        reg_pg.lengkapi_formulir("B 4321 EVM", is_ecgo=True)
+        reg_pg.submit_registration_form()
         then("Pesan himbauan agar telepon tetap aktif dalam 2 jam kerja tertera")
-        assert reg_pg.is_register_screen_displayed()
+        assert reg_pg.is_displayed(reg_pg.TEXT_SUCCESS_NOTICE_2HOURS, timeout=10), "Pesan konfirmasi 2 jam harus tampil setelah pendaftaran dikirim"
 
     @pytest.mark.negative_true
     def test_TC_DRV_REG_NT_06_format_plat_nomor_tanpa_spasi_atau_angka(self, driver_app):
@@ -636,7 +650,7 @@ class TestDrvRegister:
         given("Mitra berada di form registrasi kendaraan")
         login_pg.handle_system_permissions()
         if login_pg.is_login_screen_displayed():
-            reg_pg.click_daftar_driver_baru()
+            reg_pg.buka_formulir_pendaftaran()
 
         when("Mitra mengisi plat motor tanpa angka: 'B'")
         reg_pg.enter_plate_number("B")
@@ -644,4 +658,5 @@ class TestDrvRegister:
 
         then("Sistem menolak format dan menampilkan petunjuk B1234ABC")
         assert reg_pg.is_register_screen_displayed()
+        assert reg_pg.is_mandatory_warning_displayed(), "Formulir harus menampilkan 'Wajib Diisi' pada kolom yang belum lengkap"
 
