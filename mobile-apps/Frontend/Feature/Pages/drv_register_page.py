@@ -180,7 +180,7 @@ class DrvRegisterPage(BasePage):
         kolom.send_keys(nomor)
         time.sleep(1)
         self._sembunyikan_keyboard()
-        self.click(self.BTN_LANJUTKAN, label="Lanjutkan (nomor handphone)")
+        self._klik_langsung(self.BTN_LANJUTKAN, "Lanjutkan (nomor handphone)")
         assert self.is_displayed(self.TEXT_OTP_STEP, timeout=15), "Langkah 'Verifikasi Kode' (OTP) tidak tampil setelah nomor dikirim"
         otp = self.find(self.FIELD_PHONE, timeout=10)
         otp.click()
@@ -189,7 +189,7 @@ class DrvRegisterPage(BasePage):
             self.driver.press_keycode(7 + int(digit))
             time.sleep(0.2)
         time.sleep(1)
-        self.click(self.BTN_LANJUTKAN, label="Lanjutkan (OTP)")
+        self._klik_langsung(self.BTN_LANJUTKAN, "Lanjutkan (OTP)")
         assert self.is_displayed(self.PENANDA_FORMULIR, timeout=20), "Formulir 'Data Informasi Personal' tidak tampil setelah OTP"
 
     def buka_formulir_pendaftaran(self):
@@ -230,6 +230,21 @@ class DrvRegisterPage(BasePage):
                     return True
         return False
 
+    def _ketik(self, locator, teks: str, label: str):
+        """Ketuk kolom (agar fokus) lalu kirim teks; send_keys tanpa ketukan tidak mengisi kolom Flutter."""
+        kolom = self.find(locator)
+        kolom.click()
+        time.sleep(0.4)
+        kolom.send_keys(teks)
+        logger.info(f"Input '{teks}' ke: {label}")
+        time.sleep(0.4)
+
+    def _klik_langsung(self, locator, label: str):
+        """Tunggu tombol ada lalu ketuk langsung (tanpa jeda manusiawi); dipakai untuk 'Lanjutkan' di bawah keyboard."""
+        tombol = self.find(locator, timeout=10)
+        logger.info(f"Klik: {label}")
+        tombol.click()
+
     @staticmethod
     def _kolom_setelah_label(label: str):
         """Kolom isian pertama setelah judul kolom (judul dan kolom berurutan di pohon layar Flutter)."""
@@ -247,19 +262,19 @@ class DrvRegisterPage(BasePage):
         locator = self._kolom_setelah_label("Nomor Plat Kendaraan")
         assert self._tampilkan(locator), "Kolom 'Nomor Plat Kendaraan' tidak ditemukan di formulir"
         if plate != "":
-            self.type_text(locator, plate, label="Field Plat Nomor Kendaraan", use_human_pacing=False)
+            self._ketik(locator, plate, "Field Plat Nomor Kendaraan")
         self._sembunyikan_keyboard()
 
     def enter_full_name(self, nama: str):
         locator = self._kolom_setelah_label("Nama Lengkap")
         assert self._tampilkan(locator, konten_naik_dulu=False), "Kolom 'Nama Lengkap' tidak ditemukan di formulir"
-        self.type_text(locator, nama, label="Field Nama Lengkap", use_human_pacing=False)
+        self._ketik(locator, nama, "Field Nama Lengkap")
         self._sembunyikan_keyboard()
 
     def enter_ktp_number(self, nomor: str):
         locator = self._kolom_setelah_label("No. KTP")
         assert self._tampilkan(locator), "Kolom 'No. KTP' tidak ditemukan di formulir"
-        self.type_text(locator, nomor, label="Field No. KTP", use_human_pacing=False)
+        self._ketik(locator, nomor, "Field No. KTP")
         self._sembunyikan_keyboard()
 
     def pilih_semua_dropdown(self, maks: int = 6):
@@ -335,7 +350,7 @@ class DrvRegisterPage(BasePage):
     def enter_referral_code(self, code: str):
         """Memasukkan kode referral (kolom ini tidak ada di formulir APK UAT; AssertionError bila tidak ditemukan)."""
         assert self._tampilkan(self.FIELD_REFERRAL_CODE), "Kolom kode referral tidak ada di formulir pendaftaran APK ini"
-        self.type_text(self.FIELD_REFERRAL_CODE, code, label="Field Kode Referral", use_human_pacing=False)
+        self._ketik(self.FIELD_REFERRAL_CODE, code, "Field Kode Referral")
 
     def click_upload_selfie_ktp(self):
         """Unggah foto selfie dengan KTP."""
@@ -360,7 +375,7 @@ class DrvRegisterPage(BasePage):
     def submit_registration_form(self):
         """Menekan tombol 'Lanjutkan' di dasar formulir."""
         self._sembunyikan_keyboard()
-        self.click(self.BTN_LANJUTKAN, label="Tombol Lanjutkan (kirim formulir)", use_human_pacing=False)
+        self._klik_langsung(self.BTN_LANJUTKAN, "Tombol Lanjutkan (kirim formulir)")
         time.sleep(3)
 
     def is_registration_success_displayed(self) -> bool:
