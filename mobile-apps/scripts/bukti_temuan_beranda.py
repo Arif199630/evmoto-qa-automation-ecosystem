@@ -50,10 +50,11 @@ def bagian_user():
             el.click()
             time.sleep(2)
         simpan(d, "user_beranda")
-        geser(d, 160, 505, 160, 150)
-        simpan(d, "user_beranda_panel_digeser_ke_atas")
-        geser(d, 160, 450, 160, 120)
-        simpan(d, "user_beranda_panel_digeser_lagi")
+        # Panel bawah digeser sedikit demi sedikit (120 px per langkah) supaya semua isinya terlihat
+        geser(d, 160, 520, 160, 400)
+        for langkah in range(1, 7):
+            simpan(d, f"user_beranda_panel_langkah_{langkah}")
+            geser(d, 160, 480, 160, 360)
     finally:
         d.quit()
 
