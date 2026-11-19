@@ -38,7 +38,10 @@ def main():
         login.handle_system_permissions()
         DrvRegisterPage(d).click_daftar_driver_baru()
         time.sleep(2)
-        d.find_elements("xpath", "//android.widget.EditText")[0].send_keys(nomor)
+        kolom = d.find_elements("xpath", "//android.widget.EditText")[0]
+        kolom.click()
+        time.sleep(0.5)
+        kolom.send_keys(nomor)
         time.sleep(1)
         try:
             if d.is_keyboard_shown():

@@ -102,6 +102,9 @@ class BasePage:
     # setelah digeser ke atas muncul Button 'Batalkan'. Diketuk -> dialog 'Apakah Anda yakin ingin membatalkan pesanan?' dengan
     # Button 'Tutup' dan 'Batalkan' (konfirmasi, elemen 'Batalkan' terakhir di pohon).
     _XP_MENCARI_DRIVER = "//*[contains(@content-desc,'Sedang mencari driver terdekat') or contains(@text,'Sedang mencari driver terdekat')]"
+    # Di Beranda panel itu hanya tampil sebagai banner 'Sedang berjalanan' (teks 'Sedang mencari driver' baru muncul setelah banner
+    # diketuk atau digeser; peta run 44283312085 pool 3), jadi pendeteksian order sisa harus memeriksa banner juga.
+    _XP_BANNER_BERJALAN = "//*[contains(@content-desc,'Sedang berjalan')]"
     _XP_BATALKAN = "//android.widget.Button[@content-desc='Batalkan' or @text='Batalkan']"
     _XP_DIALOG_YAKIN = "//*[starts-with(@content-desc, 'Apakah Anda yakin ingin membatalkan pesanan')]"
 
@@ -111,14 +114,17 @@ class BasePage:
         Satu akun QA dipakai berurutan oleh banyak test; satu order sisa membuat semua test berikutnya gagal karena Beranda tidak
         punya kolom pencarian (24 kegagalan di run 18 Nov 2026). True bila ada order sisa yang berhasil dibatalkan.
         """
-        if not self.is_displayed(("xpath", self._XP_MENCARI_DRIVER), timeout=2):
+        if not (self.is_displayed(("xpath", self._XP_MENCARI_DRIVER), timeout=2)
+                or self.is_displayed(("xpath", self._XP_BANNER_BERJALAN), timeout=2)):
             return False
-        logger.info("Order sisa 'Sedang mencari driver' terdeteksi, membatalkan...")
+        logger.info("Order sisa ('Sedang berjalan' / 'Sedang mencari driver') terdeteksi, membatalkan...")
         for percobaan in range(1, 4):
             size = self.driver.get_window_size()
             x = size["width"] // 2
             try:
-                self.driver.swipe(x, int(size["height"] * 0.93), x, int(size["height"] * 0.55), 600)
+                # Geser dari banner (sekitar 80% tinggi layar, di atas bilah navigasi) ke atas; percobaan lain dari tepi bawah.
+                awal = 0.80 if percobaan != 2 else 0.93
+                self.driver.swipe(x, int(size["height"] * awal), x, int(size["height"] * 0.25), 600)
             except Exception:  # noqa: BLE001
                 pass
             time.sleep(1.5)
@@ -130,7 +136,8 @@ class BasePage:
             if self.driver.find_elements("xpath", self._XP_DIALOG_YAKIN):
                 self.driver.find_elements("xpath", self._XP_BATALKAN)[-1].click()
                 time.sleep(3)
-            if not self.driver.find_elements("xpath", self._XP_MENCARI_DRIVER):
+            if not (self.driver.find_elements("xpath", self._XP_MENCARI_DRIVER)
+                    or self.driver.find_elements("xpath", self._XP_BANNER_BERJALAN)):
                 logger.info(f"Order sisa dibatalkan (percobaan {percobaan})")
                 return True
         logger.warning("Order sisa tidak berhasil dibatalkan setelah 3 percobaan")
