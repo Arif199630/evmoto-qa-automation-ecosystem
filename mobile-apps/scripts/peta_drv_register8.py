@@ -23,7 +23,7 @@ q = s7.q
 q.OUT = ROOT / "reports" / "repro" / "peta_drv_register8"
 catat = s7.catat
 BTN_LANJUT = s7.BTN_LANJUT
-XP_TANGGAL = "//android.widget.EditText[contains(@hint,'2025') or contains(@hint,'Misalnya 20')]"
+XP_TANGGAL = "//*[contains(@hint,'Misalnya 20')]"
 
 
 def cari_tanggal(d):
