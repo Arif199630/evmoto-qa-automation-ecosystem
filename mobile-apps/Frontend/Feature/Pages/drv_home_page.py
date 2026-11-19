@@ -36,6 +36,13 @@ class DrvHomePage(BasePage):
         AppiumBy.XPATH,
         "//*[starts-with(@content-desc, 'Pemberitahuan Jam Operasional')]"
     )
+    # Dialog order masuk ("Order EVMoto Motor / jarak / penumpang ... Swipe untuk mendapatkan orderan"): akun Driver yang Online menerima order
+    # dari test User di shard lain, dan dialog menutupi Beranda sehingga tab Menu/Aktivitas tidak terketuk (23 test Menu dan Aktivitas Driver
+    # gagal di run 44273613481, layar saat gagal menampilkan dialog ini). Tombol tutup (X) tidak punya label, berada di kanan atas dialog.
+    DIALOG_ORDER_MASUK = (
+        AppiumBy.XPATH,
+        "//*[starts-with(@content-desc, 'Order EVMoto')]"
+    )
     BTN_LANJUTKAN_POPUP = (
         AppiumBy.XPATH,
         "//android.widget.Button[@content-desc='Lanjutkan' or @text='Lanjutkan']"
@@ -223,6 +230,25 @@ class DrvHomePage(BasePage):
             if buttons:
                 buttons[0].click()
 
+    def tutup_dialog_order_masuk(self) -> bool:
+        """Tutup dialog order masuk (ketuk tombol X di kanan atas; bila gagal, tombol Back) tanpa menerima order. True bila ada dan tertutup."""
+        try:
+            if not self.driver.find_elements(*self.DIALOG_ORDER_MASUK):
+                return False
+            logger.info("Dialog order masuk tampil, menutup tanpa menerima order")
+            ukuran = self.driver.get_window_size()
+            for cara in ("x", "back"):
+                if cara == "x":
+                    self.driver.tap([(int(ukuran["width"] * 0.86), int(ukuran["height"] * 0.18))], 150)
+                else:
+                    self.driver.back()
+                time.sleep(1.2)
+                if not self.driver.find_elements(*self.DIALOG_ORDER_MASUK):
+                    return True
+            return False
+        except Exception:  # noqa: BLE001 - dialog bisa hilang sendiri di antara pencarian dan ketukan
+            return False
+
     def _tutup_popup_cepat(self):
         """Tutup pop-up 'Pemberitahuan Jam Operasional' bila SEDANG tampil, tanpa menunggu (dipanggil sebelum tiap ketukan navigasi).
 
@@ -238,6 +264,7 @@ class DrvHomePage(BasePage):
                     time.sleep(1.0)
         except Exception:  # noqa: BLE001 - pop-up bisa hilang sendiri di antara pencarian dan ketukan
             pass
+        self.tutup_dialog_order_masuk()
 
     def open_wallet(self):
         """Buka layar eWallet lewat kartu 'Saldo Kamu' di Beranda."""

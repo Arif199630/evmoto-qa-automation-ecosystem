@@ -101,7 +101,10 @@ class BasePage:
     # Pembatalan order sisa (peta layar CI 18 Nov 2026, peta_batal_order): panel 'Sedang mencari driver' terpotong di layar 320x640;
     # setelah digeser ke atas muncul Button 'Batalkan'. Diketuk -> dialog 'Apakah Anda yakin ingin membatalkan pesanan?' dengan
     # Button 'Tutup' dan 'Batalkan' (konfirmasi, elemen 'Batalkan' terakhir di pohon).
-    _XP_MENCARI_DRIVER = "//*[contains(@content-desc,'Sedang mencari driver terdekat') or contains(@text,'Sedang mencari driver terdekat')]"
+    # Dua teks status order yang masih berjalan sebelum Driver menjemput: 'Sedang mencari driver terdekat' dan 'Sedang Menunggu Konfirmasi Driver'
+    # (28 dari 33 layar gagal run 44273613481 menampilkan yang kedua, sehingga order sisa tidak terdeteksi).
+    _XP_MENCARI_DRIVER = ("//*[contains(@content-desc,'Sedang mencari driver terdekat') or contains(@text,'Sedang mencari driver terdekat') "
+                          "or contains(@content-desc,'Menunggu Konfirmasi Driver') or contains(@text,'Menunggu Konfirmasi Driver')]")
     # Di Beranda panel itu hanya tampil sebagai banner 'Sedang berjalanan' (teks 'Sedang mencari driver' baru muncul setelah banner
     # diketuk atau digeser; peta run 44283312085 pool 3), jadi pendeteksian order sisa harus memeriksa banner juga.
     _XP_BANNER_BERJALAN = "//*[contains(@content-desc,'Sedang berjalan')]"
