@@ -36,6 +36,8 @@ from Data.user_data import (
 from utils.bdd_helper import given, when, then, and_step
 from utils.logger import get_logger
 
+APP_PACKAGE_USER = "com.evmoto.user.app"
+
 logger = get_logger("TestProfil")
 
 
@@ -916,7 +918,12 @@ class TestProfil:
         and_step("Menekan tombol Hardware Back tidak dapat kembali ke halaman profil (Sesi Bersih)")
         self.profil_page.press_back_key()
         time.sleep(1.5)
-        assert self.login_page.is_login_screen_displayed(timeout=5)
+        # Layar Login adalah layar akar: tombol Back Android menutup aplikasi (bukti run 44273613481: layar akhir adalah launcher Android).
+        # Yang diuji adalah sesi bersih: aplikasi dibuka lagi dan harus kembali ke Login, bukan Profil.
+        driver.activate_app(APP_PACKAGE_USER)
+        time.sleep(3)
+        assert self.login_page.is_login_screen_displayed(timeout=10)
+        assert not self.profil_page.is_profile_screen_displayed(timeout=2), "Sesi masih aktif: layar Profil tampil setelah logout"
         print(">>> [PASSED NF-04] Sesi token berhasil dibersihkan dan logout sempurna! <<<")
 
     @pytest.mark.pilar4_security
