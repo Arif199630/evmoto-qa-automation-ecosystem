@@ -225,6 +225,27 @@ def recover_emulator():
             return False
 
 
+def restart_appium():
+    """Nyalakan lagi server Appium yang mati (run 44710679494, 20 Nov 2026: emulator mati lalu proses Appium ikut keluar dengan 'device emulator-5554 not found';
+    emulator dipulihkan tetapi Appium tidak, sehingga 43 unit gagal 'Appium tidak aktif'). Hanya aktif bila RECOVER_EMULATOR=1; gagal apa pun: False."""
+    if os.getenv("RECOVER_EMULATOR") != "1":
+        return False
+    with _pulihkan_lock:
+        if appium_alive():
+            return True
+        try:
+            log = open(out_dir / "appium_pulih.log", "a", encoding="utf-8")
+            subprocess.Popen(["appium", "--address", "127.0.0.1", "--port", "4723", "--log-level", "warn"],
+                             stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+            for _ in range(30):
+                time.sleep(2)
+                if appium_alive():
+                    return True
+            return False
+        except Exception:  # noqa: BLE001 - pemulihan hanya upaya terbaik
+            return False
+
+
 def find_previous(stem):
     """XML unit yang sama dari run sebelumnya (RESUME_DIR), di folder suite yang sama, tanpa error lingkungan."""
     if not RESUME_DIR:
@@ -257,11 +278,17 @@ def run_bucket(index, group):
                 fh.write(f"### exit {proc.returncode} {label}\n")
                 fh.flush()
                 # Perangkat hilang di tengah unit: nyalakan emulator lagi lalu ulangi unit ini sekali
-                if percobaan < 3 and has_infra_error(xml) and not device_alive() and recover_emulator():
-                    fh.write(f"### emulator mati lalu dipulihkan, unit {label} diulang\n")
-                    fh.flush()
-                    xml.unlink(missing_ok=True)
-                    continue
+                if percobaan < 3 and has_infra_error(xml):
+                    pulih = True
+                    if not device_alive():
+                        pulih = recover_emulator()
+                    if pulih and not appium_alive():
+                        pulih = restart_appium()
+                    if pulih and device_alive() and appium_alive():
+                        fh.write(f"### emulator/Appium mati lalu dipulihkan, unit {label} diulang\n")
+                        fh.flush()
+                        xml.unlink(missing_ok=True)
+                        continue
                 break
             if has_infra_error(xml) and (not appium_alive() or not device_alive()):
                 # Emulator/Appium mati: unit ini dan sisanya tidak dicatat sebagai gagal palsu
