@@ -43,11 +43,6 @@ class DrvHomePage(BasePage):
         AppiumBy.XPATH,
         "//*[starts-with(@content-desc, 'Order EVMoto')]"
     )
-    # Dialog "Socket / OFFLINE" + tombol 'Lanjutkan' (bukti run 44694217442, 20 Nov 2026: menutupi Beranda Driver, 13 test Driver gagal NoSuchElement).
-    DIALOG_SOCKET_OFFLINE = (
-        AppiumBy.XPATH,
-        "//*[starts-with(@content-desc, 'Socket') and contains(@content-desc, 'OFFLINE')]"
-    )
     BTN_LANJUTKAN_POPUP = (
         AppiumBy.XPATH,
         "//android.widget.Button[@content-desc='Lanjutkan' or @text='Lanjutkan']"
@@ -251,21 +246,6 @@ class DrvHomePage(BasePage):
                 if not self.driver.find_elements(*self.DIALOG_ORDER_MASUK):
                     return True
             return False
-        except Exception:  # noqa: BLE001 - dialog bisa hilang sendiri di antara pencarian dan ketukan
-            return False
-
-    def tutup_dialog_socket_offline(self) -> bool:
-        """Tutup dialog 'Socket OFFLINE' dengan menekan 'Lanjutkan'. True bila ada dan tertutup."""
-        try:
-            if not self.driver.find_elements(*self.DIALOG_SOCKET_OFFLINE):
-                return False
-            tombol = self.driver.find_elements(*self.BTN_LANJUTKAN_POPUP)
-            if not tombol:
-                return False
-            logger.info("Dialog 'Socket OFFLINE' tampil, menekan 'Lanjutkan'")
-            tombol[0].click()
-            time.sleep(1.2)
-            return not self.driver.find_elements(*self.DIALOG_SOCKET_OFFLINE)
         except Exception:  # noqa: BLE001 - dialog bisa hilang sendiri di antara pencarian dan ketukan
             return False
 

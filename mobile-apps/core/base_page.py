@@ -27,6 +27,26 @@ class BasePage:
         self.timeout = timeout
         self.wait = WebDriverWait(driver, timeout)
 
+    # Dialog "Socket / OFFLINE" + tombol 'Lanjutkan' muncul berkala di aplikasi Driver dan menutupi layar apa pun (bukti run 44699911497, 20 Nov 2026:
+    # 29 test Driver gagal NoSuchElement; layar saat gagal hanya berisi dialog ini). Ditutup otomatis lalu pencarian/ketukan diulang sekali.
+    _XP_SOCKET_OFFLINE = "//*[starts-with(@content-desc,'Socket') and contains(@content-desc,'OFFLINE')]"
+    _XP_LANJUTKAN_DIALOG = "//android.widget.Button[@content-desc='Lanjutkan' or @text='Lanjutkan']"
+
+    def tutup_dialog_socket_offline(self) -> bool:
+        """Tutup dialog 'Socket OFFLINE' dengan menekan 'Lanjutkan'. True bila dialog ada dan tombolnya diketuk."""
+        try:
+            if not self.driver.find_elements("xpath", self._XP_SOCKET_OFFLINE):
+                return False
+            tombol = self.driver.find_elements("xpath", self._XP_LANJUTKAN_DIALOG)
+            if not tombol:
+                return False
+            logger.info("Dialog 'Socket OFFLINE' tampil, menekan 'Lanjutkan'")
+            tombol[0].click()
+            time.sleep(1.2)
+            return True
+        except Exception:  # noqa: BLE001 - dialog bisa hilang sendiri di antara pencarian dan ketukan
+            return False
+
     def find(self, locator: Tuple[str, str], timeout: int = None):
         """Menemukan satu elemen dengan Explicit Wait."""
         t = timeout or self.timeout
@@ -36,6 +56,12 @@ class BasePage:
             )
             return self._best_match(locator, element)
         except TimeoutException:
+            if self.tutup_dialog_socket_offline():
+                try:
+                    element = WebDriverWait(self.driver, max(5, t // 2)).until(EC.presence_of_element_located(locator))
+                    return self._best_match(locator, element)
+                except TimeoutException:
+                    pass
             self.check_for_server_errors()
             logger.error(f"Elemen dengan locator {locator} tidak ditemukan dalam {t} detik.")
             raise
@@ -94,6 +120,14 @@ class BasePage:
                 element.click()
             return element
         except Exception as e:
+            if self.tutup_dialog_socket_offline():
+                try:
+                    element = WebDriverWait(self.driver, max(5, self.timeout // 2)).until(EC.element_to_be_clickable(locator))
+                    element = self._best_match(locator, element)
+                    element.click()
+                    return element
+                except Exception as e2:  # noqa: BLE001
+                    e = e2
             self.check_for_server_errors()
             logger.error(f"Gagal melakukan klik pada {label or locator}: {e}")
             raise
@@ -231,6 +265,11 @@ class BasePage:
             )
             return element.is_displayed()
         except (TimeoutException, NoSuchElementException):
+            if self.tutup_dialog_socket_offline():
+                try:
+                    return WebDriverWait(self.driver, max(3, timeout // 2)).until(EC.visibility_of_element_located(locator)).is_displayed()
+                except (TimeoutException, NoSuchElementException):
+                    return False
             return False
 
     def is_element_visible(self, locator: Tuple[str, str], timeout: int = 5) -> bool:
