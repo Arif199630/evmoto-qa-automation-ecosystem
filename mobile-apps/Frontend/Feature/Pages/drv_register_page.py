@@ -173,10 +173,46 @@ class DrvRegisterPage(BasePage):
 
         Berakhir di formulir 'Data Informasi Personal'. AssertionError bila langkah OTP atau formulir tidak tampil.
         """
-        nomor = nomor or ("899" + "".join(str(random.randint(0, 9)) for _ in range(8)))
-        kolom = self.find(self.FIELD_PHONE, timeout=10)
+        # Diagnosa 19-20 Nov 2026 (emulator CI, APK UAT): verifikasi OTP kode bypass lolos atau tidak secara acak (dalam satu sesi: lolos, gagal, lolos, gagal);
+        # sesi pertama selalu lolos. Hasil gagal tidak berubah karena pembersihan data, ganti android_id, jeda, atau kirim ulang kode.
+        # Mengulang siklus nomor > OTP dengan nomor acak baru di sesi yang sama terbukti bisa lolos, sehingga siklus diulang hingga MAKS_SIKLUS_OTP kali.
+        for siklus in range(1, self.MAKS_SIKLUS_OTP + 1):
+            if siklus > 1:
+                self._kembali_ke_langkah_nomor()
+            if self._nomor_lalu_otp(nomor if (nomor and siklus == 1) else self._nomor_acak(), siklus):
+                return
+        raise AssertionError(f"Formulir 'Data Informasi Personal' tidak tampil setelah OTP ({self.MAKS_SIKLUS_OTP} siklus nomor > OTP dengan nomor acak baru)")
+
+    MAKS_SIKLUS_OTP = 4
+
+    @staticmethod
+    def _nomor_acak() -> str:
+        return "899" + "".join(str(random.randint(0, 9)) for _ in range(8))
+
+    def _kosongkan_kolom(self, kolom):
+        """Hapus isi kolom (setelah Kembali kolom nomor masih berisi nomor sebelumnya; ketikan baru akan menempel di belakangnya)."""
         kolom.click()
-        time.sleep(0.5)
+        time.sleep(0.4)
+        self.driver.press_keycode(123)  # KEYCODE_MOVE_END
+        for _ in range(25):
+            self.driver.press_keycode(67)  # KEYCODE_DEL
+
+    def _kembali_ke_langkah_nomor(self):
+        """Dari langkah OTP (atau formulir) tekan Kembali sampai langkah 'Registrasi Driver Baru' (Nomor Handphone) tampil."""
+        for _ in range(4):
+            if self.is_phone_step_displayed():
+                return
+            try:
+                self.click_back()
+            except Exception:  # noqa: BLE001 - tombol bisa tidak terbaca; pakai tombol Back sistem
+                self.driver.back()
+            time.sleep(2)
+        assert self.is_phone_step_displayed(), "Tidak bisa kembali ke langkah Nomor Handphone untuk mengulang OTP"
+
+    def _nomor_lalu_otp(self, nomor: str, siklus: int) -> bool:
+        """Satu siklus: isi nomor, Lanjutkan, isi OTP bypass, Lanjutkan. True bila formulir tampil."""
+        kolom = self.find(self.FIELD_PHONE, timeout=10)
+        self._kosongkan_kolom(kolom)
         kolom.send_keys(nomor)
         time.sleep(1)
         self._sembunyikan_keyboard()
@@ -189,14 +225,14 @@ class DrvRegisterPage(BasePage):
             self.driver.press_keycode(7 + int(digit))
             time.sleep(0.2)
         time.sleep(1)
-        for percobaan in (1, 2, 3):
-            self._klik_langsung(self.BTN_LANJUTKAN, f"Lanjutkan (OTP), percobaan {percobaan}")
+        for percobaan in (1, 2):
+            self._klik_langsung(self.BTN_LANJUTKAN, f"Lanjutkan (OTP), siklus {siklus}, percobaan {percobaan}")
             if self.is_displayed(self.PENANDA_FORMULIR, timeout=12):
-                return
-            teks = [(e.get_attribute("content-desc") or e.get_attribute("text") or "")[:60]
-                    for e in self.driver.find_elements("xpath", "//*[@content-desc or @text]")]
-            logger.warning(f"Setelah OTP percobaan {percobaan} formulir belum tampil; isi layar: {[t for t in teks if t.strip()][:12]}")
-        raise AssertionError("Formulir 'Data Informasi Personal' tidak tampil setelah OTP (3 percobaan Lanjutkan)")
+                return True
+        teks = [(e.get_attribute("content-desc") or e.get_attribute("text") or "")[:60]
+                for e in self.driver.find_elements("xpath", "//*[@content-desc or @text]")]
+        logger.warning(f"Siklus OTP {siklus} belum membuka formulir; isi layar: {[t for t in teks if t.strip()][:12]}")
+        return False
 
     def buka_formulir_pendaftaran(self):
         """Dari layar login sampai formulir data: tautan Daftar, nomor handphone, OTP."""
