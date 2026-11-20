@@ -203,7 +203,7 @@ def recover_emulator():
             avd = os.getenv("EMULATOR_AVD", "test")  # nama AVD yang dibuat android-emulator-runner
             log = open(out_dir / "emulator_pulih.log", "a", encoding="utf-8")
             subprocess.Popen([f"{sdk}/emulator/emulator", "-avd", avd, "-no-window", "-no-audio", "-no-boot-anim",
-                              "-gpu", "swiftshader_indirect", "-no-snapshot", "-dns-server", "8.8.8.8,1.1.1.1"],
+                              "-gpu", os.getenv("GPU_MODE") or "swiftshader_indirect", "-no-snapshot", "-dns-server", "8.8.8.8,1.1.1.1"],
                              stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
             subprocess.run(["adb", "wait-for-device"], timeout=240)
             deadline = time.time() + 300
