@@ -672,6 +672,16 @@ class HomePage(BasePage):
         except Exception as e:
             logger.warning(f"Gagal melakukan pull-to-refresh: {e}")
 
+    def kembali_ke_beranda(self, maks_back: int = 3) -> bool:
+        """Tekan Back sampai Beranda tampil. Back pertama sering hanya menutup keyboard; bukti run 44715833561 (20 Nov 2026): layar pencarian
+        tujuan masih terbuka setelah satu kali Back. True bila Beranda tampil dalam maks_back kali Back."""
+        for _ in range(maks_back):
+            self.press_back_key()
+            time.sleep(1.5)
+            if self.is_home_screen_displayed(timeout=3):
+                return True
+        return False
+
     def press_back_key(self):
         """Menekan tombol Android Hardware Back Key (Keycode 4)."""
         logger.info("Menekan Android Hardware Back Key (Keycode 4)")

@@ -251,9 +251,7 @@ class TestHome:
         time.sleep(2)
 
         then("Sistem menampilkan hasil pencarian alamat terkait atau memproses form tujuan")
-        self.home_page.press_back_key()
-        time.sleep(1.5)
-        assert self.home_page.is_home_screen_displayed(timeout=5)
+        assert self.home_page.kembali_ke_beranda()
         print(f"  -> Pencarian tujuan '{dest_data['query']}' berhasil diproses.")
 
     @pytest.mark.pilar1_positive
@@ -416,9 +414,7 @@ class TestHome:
         print(f"  -> Layar riwayat transaksi terbuka: {is_history}")
 
         and_step("Pengguna kembali ke Beranda utama")
-        self.home_page.press_back_key()
-        time.sleep(1.5)
-        assert self.home_page.is_home_screen_displayed(timeout=5)
+        assert self.home_page.kembali_ke_beranda()
         print("  -> Shortcut riwayat mutasi dompet berhasil diverifikasi!")
 
     @pytest.mark.pilar1_positive
@@ -434,9 +430,7 @@ class TestHome:
         print(f"  -> Layar layanan EvSend terbuka: {is_send}")
 
         and_step("[EXCLUDE PLACING ORDER] Pengguna kembali ke Beranda tanpa melakukan submit pemesanan kurir")
-        self.home_page.press_back_key()
-        time.sleep(1.5)
-        assert self.home_page.is_home_screen_displayed(timeout=5)
+        assert self.home_page.kembali_ke_beranda()
         print("  -> Tinjauan layanan EvSend berhasil diverifikasi aman!")
 
     @pytest.mark.pilar1_positive
@@ -452,9 +446,7 @@ class TestHome:
         print(f"  -> Layar EvRent / Swap Station terbuka: {is_rent}")
 
         and_step("Pengguna kembali ke Beranda utama")
-        self.home_page.press_back_key()
-        time.sleep(1.5)
-        assert self.home_page.is_home_screen_displayed(timeout=5)
+        assert self.home_page.kembali_ke_beranda()
         print("  -> Tinjauan stasiun swap baterai berhasil diverifikasi!")
 
     @pytest.mark.pilar1_positive
@@ -469,9 +461,7 @@ class TestHome:
         has_recent = self.home_page.is_recent_search_history_displayed(timeout=4)
         print(f"  -> Riwayat pencarian terkini terdeteksi: {has_recent}")
 
-        self.home_page.press_back_key()
-        time.sleep(1.5)
-        assert self.home_page.is_home_screen_displayed(timeout=5)
+        assert self.home_page.kembali_ke_beranda()
         print("  -> Fitur riwayat pencarian terkini terverifikasi aktif!")
 
 
@@ -553,9 +543,7 @@ class TestHome:
         time.sleep(2)
 
         then("Sistem menolak pembuatan order atau memunculkan peringatan di luar area")
-        self.home_page.press_back_key()
-        time.sleep(1.5)
-        assert self.home_page.is_home_screen_displayed(timeout=5)
+        assert self.home_page.kembali_ke_beranda()
         print("  -> Penegakan aturan bisnis wilayah operasional terbukti aman.")
 
     @pytest.mark.pilar2_negative
@@ -608,9 +596,7 @@ class TestHome:
         time.sleep(1)
 
         then("Sistem mencegah proses pencarian atau tetap menampilkan panduan input")
-        self.home_page.press_back_key()
-        time.sleep(1.5)
-        assert self.home_page.is_home_screen_displayed(timeout=5)
+        assert self.home_page.kembali_ke_beranda()
         print("  -> Kolom pencarian kosong berhasil dicegah.")
 
     @pytest.mark.pilar3_boundary
@@ -629,9 +615,7 @@ class TestHome:
         is_empty = self.home_page.is_search_result_empty(timeout=4)
         print(f"  -> Indikator hasil pencarian kosong terdeteksi: {is_empty}")
 
-        self.home_page.press_back_key()
-        time.sleep(1.5)
-        assert self.home_page.is_home_screen_displayed(timeout=5)
+        assert self.home_page.kembali_ke_beranda()
 
     @pytest.mark.pilar3_boundary
     def test_TC_HOME_NT_03_penanganan_peringatan_saat_saldo_nol_memilih_metode_dompet(self, driver):
@@ -680,9 +664,7 @@ class TestHome:
         is_warned = self.home_page.is_same_location_warning_displayed(timeout=3)
         print(f"  -> Peringatan lokasi identik muncul: {is_warned}")
 
-        self.home_page.press_back_key()
-        time.sleep(1.5)
-        assert self.home_page.is_home_screen_displayed(timeout=5)
+        assert self.home_page.kembali_ke_beranda()
         print("  -> Proteksi titik jemput dan antar sama berhasil menolak order.")
 
     @pytest.mark.pilar3_boundary
@@ -718,9 +700,7 @@ class TestHome:
         time.sleep(2)
 
         then("Aplikasi tetap berjalan normal tanpa crash, freeze, atau kebocoran database")
-        self.home_page.press_back_key()
-        time.sleep(1.5)
-        assert self.home_page.is_home_screen_displayed(timeout=5)
+        assert self.home_page.kembali_ke_beranda()
         print("  -> Proteksi sanitasi SQL Injection pada Beranda terbukti aman!")
 
     @pytest.mark.pilar4_security
@@ -736,9 +716,7 @@ class TestHome:
         time.sleep(2)
 
         then("Skrip tidak dieksekusi oleh WebView atau engine Flutter")
-        self.home_page.press_back_key()
-        time.sleep(1.5)
-        assert self.home_page.is_home_screen_displayed(timeout=5)
+        assert self.home_page.kembali_ke_beranda()
         print("  -> Sanitasi XSS berhasil: Skrip tidak tereksekusi pada antarmuka Beranda!")
 
     @pytest.mark.pilar4_security

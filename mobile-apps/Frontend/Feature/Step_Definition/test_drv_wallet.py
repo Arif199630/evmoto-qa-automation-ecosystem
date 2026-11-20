@@ -197,7 +197,7 @@ class TestDrvWallet:
             pass
 
         then("Layar Pengaturan Otomatis dapat diakses")
-        assert wallet_pg.is_wallet_screen_displayed()
+        assert wallet_pg.is_pengaturan_otomatis_displayed()
         logger.info("[SUCCESS] Akses Pengaturan Otomatis terverifikasi.")
 
     @pytest.mark.positive_true

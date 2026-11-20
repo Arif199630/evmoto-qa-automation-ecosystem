@@ -295,6 +295,10 @@ class DrvWalletPage(BasePage):
         """Mengonfirmasi pemutusan hubungan eWallet."""
         self.click(self.BTN_CONFIRM_PUTUSKAN, label="Konfirmasi Ya, Putuskan eWallet")
 
+    def is_pengaturan_otomatis_displayed(self) -> bool:
+        """Panel 'Pengaturan Otomatis' terbuka: sakelar 'Hubungkan Secara Otomatis' dan tombol 'Simpan' tampil (bukti run 44707686324)."""
+        return self.is_displayed((AppiumBy.XPATH, "//*[contains(@content-desc, 'Hubungkan Secara Otomatis') or contains(@text, 'Hubungkan Secara Otomatis')]"), timeout=6)
+
     def open_pengaturan_otomatis(self):
         """Membuka layar Pengaturan Otomatis transfer saldo."""
         self.click(self.MENU_PENGATURAN_OTOMATIS, label="Menu Pengaturan Otomatis")
