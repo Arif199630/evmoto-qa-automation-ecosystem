@@ -123,14 +123,28 @@ class BasePage:
         logger.info("Order sisa ('Sedang berjalan' / 'Sedang mencari driver') terdeteksi, membatalkan...")
         # Titik awal geser harus tepat di atas panel: panel 'Sedang mencari driver' di layar pelacakan berada di sekitar y=541 (85% tinggi layar),
         # banner 'Sedang berjalanan' di Beranda y=488-552. Titik 80% (run 44484545989) mengenai peta pada layar pelacakan sehingga panel tidak bergeser.
+        # Terbukti di CI (diagnosa run 44699905925, APK UAT, akun pool 3/12/14): banner 'Sedang berjalan' di Beranda harus diketuk dulu untuk membuka layar
+        # pelacakan, lalu panel ditarik dengan 'mobile: dragGesture' pelan (speed 250) dari judul panel (y=86% tinggi layar) ke y=30%; tombol 'Batalkan'
+        # baru muncul. Geseran 'driver.swipe' biasa dan ketukan judul tidak membuka panel.
         for percobaan in range(1, 5):
             size = self.driver.get_window_size()
             x = size["width"] // 2
+            if (self.driver.find_elements("xpath", self._XP_BANNER_BERJALAN)
+                    and not self.driver.find_elements("xpath", self._XP_MENCARI_DRIVER)):
+                try:
+                    self.driver.find_elements("xpath", self._XP_BANNER_BERJALAN)[0].click()
+                except Exception:  # noqa: BLE001 - banner bisa berganti layar di antara pencarian dan ketukan
+                    pass
+                time.sleep(2.5)
             try:
-                awal = (0.86, 0.80, 0.93, 0.84)[percobaan - 1]
-                self.driver.swipe(x, int(size["height"] * awal), x, int(size["height"] * 0.25), 600)
+                awal = (0.86, 0.84, 0.88, 0.86)[percobaan - 1]
+                self.driver.execute_script("mobile: dragGesture", {"startX": x, "startY": int(size["height"] * awal), "endX": x,
+                                                                   "endY": int(size["height"] * 0.30), "speed": 250})
             except Exception:  # noqa: BLE001
-                pass
+                try:
+                    self.driver.swipe(x, int(size["height"] * 0.86), x, int(size["height"] * 0.30), 1500)
+                except Exception:  # noqa: BLE001
+                    pass
             time.sleep(1.5)
             tombol = self.driver.find_elements("xpath", self._XP_BATALKAN)
             if not tombol:
