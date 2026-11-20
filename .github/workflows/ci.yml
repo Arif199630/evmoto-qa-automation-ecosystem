@@ -25,8 +25,8 @@ on:
         description: "Isi 1 agar screenshot tetap disimpan pada run apk_set=uat (default: gambar run uat dihapus karena run UAT OVO memuat nomor akun)"
         default: ""
       gpu_mode:
-        description: "Mode render GPU emulator (swiftshader_indirect bawaan; coba swangle_indirect atau guest bila UiAutomator2 mati pada layar peta)"
-        default: "swiftshader_indirect"
+        description: "Mode render GPU emulator (swangle_indirect bawaan karena swiftshader_indirect membuat UiAutomator2 mati pada layar peta, run 44731648970; alternatif: swiftshader_indirect, guest)"
+        default: "swangle_indirect"
       simulasi_emulator_mati:
         description: "Uji pemulihan emulator: matikan emulator sengaja setelah restart zygote (true/false). Biarkan false untuk run normal."
         default: "false"
@@ -143,7 +143,7 @@ jobs:
       ALLOW_ADMIN_CONFIG_WRITE: "1"
       # Bila emulator mati di tengah run, run_per_file.py menyalakannya lagi sekali lalu mengulang unit yang terdampak
       RECOVER_EMULATOR: "1"
-      GPU_MODE: ${{ inputs.gpu_mode || 'swiftshader_indirect' }}
+      GPU_MODE: ${{ inputs.gpu_mode || 'swangle_indirect' }}
       SIMULASI_EMULATOR_MATI: ${{ inputs.simulasi_emulator_mati || 'false' }}
     steps:
       - uses: actions/checkout@v4
@@ -199,7 +199,7 @@ jobs:
           ram-size: 4096M
           cores: 4   # bukti run 44722388130: frame emulator 7-14 detik (CPU kurang, render peta software) lalu UiAutomator2 'socket hang up'; default 2 core
           disk-size: 6000M
-          emulator-options: -no-window -no-audio -no-boot-anim -gpu ${{ inputs.gpu_mode || 'swiftshader_indirect' }} -no-snapshot -dns-server 8.8.8.8,1.1.1.1
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu ${{ inputs.gpu_mode || 'swangle_indirect' }} -no-snapshot -dns-server 8.8.8.8,1.1.1.1
           disable-animations: true
           script: |
             adb root || true
