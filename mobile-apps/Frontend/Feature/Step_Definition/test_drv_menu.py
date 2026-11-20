@@ -110,8 +110,8 @@ class TestDrvMenu:
         except Exception:
             pass
 
-        then("Pengaturan izin overlay berhasil diperbarui")
-        assert menu_pg.is_menu_screen_displayed()
+        then("Layar izin overlay ('Izinkan Aktifkan Order') terbuka")
+        assert menu_pg.is_overlay_permission_screen_displayed()
         logger.info("[SUCCESS] Toggle izin overlay order layar utama terverifikasi.")
 
     @pytest.mark.positive_true
@@ -214,7 +214,7 @@ class TestDrvMenu:
             pass
 
         then("Layar panduan cara penggunaan aplikasi ditampilkan")
-        assert menu_pg.is_menu_screen_displayed()
+        assert menu_pg.is_guide_screen_displayed()
         logger.info("[SUCCESS] Akses Panduan Cara Penggunaan terverifikasi.")
 
     @pytest.mark.positive_true

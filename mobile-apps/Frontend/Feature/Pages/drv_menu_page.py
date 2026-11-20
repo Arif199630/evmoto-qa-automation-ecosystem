@@ -204,6 +204,14 @@ class DrvMenuPage(BasePage):
     # ==========================================================================
     # METHODS / USER ACTIONS
     # ==========================================================================
+    def is_guide_screen_displayed(self) -> bool:
+        """Layar 'Cara Penggunaan Aplikasi' terbuka (judul 'Langkah Mudah Menggunakan Aplikasi' tampil; bukti run 44707686324)."""
+        return self.is_displayed(self.TITLE_LANGKAH_MUDAH, timeout=6)
+
+    def is_overlay_permission_screen_displayed(self) -> bool:
+        """Layar izin overlay terbuka: judul 'Akfitkan Order Dilayar Utama' (ejaan dari aplikasi) dan tombol 'Izinkan Aktifkan Order' (bukti run 44707686324)."""
+        return self.is_displayed((AppiumBy.XPATH, "//*[contains(@content-desc, 'Izinkan Aktifkan Order') or contains(@text, 'Izinkan Aktifkan Order')]"), timeout=6)
+
     def is_menu_screen_displayed(self) -> bool:
         """Memeriksa apakah layar Menu Driver aktif."""
         return self.is_displayed(self.TITLE_MENU, timeout=5) or self.is_displayed(self.MENU_KELOLA_AKUN, timeout=4)
