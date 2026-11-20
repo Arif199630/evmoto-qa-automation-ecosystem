@@ -193,6 +193,7 @@ jobs:
           target: google_apis
           arch: x86_64
           ram-size: 4096M
+          cores: 4   # bukti run 44722388130: frame emulator 7-14 detik (CPU kurang, render peta software) lalu UiAutomator2 'socket hang up'; default 2 core
           disk-size: 6000M
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -dns-server 8.8.8.8,1.1.1.1
           disable-animations: true
