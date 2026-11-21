@@ -107,6 +107,29 @@ def check_backend_server_status() -> tuple:
     except Exception as e:
         return (0, str(e))
 
+# Berkas dan test yang memang menguji login/pendaftaran/onboarding: harus mulai dari aplikasi bersih (layar login). Test lain tidak perlu login OTP lagi.
+_BERKAS_LOGIN_SEGAR = ("test_login", "test_register", "test_drv_login", "test_drv_register", "test_reproduce")
+_NAMA_LOGIN_SEGAR = ("TC_E2E_01", "_OB_")
+
+
+def _pakai_no_reset(request) -> bool:
+    """True bila sesi Appium harus mempertahankan data aplikasi (login tetap tersimpan).
+
+    Bukti regression penuh 44733709894 dan diagnosa 44853164030 (APK UAT, 20-21 Nov 2026): tiap test memulai sesi dengan data aplikasi dihapus sehingga harus
+    login OTP lagi; OTP staging kedua pada runner yang sama gagal (login User kedua dan login Driver kedua berhenti di layar login), sehingga test E2E
+    dan sebagian test Driver gagal di layar login. Dengan QA_PERSIST_SESSION=1 (diset di workflow) test selain yang menguji login/pendaftaran
+    memakai noReset=True, sehingga login hanya terjadi sekali per aplikasi per shard.
+    """
+    if "no_reset" in request.keywords:
+        return True
+    if os.getenv("QA_PERSIST_SESSION") != "1":
+        return False
+    berkas = Path(str(request.node.fspath)).name
+    if any(berkas.startswith(b) for b in _BERKAS_LOGIN_SEGAR) or any(k in request.node.name for k in _NAMA_LOGIN_SEGAR):
+        return False
+    return True
+
+
 @pytest.fixture(scope="function")
 def driver(request):
     """
@@ -157,7 +180,7 @@ def driver(request):
         pytest.skip(f"Server backend tidak responsif ({status_msg}). Automasi dibatalkan.")
     
     # Periksa apakah test meminta no_reset
-    no_reset = "no_reset" in request.keywords
+    no_reset = _pakai_no_reset(request)
     driver_instance = DriverFactory.create_driver(no_reset=no_reset)
     
     # Simpan instance driver ke node agar dapat diakses oleh hook makereport
@@ -188,7 +211,7 @@ def driver_app(request):
     (package: com.evmoto.driver.app, activity: com.evmoto.driver.app.MainActivity).
     """
     logger.info(f"=== [START DRIVER APP TEST] {request.node.name} ===")
-    no_reset = "no_reset" in request.keywords
+    no_reset = _pakai_no_reset(request)
     driver_instance = DriverFactory.create_driver(no_reset=no_reset, is_driver_app=True)
     request.node.driver = driver_instance
 
