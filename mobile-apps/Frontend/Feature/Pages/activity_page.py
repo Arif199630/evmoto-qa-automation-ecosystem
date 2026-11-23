@@ -920,7 +920,22 @@ class ActivityPage(BasePage):
     def select_5_stars(self):
         """Mengetuk bintang ke-5 untuk memberi nilai sempurna."""
         logger.info("Memilih rating 5 Bintang...")
-        self.click(self.STAR_RATING_5, label="Bintang 5")
+        if self.is_displayed(self.STAR_RATING_5, timeout=2):
+            self.click(self.STAR_RATING_5, label="Bintang 5")
+            return
+        self.pilih_bintang(5)
+
+    _XP_TEKS_SKALA_RATING = (AppiumBy.XPATH, "//*[contains(@content-desc, 'Sempurna')]")
+
+    def pilih_bintang(self, n: int):
+        """Bintang UAT tidak punya label aksesibilitas: ketuk berdasarkan posisi, relatif terhadap teks skala '(1: ... 5: Sempurna)'.
+        Bintang berpusat 31 px dari tepi kiri teks, berjarak 48 px, dan 26 px di bawah teks (layar 320x640)."""
+        teks = self.find(self._XP_TEKS_SKALA_RATING, timeout=8)
+        r = teks.rect
+        x = int(r["x"] + 31 + 48 * (n - 1))
+        y = int(r["y"] + r["height"] + 26)
+        logger.info(f"Mengetuk bintang {n} berdasarkan posisi ({x}, {y})")
+        self.driver.execute_script("mobile: clickGesture", {"x": x, "y": y})
 
     def select_feedback_tags(self):
         """Memilih tag feedback cepat: 'Driver Ramah' & 'Motor Bersih'."""
@@ -947,7 +962,11 @@ class ActivityPage(BasePage):
     def dismiss_rating_modal(self):
         """Menutup modal rating tanpa memberikan ulasan ('Nanti Saja')."""
         logger.info("Menutup modal ulasan ('Nanti Saja')...")
-        self.click(self.BTN_DISMISS_RATING, label="Tombol Nanti Saja Rating")
+        if self.is_displayed(self.BTN_DISMISS_RATING, timeout=3):
+            self.click(self.BTN_DISMISS_RATING, label="Tombol Nanti Saja Rating")
+        else:
+            # UAT: layar penilaian tidak punya tombol 'Nanti Saja'; ditutup dengan tombol Kembali
+            self.press_back_key()
 
     def is_rating_success_snackbar_displayed(self, timeout: int = 5) -> bool:
         """Memverifikasi kemunculan snackbar sukses mengirim penilaian."""

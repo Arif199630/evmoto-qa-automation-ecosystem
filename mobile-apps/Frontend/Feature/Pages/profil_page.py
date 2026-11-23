@@ -386,6 +386,10 @@ class ProfilPage(BasePage):
     # ==========================================================================
     # 7. BANNER LAYANAN CUSTOMER SERVICE (CS) & POPUP LAMPIRAN MEDIA
     # ==========================================================================
+    MENU_CUSTOMER_SERVICE = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Customer Service' or @text='Customer Service']"
+    )
     BANNER_CS_HELP = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Hubungi Customer Service') or "
@@ -796,8 +800,11 @@ class ProfilPage(BasePage):
         return self.is_displayed(self.BANNER_CS_HELP, timeout=timeout)
 
     def open_cs_ticket_form(self):
-        """Membuka formulir tiket Customer Service."""
-        self.click(self.BANNER_CS_HELP, label="Banner 'Customer Service'")
+        """Membuka formulir tiket Customer Service (banner bila ada; UAT hanya punya menu 'Customer Service' di bawah lipatan)."""
+        if self.is_displayed(self.BANNER_CS_HELP, timeout=3):
+            self.click(self.BANNER_CS_HELP, label="Banner 'Customer Service'")
+        else:
+            self.click_with_scroll(self.MENU_CUSTOMER_SERVICE, label="Menu 'Customer Service'")
 
     def is_cs_ticket_form_displayed(self, timeout: int = 5) -> bool:
         """Memeriksa apakah form tiket CS muncul."""

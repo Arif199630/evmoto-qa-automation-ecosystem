@@ -277,8 +277,19 @@ class BasePage:
         return self.is_displayed(locator, timeout=timeout)
 
     def swipe(self, start_x: int, start_y: int, end_x: int, end_y: int, duration: int = 400):
-        """Geser layar dari titik awal ke titik akhir (koordinat piksel, durasi milidetik)."""
-        self.driver.swipe(start_x, start_y, end_x, end_y, duration)
+        """Geser layar dari titik awal ke titik akhir (koordinat piksel, durasi milidetik).
+
+        Daftar Flutter sering tidak bergerak oleh swipe W3C di emulator render software (bukti Menu Driver 23 Nov 2026:
+        layar tetap di atas setelah scroll); 'mobile: dragGesture' UiAutomator2 dipakai lebih dulu, swipe biasa sebagai cadangan.
+        """
+        jarak = max(abs(end_x - start_x), abs(end_y - start_y))
+        kecepatan = max(200, int(jarak / max(duration, 100) * 1000))
+        try:
+            self.driver.execute_script("mobile: dragGesture", {
+                "startX": start_x, "startY": start_y, "endX": end_x, "endY": end_y, "speed": kecepatan,
+            })
+        except Exception:  # noqa: BLE001
+            self.driver.swipe(start_x, start_y, end_x, end_y, duration)
 
     def pause(self, min_sec: float = 3.0, max_sec: float = 3.0, message: str = ""):
         """Melakukan jeda deliberasi manusia (default 3 detik)."""
