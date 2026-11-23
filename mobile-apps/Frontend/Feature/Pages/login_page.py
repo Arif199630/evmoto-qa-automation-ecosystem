@@ -14,6 +14,11 @@ from utils.logger import get_logger
 
 logger = get_logger("LoginPage")
 
+def config_package() -> str:
+    from config import config
+    return config.APP_PACKAGE
+
+
 class LoginPage(BasePage):
     """Page Object untuk Halaman Login / Masuk Akun Pengguna EvMoto."""
 
@@ -123,8 +128,29 @@ class LoginPage(BasePage):
         except Exception:  # noqa: BLE001
             return False
 
+    def pulihkan_ke_beranda(self, maks_back: int = 4) -> bool:
+        """Sesi tersimpan bisa terbuka di layar sisa test sebelumnya (tab Profil, detail, dialog): Back berulang sampai
+        Beranda atau layar login tampil; bila aplikasi keluar ke launcher, aplikasi diaktifkan lagi."""
+        for _ in range(maks_back + 1):
+            if self.driver.find_elements(*self.FIELD_PHONE) or self.driver.find_elements(*self._XP_BERANDA_SIAP):
+                return True
+            try:
+                self.driver.press_keycode(4)  # KEYCODE_BACK
+            except Exception:  # noqa: BLE001
+                pass
+            time.sleep(1.5)
+            try:
+                if self.driver.current_package != config_package():
+                    self.driver.activate_app(config_package())
+                    time.sleep(4)
+            except Exception:  # noqa: BLE001
+                pass
+        return bool(self.driver.find_elements(*self.FIELD_PHONE) or self.driver.find_elements(*self._XP_BERANDA_SIAP))
+
     def input_phone_number(self, phone: str):
         """Memasukkan nomor handphone (misal: <TEST_USER_PHONE>)."""
+        if not self.driver.find_elements(*self.FIELD_PHONE):
+            self.pulihkan_ke_beranda()
         if self.sesi_sudah_login():
             logger.info("Sesi tersimpan: aplikasi sudah di Beranda, langkah input nomor dilewati")
             return

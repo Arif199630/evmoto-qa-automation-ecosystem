@@ -67,6 +67,8 @@ class TestActivity:
                 self.login_page.login(phone=dev_phone, otp=dev_otp)
                 time.sleep(2.0)
             
+            # Sesi tersimpan bisa terbuka di layar sisa test sebelumnya: kembali ke Beranda dulu
+            self.login_page.pulihkan_ke_beranda()
             # Navigasi ke Halaman Aktivitas via bilah navigasi bawah
             logger.info("[SETUP] Menavigasi ke tab Halaman Aktivitas...")
             self.activity_page.navigate_to_activity_screen()
