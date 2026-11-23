@@ -291,3 +291,14 @@ def pytest_terminal_summary(terminalreporter):
             "Hasil ini menguji alur test dan Page Object, bukan perilaku aplikasi EvMoto.",
             yellow=True,
         )
+
+
+# Test yang benar-benar keluar dari akun dijalankan paling akhir dalam satu unit: login berikutnya pada runner yang sama
+# gagal di OTP staging (bukti diag_otp_login_ulang 21 Nov 2026), sehingga test sesudah logout berhenti di layar login.
+_NAMA_LOGOUT_NYATA = ("DRV_MENU_AL_02", "PROF_NF_04", "E2E_08")
+
+
+def pytest_collection_modifyitems(config, items):
+    normal = [i for i in items if not any(k in i.name for k in _NAMA_LOGOUT_NYATA)]
+    akhir = [i for i in items if any(k in i.name for k in _NAMA_LOGOUT_NYATA)]
+    items[:] = normal + akhir
