@@ -117,6 +117,7 @@ class DrvMenuPage(BasePage):
     MENU_BERSIHKAN_CACHE = (
         AppiumBy.XPATH,
         "//*[contains(@content-desc, 'Bersihkan cache') or contains(@text, 'Bersihkan cache') or "
+        "contains(@content-desc, 'Bersihkan Cache') or contains(@text, 'Bersihkan Cache') or "
         "contains(@content-desc, 'Clear Cache') or contains(@text, 'Clear Cache')]"
     )
     SNACKBAR_CACHE_CLEARED = (
@@ -246,6 +247,33 @@ class DrvMenuPage(BasePage):
         """Mengetuk tombol Simpan Rekening."""
         self.click(self.BTN_SIMPAN_REKENING, label="Tombol Simpan Rekening")
 
+    MENU_PENGATURAN_LAINNYA = (
+        AppiumBy.XPATH,
+        "//*[@content-desc='Pengaturan Lainnya' or @text='Pengaturan Lainnya']"
+    )
+    _XP_ISI_PENGATURAN_LAINNYA = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'Pergantian Bahasa') or contains(@text, 'Pergantian Bahasa') or "
+        "contains(@content-desc, 'Pembaruan Versi') or contains(@text, 'Pembaruan Versi')]"
+    )
+
+    def buka_pengaturan_lainnya(self):
+        """UAT 1.9.27: Bersihkan Cache, Tentang Kami, Versi, dan Pergantian Bahasa ada di layar 'Pengaturan Lainnya'
+        (dibuka dari entri di dasar daftar Menu; peta layar diag_menu_driver 23 Nov 2026)."""
+        if self.is_displayed(self._XP_ISI_PENGATURAN_LAINNYA, timeout=2):
+            return
+        self.click_with_scroll(self.MENU_PENGATURAN_LAINNYA, label="Menu Pengaturan Lainnya", max_swipes=8)
+        self.find(self._XP_ISI_PENGATURAN_LAINNYA, timeout=8)
+
+    _XP_SHEET_KELOLA_AKUN = (AppiumBy.XPATH, "//*[contains(@content-desc, 'Keluar dari Akun')]")
+
+    def buka_kelola_akun_sheet(self):
+        """UAT 1.9.27: 'Keluar dari Akun' dan 'Hapus Akun' ada di lembar 'Kelola Akun' yang dibuka dari dasar daftar Menu."""
+        if self.is_displayed(self._XP_SHEET_KELOLA_AKUN, timeout=2):
+            return
+        self.click_with_scroll(self.MENU_KELOLA_AKUN, label="Menu Kelola Akun", max_swipes=8)
+        self.find(self._XP_SHEET_KELOLA_AKUN, timeout=8)
+
     def open_kelola_akun(self):
         """Membuka sub-menu Kelola Akun (item paling bawah Menu, perlu digulir: 06_menu_gulir_2)."""
         self.is_displayed_after_scroll(self.MENU_KELOLA_AKUN)
@@ -257,7 +285,8 @@ class DrvMenuPage(BasePage):
 
     def click_bersihkan_cache(self):
         """Mengetuk opsi bersihkan cache aplikasi."""
-        self.click_with_scroll(self.MENU_BERSIHKAN_CACHE, label="Tombol Bersihkan Cache", max_swipes=8)
+        self.buka_pengaturan_lainnya()
+        self.click(self.MENU_BERSIHKAN_CACHE, label="Tombol Bersihkan Cache")
 
     def is_cache_cleared_success_displayed(self) -> bool:
         """Memeriksa apakah snackbar 'Berhasil membersihkan cache' tampil."""
@@ -292,7 +321,8 @@ class DrvMenuPage(BasePage):
 
     def click_logout_menu(self):
         """Mengetuk menu Keluar dari Akun."""
-        self.click_with_scroll(self.MENU_LOGOUT, label="Menu Keluar dari Akun", max_swipes=8)
+        self.buka_kelola_akun_sheet()
+        self.click(self.MENU_LOGOUT, label="Menu Keluar dari Akun")
 
     def is_logout_confirmation_displayed(self) -> bool:
         """Memeriksa apakah pop-up konfirmasi logout tampil."""
@@ -308,7 +338,8 @@ class DrvMenuPage(BasePage):
 
     def click_delete_account_menu(self):
         """Mengetuk menu Hapus Akun."""
-        self.click_with_scroll(self.MENU_HAPUS_AKUN, label="Menu Hapus Akun", max_swipes=8)
+        self.buka_kelola_akun_sheet()
+        self.click(self.MENU_HAPUS_AKUN, label="Menu Hapus Akun")
 
     def is_delete_account_confirmation_displayed(self) -> bool:
         """Memeriksa apakah pop-up konfirmasi hapus akun tampil."""
@@ -399,7 +430,8 @@ class DrvMenuPage(BasePage):
 
     def open_tentang_kami(self):
         """Membuka halaman Tentang Kami."""
-        self.click_with_scroll(self.MENU_TENTANG_KAMI, label="Menu Tentang Kami", max_swipes=8)
+        self.buka_pengaturan_lainnya()
+        self.click(self.MENU_TENTANG_KAMI, label="Menu Tentang Kami")
 
     def is_app_version_displayed(self) -> bool:
         """Memeriksa apakah versi aplikasi tertera."""
