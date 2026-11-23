@@ -100,10 +100,34 @@ class LoginPage(BasePage):
 
     def is_login_screen_displayed(self, timeout: int = 15) -> bool:
         """Memeriksa apakah layar Login aktif."""
+        if self.sesi_sudah_login():
+            return False
         return self.is_displayed(self.TITLE_LOGIN, timeout=timeout) or self.is_displayed(self.FIELD_PHONE, timeout=timeout)
+
+    # Sesi login dipertahankan antar test (QA_PERSIST_SESSION): aplikasi langsung terbuka di Beranda, jadi langkah login dilewati.
+    _XP_BERANDA_SIAP = (
+        AppiumBy.XPATH,
+        "//*[contains(@content-desc, 'mau ke mana hari ini') or contains(@text, 'mau ke mana hari ini') or "
+        "contains(@content-desc, 'mau kemana hari ini') or contains(@text, 'mau kemana hari ini') or "
+        "contains(@content-desc, 'where are you going today') or contains(@text, 'where are you going today') or "
+        "contains(@content-desc, 'Siap jalan? tentukan tujuanmu') or "
+        "contains(@content-desc, 'Ready to go? Determine your destination')]",
+    )
+
+    def sesi_sudah_login(self) -> bool:
+        """True bila aplikasi sudah di Beranda (sesi tersimpan): kolom nomor tidak ada dan penanda Beranda tampil."""
+        try:
+            if self.driver.find_elements(*self.FIELD_PHONE) or self.driver.find_elements(*self.TITLE_OTP):
+                return False
+            return bool(self.driver.find_elements(*self._XP_BERANDA_SIAP))
+        except Exception:  # noqa: BLE001
+            return False
 
     def input_phone_number(self, phone: str):
         """Memasukkan nomor handphone (misal: <TEST_USER_PHONE>)."""
+        if self.sesi_sudah_login():
+            logger.info("Sesi tersimpan: aplikasi sudah di Beranda, langkah input nomor dilewati")
+            return
         field = self.find(self.FIELD_PHONE)
         field.click()
         time.sleep(0.5)
@@ -114,6 +138,8 @@ class LoginPage(BasePage):
 
     def click_submit_login(self):
         """Menekan tombol Log In / Masuk setelah tombolnya aktif (validasi nomor di Flutter butuh waktu)."""
+        if self.sesi_sudah_login():
+            return
         deadline = time.time() + 5
         while time.time() < deadline:
             buttons = self.driver.find_elements(*self.BTN_SUBMIT_LOGIN)
@@ -133,6 +159,8 @@ class LoginPage(BasePage):
         handle_first_login=False untuk OTP yang sengaja salah: jangan menunggu layar nama/Beranda (15 dtk), karena
         pesan 'kode verifikasi tidak valid' hanya tampil ±3 detik dan akan terlewat.
         """
+        if self.sesi_sudah_login():
+            return
         self.find(self.TITLE_OTP, timeout=15)
         field = self.find(self.FIELD_OTP, timeout=10)
         field.click()
