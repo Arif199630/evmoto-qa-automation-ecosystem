@@ -257,7 +257,7 @@ class DrvMenuPage(BasePage):
 
     def click_bersihkan_cache(self):
         """Mengetuk opsi bersihkan cache aplikasi."""
-        self.click(self.MENU_BERSIHKAN_CACHE, label="Tombol Bersihkan Cache")
+        self.click_with_scroll(self.MENU_BERSIHKAN_CACHE, label="Tombol Bersihkan Cache", max_swipes=8)
 
     def is_cache_cleared_success_displayed(self) -> bool:
         """Memeriksa apakah snackbar 'Berhasil membersihkan cache' tampil."""
@@ -292,8 +292,7 @@ class DrvMenuPage(BasePage):
 
     def click_logout_menu(self):
         """Mengetuk menu Keluar dari Akun."""
-        self.scroll_down()
-        self.click(self.MENU_LOGOUT, label="Menu Keluar dari Akun")
+        self.click_with_scroll(self.MENU_LOGOUT, label="Menu Keluar dari Akun", max_swipes=8)
 
     def is_logout_confirmation_displayed(self) -> bool:
         """Memeriksa apakah pop-up konfirmasi logout tampil."""
@@ -309,8 +308,7 @@ class DrvMenuPage(BasePage):
 
     def click_delete_account_menu(self):
         """Mengetuk menu Hapus Akun."""
-        self.scroll_down()
-        self.click(self.MENU_HAPUS_AKUN, label="Menu Hapus Akun")
+        self.click_with_scroll(self.MENU_HAPUS_AKUN, label="Menu Hapus Akun", max_swipes=8)
 
     def is_delete_account_confirmation_displayed(self) -> bool:
         """Memeriksa apakah pop-up konfirmasi hapus akun tampil."""
@@ -401,7 +399,7 @@ class DrvMenuPage(BasePage):
 
     def open_tentang_kami(self):
         """Membuka halaman Tentang Kami."""
-        self.click(self.MENU_TENTANG_KAMI, label="Menu Tentang Kami")
+        self.click_with_scroll(self.MENU_TENTANG_KAMI, label="Menu Tentang Kami", max_swipes=8)
 
     def is_app_version_displayed(self) -> bool:
         """Memeriksa apakah versi aplikasi tertera."""

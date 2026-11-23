@@ -966,7 +966,7 @@ class ActivityPage(BasePage):
             self.click(self.BTN_DISMISS_RATING, label="Tombol Nanti Saja Rating")
         else:
             # UAT: layar penilaian tidak punya tombol 'Nanti Saja'; ditutup dengan tombol Kembali
-            self.press_back_key()
+            self.driver.press_keycode(4)  # KEYCODE_BACK
 
     def is_rating_success_snackbar_displayed(self, timeout: int = 5) -> bool:
         """Memverifikasi kemunculan snackbar sukses mengirim penilaian."""
